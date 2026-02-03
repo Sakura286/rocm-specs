@@ -36,7 +36,8 @@ Requires:  %{name}%{?_isa} = %{version}-%{release}
 %description devel
 Libraries and header files for %{name}
 
-%prep -a
+%prep
+%autosetup -p1
 
 # gtest 1.17.0 requires at least C++17
 sed -i "s|-std=c++98|-std=gnu++17|g" CMakeLists.txt
