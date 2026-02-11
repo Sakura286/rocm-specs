@@ -62,7 +62,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %prep -a
 # No cpack
-rm cmake/rocprofiler_register_config_packaging.cmake
+sed -i 's@include(rocprofiler_register_config_packaging)@# include(rocprofiler_register_config_packaging)@' CMakeLists.txt
 
 # When using the system fmt, need to change this link
 sed -i 's@fmt::fmt glog::glog@fmt glog@' source/lib/rocprofiler-register/CMakeLists.txt
