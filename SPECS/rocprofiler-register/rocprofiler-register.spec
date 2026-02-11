@@ -20,6 +20,8 @@ Url:            https://github.com/ROCm/%{upstreamname}
 Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
+Patch0:         0001-use-system-buildreq.patch
+
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_TESTS=%{?with_test:ON}%{!?with_test:OFF}
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_FMT=OFF
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_GLOG=OFF
@@ -59,16 +61,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
 %{summary}
-
-%prep -a
-# No cpack
-sed -i 's@include(rocprofiler_register_config_packaging)@# include(rocprofiler_register_config_packaging)@' CMakeLists.txt
-
-# When using the system fmt, need to change this link
-sed -i 's@fmt::fmt glog::glog@fmt glog@' source/lib/rocprofiler-register/CMakeLists.txt
-
-# Do not hardcode install lib
-sed -i 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' CMakeLists.txt
 
 %install -a
 # Do not install the test source etc
