@@ -29,6 +29,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  git
 BuildRequires:  glog-devel
 BuildRequires:  pkgconfig(fmt)
+BuildRequires:  pkgconfig(gflags)
 
 %description
 The rocprofiler-register library is a helper library that coordinates
