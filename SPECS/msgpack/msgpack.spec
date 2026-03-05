@@ -8,11 +8,11 @@ Name:           msgpack
 Version:        3.1.0
 Release:        %autorelease
 Summary:        Binary-based efficient object serialization library
-
-# Automatically converted from old format: Boost - review is highly recommended.
 License:        BSL-1.0
 URL:            http://msgpack.org
 Source0:        https://github.com/msgpack/msgpack-c/releases/download/cpp-%{version}/%{name}-%{version}.tar.gz
+BuildSystem:    cmake
+
 Patch0:         0001-Fixed-724.patch
 Patch1:         0002-msgpack-cmake4.patch
 
@@ -21,24 +21,22 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  doxygen
 # for %%check
-BuildRequires:  gtest-devel
-BuildRequires:  zlib-devel
+BuildRequires:  pkgconfig(gtest)
+BuildRequires:  pkgconfig(zlib)
 
 %description
 MessagePack is a binary-based efficient object serialization
 library. It enables to exchange structured objects between many
 languages like JSON. But unlike JSON, it is very fast and small.
 
-%package devel
-Summary:  Libraries and header files for %{name}
-Requires:  %{name}%{?_isa} = %{version}-%{release}
+%package        devel
+Summary:        Libraries and header files for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 Libraries and header files for %{name}
 
-%prep
-%autosetup -p1
-
+%prep -a
 # gtest 1.17.0 requires at least C++17
 sed -i "s|-std=c++98|-std=gnu++17|g" CMakeLists.txt
 
@@ -52,10 +50,6 @@ export CMAKE_POLICY_VERSION_MINIMUM=3.5
 # https://github.com/msgpack/msgpack-c/issues/697
 export GTEST_FILTER=-object_with_zone.ext_empty
 %ctest
-cat %_vpath_builddir/Testing/Temporary/LastTest.log
-
-%install
-%cmake_install
 
 %files
 %license LICENSE_1_0.txt COPYING
