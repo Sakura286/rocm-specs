@@ -29,7 +29,6 @@ BuildRequires:  python3dist(installer)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)
 
-%package
 Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 Requires:       cmake-filesystem
 Requires:       hipcc
