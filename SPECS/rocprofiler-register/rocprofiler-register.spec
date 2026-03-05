@@ -5,10 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global upstreamname rocprofiler-register
-%global rocm_release 7.1
-%global rocm_patch 0
-%global rocm_version %{rocm_release}.%{rocm_patch}
+%global rocm_version 7.1.0
 
 Name:           rocprofiler-register
 Version:        %{rocm_version}
