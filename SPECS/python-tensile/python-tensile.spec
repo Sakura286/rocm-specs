@@ -103,8 +103,6 @@ rm -rf %{buildroot}%{python3_sitelib}/%{upstreamname}/Tests
 rm %{buildroot}%{python3_sitelib}/%{upstreamname}/cmake/*.cmake
 mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/%{upstreamname}/cmake/
 
-rm -rf %{buildroot}%{python3_sitelib}/tensile*dist-info
-
 %pyproject_save_files %{upstreamname}
 
 %files -f %{pyproject_files}
