@@ -5,8 +5,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%define python_sitelib %python3_sitelib
-
 %global srcname tensile
 %global upstreamname Tensile
 %global rocm_version 7.1.1
@@ -20,7 +18,7 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        %{url}/releases/download/rocm-%{rocm_version}/tensile.tar.gz
 BuildSystem:    pyproject
 
-BuildOption(install): -l %{upstreamname}
+BuildOption(install):  -l %{upstreamname}
 
 Patch0:         0001-tensile-set-default-paths.patch
 
@@ -29,12 +27,12 @@ BuildRequires:  python3dist(installer)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)
 
-Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 Requires:       cmake-filesystem
 Requires:       hipcc
 Requires:       rocminfo
 Requires:       python3dist(msgpack)
 Requires:       python3dist(pyyaml)
+
 Provides:       python3-%{srcname}
 %python_provide python3-%{srcname}
 
@@ -112,9 +110,9 @@ mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/
 find %{buildroot}
 
 %files -f %{pyproject_files}
-%dir %{python_sitelib}/%{upstreamname}
 %doc README.md
 %license LICENSE.md
+%exclude %{python3_sitelib}/%{upstreamname}/Tests/*
 %{_bindir}/Tensile
 %{_bindir}/TensileBenchmarkCluster
 %{_bindir}/TensileCreateLibrary
