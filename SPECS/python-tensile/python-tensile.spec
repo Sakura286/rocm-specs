@@ -94,9 +94,6 @@ rm -rf %{buildroot}%{_prefix}/cmake
 # Do not distribute broken bins
 rm %{buildroot}%{_bindir}/tensile*
 
-# Do not distribute tests
-rm -rf %{buildroot}%{python3_sitelib}/%{upstreamname}/Tests
-
 # rm hard links and replace
 rm %{buildroot}%{python3_sitelib}/%{upstreamname}/cmake/*.cmake
 mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/%{upstreamname}/cmake/
@@ -112,7 +109,8 @@ find %{buildroot}
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE.md
-%exclude %{python3_sitelib}/%{upstreamname}/Tests/*
+# Do not distribute tests
+%exclude %{python3_sitelib}/%{upstreamname}/Tests
 %{_bindir}/Tensile
 %{_bindir}/TensileBenchmarkCluster
 %{_bindir}/TensileCreateLibrary
