@@ -20,7 +20,7 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        %{url}/releases/download/rocm-%{rocm_version}/tensile.tar.gz
 BuildSystem:    pyproject
 
-BuildOption(install): -l %{srcname}
+BuildOption(install): -l %{upstreamname}
 
 Patch0:         0001-tensile-set-default-paths.patch
 
