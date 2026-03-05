@@ -5,8 +5,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%bcond test 1
-
 %global upstreamname rocprofiler-register
 %global rocm_release 7.1
 %global rocm_patch 0
@@ -25,7 +23,6 @@ BuildSystem:    cmake
 # Use system glog
 Patch0:         0001-use-system-buildreq.patch
 
-BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_TESTS=%{?with_test:ON}%{!?with_test:OFF}
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_FMT=OFF
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_GLOG=OFF
 
