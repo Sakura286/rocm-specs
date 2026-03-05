@@ -165,7 +165,7 @@ BuildRequires:  lld
 
 %if %{with tensile}
 #BuildRequires:  python3dist(tensile)
-BuildRequires:  python3dist(Tensile)
+BuildRequires:  python3dist(tensile)
 Requires:       python3dist(msgpack)
 BuildRequires:  msgpack-devel
 %global tensile_verbose 1
