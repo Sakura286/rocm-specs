@@ -1,9 +1,11 @@
-# SPDX-FileCopyrightText: (C) 2025 Institute of Software, Chinese Academy of Sciences (ISCAS)
-# SPDX-FileCopyrightText: (C) 2025 openRuyi Project Contributors
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
 # SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
 # SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
+
+%bcond check 0
 
 %global upstreamname rocprofiler-register
 %global rocm_release 7.1
@@ -15,11 +17,12 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        A rocprofiler helper library
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/%{upstreamname}
+Url:            https://github.com/ROCm/rocprofiler-register
 #!RemoteAsset
 Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
+# Use system glog
 Patch0:         0001-use-system-buildreq.patch
 
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_TESTS=%{?with_test:ON}%{!?with_test:OFF}
@@ -27,9 +30,8 @@ BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_FMT=OFF
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_GLOG=OFF
 
 BuildRequires:  cmake
+BuildRequires:  cmake(glog)
 BuildRequires:  gcc-c++
-BuildRequires:  git
-BuildRequires:  glog-devel
 BuildRequires:  pkgconfig(fmt)
 BuildRequires:  pkgconfig(gflags)
 
@@ -69,7 +71,7 @@ rm -rf %{buildroot}%{_prefix}/share/modulefiles
 rm -rf %{buildroot}%{_prefix}/share/doc/rocprofiler-register/LICENSE.md
 
 %check
-%{?with check:%ctest}
+%{?with_check:%ctest}
 
 %files
 %license LICENSE.md
