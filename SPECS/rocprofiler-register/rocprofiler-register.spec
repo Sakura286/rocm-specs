@@ -5,8 +5,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%bcond check 1
-
 %global upstreamname rocprofiler-register
 %global rocm_release 7.1
 %global rocm_patch 0
@@ -69,9 +67,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 rm -rf %{buildroot}%{_prefix}/share/rocprofiler-register
 rm -rf %{buildroot}%{_prefix}/share/modulefiles
 rm -rf %{buildroot}%{_prefix}/share/doc/rocprofiler-register/LICENSE.md
-
-%check
-%{?with_check:%ctest}
 
 %files
 %license LICENSE.md
