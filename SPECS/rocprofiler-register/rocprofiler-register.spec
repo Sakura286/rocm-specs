@@ -61,6 +61,12 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{summary}
 
+%install -a
+# Do not install the test source etc
+rm -rf %{buildroot}%{_prefix}/share/rocprofiler-register
+rm -rf %{buildroot}%{_prefix}/share/modulefiles
+rm -rf %{buildroot}%{_prefix}/share/doc/rocprofiler-register/LICENSE.md
+
 %files
 %license LICENSE.md
 %{_libdir}/librocprofiler-register.so.0{,.*}
