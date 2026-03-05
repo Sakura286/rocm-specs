@@ -109,6 +109,8 @@ mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/
 # tensile requires GPU hardware at runtime
 # optional dependencies (joblib) are intentionally excluded
 
+find %{buildroot}
+
 %files -f %{pyproject_files}
 %dir %{python_sitelib}/%{upstreamname}
 %doc README.md
