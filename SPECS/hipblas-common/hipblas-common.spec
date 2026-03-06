@@ -38,7 +38,7 @@ rm -f %{buildroot}%{_prefix}/share/doc/hipblas-common/LICENSE.md
 %files devel
 %license LICENSE.md
 %{_includedir}/%{name}
-%{_datadir}/cmake/%{name}
+%{_libdir}/cmake/%{name}
 
 %changelog
 %{?autochangelog}
