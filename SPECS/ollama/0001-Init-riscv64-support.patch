@@ -1,0 +1,192 @@
+From 18691d5e1f4fd21f9e806a7959d364dfc2b04f8e Mon Sep 17 00:00:00 2001
+From: Yafen Fang <yafen@iscas.ac.cn>
+Date: Tue, 18 Feb 2025 15:11:37 +0800
+Subject: [PATCH] Init riscv64 support
+
+Signed-off-by: Yafen Fang <yafen@iscas.ac.cn>
+Signed-off-by: misaka00251 <liuxin@iscas.ac.cn>
+
+diff --git a/vendor/github.com/chewxy/math32/exp2_asm.go b/vendor/github.com/chewxy/math32/exp2_asm.go
+index 3d2e1d6..144e723 100644
+--- a/vendor/github.com/chewxy/math32/exp2_asm.go
++++ b/vendor/github.com/chewxy/math32/exp2_asm.go
+@@ -2,10 +2,10 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build !noasm && !tinygo && (amd64 || 386 || arm || ppc64le || wasm)
++//go:build !noasm && !tinygo && (amd64 || 386 || arm || ppc64le || riscv64 || wasm)
+ // +build !noasm
+ // +build !tinygo
+-// +build amd64 386 arm ppc64le wasm
++// +build amd64 386 arm ppc64le riscv64 wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/exp2_noasm.go b/vendor/github.com/chewxy/math32/exp2_noasm.go
+index 13ca9c4..35d7212 100644
+--- a/vendor/github.com/chewxy/math32/exp2_noasm.go
++++ b/vendor/github.com/chewxy/math32/exp2_noasm.go
+@@ -2,8 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build noasm || tinygo || !(amd64 || 386 || arm || ppc64le || wasm)
+-// +build noasm tinygo !amd64,!386,!arm,!ppc64le,!wasm
++//go:build noasm || tinygo || !(amd64 || 386 || arm || ppc64le || riscv64 || wasm)
++// +build noasm tinygo !amd64,!386,!arm,!ppc64le,!riscv64,!wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/exp_asm.go b/vendor/github.com/chewxy/math32/exp_asm.go
+index 5b6f7d2..22f9474 100644
+--- a/vendor/github.com/chewxy/math32/exp_asm.go
++++ b/vendor/github.com/chewxy/math32/exp_asm.go
+@@ -2,10 +2,10 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build !noasm && !tinygo && (amd64 || 386 || arm || ppc64le || wasm || s390x)
++//go:build !noasm && !tinygo && (amd64 || 386 || arm || ppc64le || riscv64 || wasm || s390x)
+ // +build !noasm
+ // +build !tinygo
+-// +build amd64 386 arm ppc64le wasm s390x
++// +build amd64 386 arm ppc64le riscv64 wasm s390x
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/exp_noasm.go b/vendor/github.com/chewxy/math32/exp_noasm.go
+index 838022b..fae250d 100644
+--- a/vendor/github.com/chewxy/math32/exp_noasm.go
++++ b/vendor/github.com/chewxy/math32/exp_noasm.go
+@@ -2,8 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build noasm || tinygo || !(amd64 || 386 || arm || ppc64le || wasm || s390x)
+-// +build noasm tinygo !amd64,!386,!arm,!ppc64le,!wasm,!s390x
++//go:build noasm || tinygo || !(amd64 || 386 || arm || ppc64le || riscv64 || wasm || s390x)
++// +build noasm tinygo !amd64,!386,!arm,!ppc64le,!riscv64,!wasm,!s390x
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/log_asm.go b/vendor/github.com/chewxy/math32/log_asm.go
+index 9491e1a..6dc21e1 100644
+--- a/vendor/github.com/chewxy/math32/log_asm.go
++++ b/vendor/github.com/chewxy/math32/log_asm.go
+@@ -2,10 +2,10 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build !noasm && !tinygo && (amd64 || arm || s390x || 386 || arm64 || ppc64le || wasm)
++//go:build !noasm && !tinygo && (amd64 || arm || s390x || 386 || arm64 || ppc64le || riscv64 || wasm)
+ // +build !noasm
+ // +build !tinygo
+-// +build amd64 arm s390x 386 arm64 ppc64le wasm
++// +build amd64 arm s390x 386 arm64 ppc64le riscv64 wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/log_noasm.go b/vendor/github.com/chewxy/math32/log_noasm.go
+index e7eb6f1..3428ea0 100644
+--- a/vendor/github.com/chewxy/math32/log_noasm.go
++++ b/vendor/github.com/chewxy/math32/log_noasm.go
+@@ -2,8 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build noasm || tinygo || (!amd64 && !arm && !s390x && !386 && !arm64 && !ppc64le && !wasm)
+-// +build noasm tinygo !amd64,!arm,!s390x,!386,!arm64,!ppc64le,!wasm
++//go:build noasm || tinygo || (!amd64 && !arm && !s390x && !386 && !arm64 && !ppc64le && !riscv64 && !wasm)
++// +build noasm tinygo !amd64,!arm,!s390x,!386,!arm64,!ppc64le,!riscv64,!wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/remainder_asm.go b/vendor/github.com/chewxy/math32/remainder_asm.go
+index d4e41c1..65ea8fd 100644
+--- a/vendor/github.com/chewxy/math32/remainder_asm.go
++++ b/vendor/github.com/chewxy/math32/remainder_asm.go
+@@ -1,7 +1,7 @@
+-//go:build !noasm && !tinygo && (amd64 || s390x || arm || ppc64le || 386 || wasm)
++//go:build !noasm && !tinygo && (amd64 || s390x || arm || ppc64le || 386 || riscv64 || wasm)
+ // +build !noasm
+ // +build !tinygo
+-// +build amd64 s390x arm ppc64le 386 wasm
++// +build amd64 s390x arm ppc64le 386 riscv64 wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/remainder_noasm.go b/vendor/github.com/chewxy/math32/remainder_noasm.go
+index f240675..ca40e52 100644
+--- a/vendor/github.com/chewxy/math32/remainder_noasm.go
++++ b/vendor/github.com/chewxy/math32/remainder_noasm.go
+@@ -1,5 +1,5 @@
+-//go:build noasm || tinygo || (!amd64 && !s390x && !arm && !ppc64le && !386 && !wasm)
+-// +build noasm tinygo !amd64,!s390x,!arm,!ppc64le,!386,!wasm
++//go:build noasm || tinygo || (!amd64 && !s390x && !arm && !ppc64le && !386 && !riscv64 && !wasm)
++// +build noasm tinygo !amd64,!s390x,!arm,!ppc64le,!386,!riscv64,!wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/sqrt_asm.go b/vendor/github.com/chewxy/math32/sqrt_asm.go
+index 879fec4..e99ccff 100644
+--- a/vendor/github.com/chewxy/math32/sqrt_asm.go
++++ b/vendor/github.com/chewxy/math32/sqrt_asm.go
+@@ -2,10 +2,10 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build !noasm && !tinygo && (386 || amd64 || arm64 || arm || ppc64le || s390x || wasm)
++//go:build !noasm && !tinygo && (386 || amd64 || arm64 || arm || ppc64le || s390x || riscv64 || wasm)
+ // +build !noasm
+ // +build !tinygo
+-// +build 386 amd64 arm64 arm ppc64le s390x wasm
++// +build 386 amd64 arm64 arm ppc64le s390x riscv64 wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/sqrt_noasm.go b/vendor/github.com/chewxy/math32/sqrt_noasm.go
+index 35ec316..76f37b9 100644
+--- a/vendor/github.com/chewxy/math32/sqrt_noasm.go
++++ b/vendor/github.com/chewxy/math32/sqrt_noasm.go
+@@ -2,8 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-//go:build noasm || tinygo || (!386 && !amd64 && !arm64 && !arm && !ppc64le && !s390x && !wasm)
+-// +build noasm tinygo !386,!amd64,!arm64,!arm,!ppc64le,!s390x,!wasm
++//go:build noasm || tinygo || (!386 && !amd64 && !arm64 && !arm && !ppc64le && !s390x && !riscv64 && !wasm)
++// +build noasm tinygo !386,!amd64,!arm64,!arm,!ppc64le,!s390x,!riscv64,!wasm
+ 
+ package math32
+ 
+diff --git a/vendor/github.com/chewxy/math32/stubs_riscv64.s b/vendor/github.com/chewxy/math32/stubs_riscv64.s
+new file mode 100644
+index 0000000..7c4f15f
+--- /dev/null
++++ b/vendor/github.com/chewxy/math32/stubs_riscv64.s
+@@ -0,0 +1,21 @@
++#include "textflag.h"
++
++// func archExp(x float32) float32
++TEXT ·archExp(SB),NOSPLIT,$0
++	JMP ·exp(SB)
++
++// func archExp2(x float32) float32
++TEXT ·archExp2(SB),NOSPLIT,$0
++	JMP ·exp2(SB)
++
++// func archLog(x float32) float32
++TEXT ·archLog(SB),NOSPLIT,$0
++	JMP ·log(SB)
++
++// func archRemainder(x, y float32) float32
++TEXT ·archRemainder(SB),NOSPLIT,$0
++	JMP ·remainder(SB)
++
++// func archSqrt(x float32) float32
++TEXT ·archSqrt(SB),NOSPLIT,$0
++	JMP ·sqrt(SB)
+-- 
+2.48.1
+
