@@ -100,12 +100,12 @@ sed -i -e 's@\.\.@\/usr\/bin@' %{buildroot}%{_bindir}/%{name}/CTestTestfile.cmak
 %license LICENSE.md
 %license NOTICES.txt
 %{_includedir}/%{name}
-%{_datadir}/cmake/rocprim
+%{_libdir}/cmake/rocprim
 
 %if %{with test}
 %files test
 %{_bindir}/test*
-%{_datadir}/libtest*
+%{_libdir}/libtest*
 %{_bindir}/%{name}/
 %endif
 
