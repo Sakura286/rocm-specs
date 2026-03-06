@@ -14,8 +14,9 @@ Summary:        BLAS implementation for ROCm
 Version:        %{rocm_version}
 Release:        %autorelease
 License:        MIT AND BSD-3-Clause
-URL:            https://github.com/ROCm/rocm-libraries
-Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz#/%{upstreamname}-%{version}.tar.gz
+URL:            https://github.com/ROCm/rocBLAS
+#!RemoteAsset
+Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja

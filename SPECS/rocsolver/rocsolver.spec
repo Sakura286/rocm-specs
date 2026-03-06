@@ -7,11 +7,6 @@
 
 %global rocm_version 7.1.1
 
-%global toolchain clang
-# hipcc does not support some clang flags
-# build_cxxflags does not honor CMAKE_BUILD_TYPE, strip out -g
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
 # consume too much time
 %bcond test 0
 %bcond sample 0
@@ -23,6 +18,7 @@ Release:        %autorelease
 Summary:        Next generation LAPACK implementation for ROCm platform
 License:        BSD-3-Clause AND BSD-2-Clause
 Url:            https://github.com/ROCm/rocSOLVER
+#!RemoteAsset
 Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 

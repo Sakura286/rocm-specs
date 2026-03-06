@@ -10,19 +10,14 @@
 
 %global rocm_version 7.1.1
 
-# Compiler is hipcc, which is clang based:
-%global toolchain clang
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
 Name:           rocprim
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm parallel primatives
 License:        MIT AND BSD-3-Clause
-URL:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocPRIM
 #!RemoteAsset
-Source0:        %{url}/releases/download/rocm-%{version}/rocPRIM.tar.gz
+Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF

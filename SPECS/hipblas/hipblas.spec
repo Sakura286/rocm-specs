@@ -7,10 +7,6 @@
 
 %global rocm_version 7.1.1
 
-%global toolchain clang
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
 %bcond test 0
 
 Name:           hipblas
@@ -20,7 +16,7 @@ Summary:        ROCm BLAS marshalling library
 License:        MIT
 Url:            https://github.com/ROCm/hipBLAS
 #!RemoteAsset
-Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildRequires:  clang

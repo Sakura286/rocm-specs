@@ -9,11 +9,6 @@
 
 %global rocm_version 7.1.1
 
-# rocm use hipcc to build objects
-%global toolchain clang
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
 Name:           rocsparse
 Version:        %{rocm_version}
 Release:        %autorelease
