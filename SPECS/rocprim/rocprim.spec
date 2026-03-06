@@ -22,7 +22,7 @@ Summary:        ROCm parallel primatives
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset
-Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
+Source0:        %{url}/releases/download/rocm-%{version}/rocPRIM.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
