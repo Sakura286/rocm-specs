@@ -65,7 +65,7 @@ BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  compiler-rt
-BuildRequires:  gcc-g++
+BuildRequires:  gcc-c++
 BuildRequires:  hipcc
 BuildRequires:  lld
 BuildRequires:  llvm
