@@ -31,7 +31,6 @@ BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
 BuildOption(conf):  -DCMAKE_BUILD_TYPE=%build_type
 BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++
-BuildOption(conf):  -DCMAKE_INSTALL_LIBDIR=share
 BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
