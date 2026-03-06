@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
 # SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
 # SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
@@ -13,6 +14,7 @@ URL:            http://msgpack.org
 Source0:        https://github.com/msgpack/msgpack-c/releases/download/cpp-%{version}/%{name}-%{version}.tar.gz
 BuildSystem:    cmake
 
+# https://github.com/msgpack/msgpack-c/commit/53d2ea9ad3cc20e1beac2e1c014082c25e221182
 Patch0:         0001-Fixed-724.patch
 Patch1:         0002-msgpack-cmake4.patch
 
@@ -40,16 +42,12 @@ Libraries and header files for %{name}
 # gtest 1.17.0 requires at least C++17
 sed -i "s|-std=c++98|-std=gnu++17|g" CMakeLists.txt
 
-%build
-# TODO: Please submit an issue to upstream (rhbz#2380918)
+%build -p
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-%cmake -DCMAKE_INSTALL_LIBDIR=%{_libdir} -Dlibdir=%{_libdir} -DBUILD_SHARED_LIBS=ON
-%cmake_build
 
-%check
+%check -p
 # https://github.com/msgpack/msgpack-c/issues/697
 export GTEST_FILTER=-object_with_zone.ext_empty
-%ctest
 
 %files
 %license LICENSE_1_0.txt COPYING
