@@ -37,7 +37,7 @@ Provides:       python3-%{srcname}
 0002-fix-tensile-get-path.patch
 0003-reduce-requirements.patch
 0004-ignore-asm-cap-cache.patch
-0005-no-amdclang-when-rocm-llvm-is-unbundled.
+0005-no-amdclang-when-rocm-llvm-is-unbundled.patch
 0006-use-system-path-instead-of-default.patch
 
 %description
