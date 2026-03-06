@@ -99,7 +99,7 @@ programming language and optimized for AMD GPUs.
 
 %package        devel
 Summary:        Libraries and headers for %{name}
-Requires:       %{rocblas_name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       rocm-hip-devel
 
 %description    devel
