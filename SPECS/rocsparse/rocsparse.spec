@@ -5,26 +5,14 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+%bcond test 0
+
 %global rocm_version 7.1.1
 
 # rocm use hipcc to build objects
 %global toolchain clang
 # hipcc does not support some clang flags
 %global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
-# downloads tests, use mock --enable-network
-%bcond_with test
-%if %{with test}
-%global build_test ON
-%global __brp_check_rpaths %{nil}
-%else
-%global build_test OFF
-%endif
-
-# Option to test suite for testing on real HW:
-# May have to set gpu under test with
-# export HIP_VISIBLE_DEVICES=<num> - 0, 1 etc.
-%bcond_with check
 
 Name:           rocsparse
 Version:        %{rocm_version}
@@ -75,12 +63,11 @@ BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
-BuildRequires:  rocprim-static
 %if %{with test}
+BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(rocblas)
-BuildRequires:  libomp-devel
+BuildRequires:  cmake(openmp)
 BuildRequires:  gcc-gfortran
-BuildRequires:  pkgconfig(gtest)
 BuildRequires:  python3dist(pyyaml)
 %endif
 
