@@ -31,7 +31,6 @@ BuildOption(conf):  -DCMAKE_C_COMPILER=clang
 BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
 BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
 BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
-BuildOption(conf):  -DCMAKE_BUILD_TYPE=%build_type
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 BuildOption(conf):  -DHIP_PLATFORM=amd
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
