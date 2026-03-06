@@ -11,6 +11,7 @@ Release:        %autorelease
 Summary:        Binary-based efficient object serialization library
 License:        BSL-1.0
 URL:            http://msgpack.org
+#!RemoteAsset
 Source0:        https://github.com/msgpack/msgpack-c/releases/download/cpp-%{version}/%{name}-%{version}.tar.gz
 BuildSystem:    cmake
 

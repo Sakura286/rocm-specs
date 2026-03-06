@@ -15,17 +15,13 @@ Release:        %autorelease
 Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
+#!RemoteAsset
 Source0:        %{url}/releases/download/rocm-%{rocm_version}/tensile.tar.gz
 BuildSystem:    pyproject
 
 BuildOption(install):  -l %{upstreamname}
 
-Patch0:         0001-tensile-set-default-paths.patch
-
 BuildRequires:  python3-devel
-BuildRequires:  python3dist(installer)
-BuildRequires:  python3dist(setuptools)
-BuildRequires:  python3dist(wheel)
 
 Requires:       cmake-filesystem
 Requires:       hipcc
@@ -35,6 +31,14 @@ Requires:       python3dist(pyyaml)
 
 Provides:       python3-%{srcname}
 %python_provide python3-%{srcname}
+
+%patchlist
+0001-fix-python-shebang.patch
+0002-fix-tensile-get-path.patch
+0003-reduce-requirements.patch
+0004-ignore-asm-cap-cache.patch
+0005-no-amdclang-when-rocm-llvm-is-unbundled.
+0006-use-system-path-instead-of-default.patch
 
 %description
 Tensile is a tool for creating benchmark-driven backend libraries for GEMMs,
@@ -46,41 +50,6 @@ rocBLAS. Tensile acts as the performance backbone for a wide variety of
 %prep -a
 #Fix a few things:
 chmod 755 Tensile/Configs/miopen/convert_cfg.py
-sed -i -e 's@bin/python@bin/python3@' Tensile/Configs/miopen/convert_cfg.py
-sed -i -e 's@bin/python@bin/python3@' Tensile/Tests/create_tests.py
-sed -i -e 's@bin/env python3@bin/python3@' Tensile/bin/Tensile
-sed -i -e 's@bin/env python3@bin/python3@' Tensile/bin/TensileCreateLibrary
-
-# hack where TensileGetPath is located
-sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g' Tensile/cmake/TensileConfig.cmake
-
-# Ignora asm cap
-sed -i -e 's@globalParameters["IgnoreAsmCapCache"] = False@globalParameters["IgnoreAsmCapCache"] = True@' Tensile/Common.py
-sed -i -e 's@arguments["IgnoreAsmCapCache"] = args.IgnoreAsmCapCache@arguments["IgnoreAsmCapCache"] = True@' Tensile/TensileCreateLibrary.py
-sed -i -e 's@if not ignoreCacheCheck and derivedAsmCaps@if False and derivedAsmCaps@' Tensile/Common.py
-
-# Reduce requirements
-sed -i -e '/joblib/d' requirements.*
-sed -i -e '/rich/d' requirements.*
-sed -i -e '/msgpack/d' requirements.*
-
-# No amdclang when build rocm-llvm as component
-sed -i 's@AssemblerPath"] = None@AssemblerPath"] = "clang++"@g' Tensile/Common.py
-sed -i 's@CxxCompiler"] = "amdclang++"@CxxCompiler"] = "hipcc"@g' Tensile/Common.py
-sed -i 's@ASSEMBLER = osSelect(linux="amdclang++"@ASSEMBLER = osSelect(linux="clang++"@g' Tensile/Utilities/Toolchain.py
-sed -i 's@CXX_COMPILER = osSelect(linux="amdclang++"@CXX_COMPILER = osSelect(linux="hipcc"@g' Tensile/Utilities/Toolchain.py
-sed -i 's@amdclang@clang@g' Tensile/Common.py Tensile/Utilities/Toolchain.py
-
-# Use /usr instead of /opt/rocm for prefix
-sed -i "s@opt/rocm/hip@usr@g" Tensile/Tests/hipModuleLoad_timing/Makefile
-sed -i "s@opt/rocm@usr@g" \
-    Tensile/Common.py \
-    Tensile/Source/CMakeLists.txt \
-    Tensile/Source/FindHIP.cmake \
-    Tensile/Source/cmake/FindROCmSMI.cmake \
-    Tensile/Source/cmake/FindROCmSMI.cmake \
-    Tensile/Utilities/Toolchain.py
-sed -i "s@llvm/bin@bin@g" Tensile/Utilities/Toolchain.py
 
 %generate_buildrequires
 %pyproject_buildrequires
@@ -101,10 +70,8 @@ mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/
 %pyproject_save_files %{upstreamname}
 
 %check
-# tensile requires GPU hardware at runtime
-# optional dependencies (joblib) are intentionally excluded
-
-find %{buildroot}
+# 1. tensile requires GPU hardware at runtime
+# 2. optional dependencies (joblib) are intentionally excluded
 
 %files -f %{pyproject_files}
 %doc README.md
