@@ -64,6 +64,7 @@ Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
+BuildRequires:  cmake(msgpack)
 BuildRequires:  compiler-rt
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
