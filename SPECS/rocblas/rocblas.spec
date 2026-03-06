@@ -6,14 +6,8 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 %bcond test 0
-%bcond tensile 1
 
 %global rocm_version 7.1.1
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-%global tensile_library_format msgpack
-
-%global gpu_list gfx1100
 
 Name:           rocblas
 Summary:        BLAS implementation for ROCm
@@ -48,7 +42,7 @@ BuildOption(conf):  -DBUILD_FORTRAN_CLIENTS=OFF
 BuildOption(conf):  -DBUILD_OFFLOAD_COMPRESS=ON
 BuildOption(conf):  -DBUILD_WITH_HIPBLASLT=OFF
 BuildOption(conf):  -DBUILD_WITH_TENSILE=ON
-BuildOption(conf):  -DGPU_TARGETS=%{gpu_list}
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
 BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DTensile_DIR=$(%{_bindir}/TensileGetPath)/cmake
@@ -155,9 +149,7 @@ export LD_LIBRARY_PATH=%{_vpath_builddir}/library/src:$LD_LIBRARY_PATH
 %files
 %license LICENSE.md
 %{_libdir}/librocblas.so.5{,.*}
-%if %{with tensile}
 %{_libdir}/rocblas/
-%endif
 
 %files devel
 %doc README.md
