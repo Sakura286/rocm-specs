@@ -5,6 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# Tests consumes too much time and space
 %bcond test 0
 
 %global rocm_version 7.1.1
@@ -60,6 +61,9 @@ Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(msgpack)
 BuildRequires:  compiler-rt
 BuildRequires:  gcc-c++
@@ -70,20 +74,17 @@ BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  python3dist(tensile)
 BuildRequires:  rocm-cmake
-BuildRequires:  rocm-comgr-devel
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-BuildRequires:  rocm-hip-devel
-BuildRequires:  rocr-runtime-devel
 
 %if %{with test}
-BuildRequires:  blas-devel
-BuildRequires:  gcc-gfortran
-BuildRequires:  gtest-devel
-BuildRequires:  libomp-devel
+BuildRequires:  gcc-fortran
+BuildRequires:  cmake(openmp)
+BuildRequires:  cmake(rocm_smi)
+BuildRequires:  pkgconfig(blas)
+BuildRequires:  pkgconfig(GTest)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  rocminfo
-BuildRequires:  rocm-smi-devel
 %endif
 
 Provides:       rocblas = %{version}-%{release}
