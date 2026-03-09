@@ -5,9 +5,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# Test cost too much time
-%bcond test 0
-
 %global rocm_version 7.1.1
 
 Name:           rocprim
@@ -21,7 +18,7 @@ Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-BuildOption(conf):  -DBUILD_TEST=%{?with_test:ON}%{!?with_test:OFF}
+BuildOption(conf):  -DBUILD_TEST=OFF
 BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
 BuildOption(conf):  -DCMAKE_BUILD_TYPE=%build_type
 BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
@@ -41,9 +38,6 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  gcc-c++
 BuildRequires:  lld-devel
 BuildRequires:  llvm-devel
-%if %{with test}
-BuildRequires:  pkgconfig(gtest)
-%endif
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
@@ -64,31 +58,8 @@ BuildArch:      noarch
 The rocPRIM is a header-only library providing HIP parallel primitives
 for developing performant GPU-accelerated code on AMD ROCm platform.
 
-%if %{with test}
-%package        test
-Summary:        upstream tests for ROCm parallel primatives
-Provides:       %{name}-test = %{version}-%{release}
-Requires:       %{name}-devel
-Requires:       gtest
-
-%description    test
-tests for the rocPRIM package
-%endif
-
-%prep -a
-# In file included from rocPRIM-rocm-6.4.2/test/rocprim/test_texture_cache_iterator.cpp:26: 
-# ../rocprim/include/rocprim/iterator/texture_cache_iterator.hpp:231:13: error:
-#   'tex1Dfetch<int, nullptr>' is unavailable: The image/texture API not supported on the device
-# Remove fail to build test
-sed -i -e 's@add_rocprim_test("rocprim.texture_cache_iterator"@#add_rocprim_test("rocprim.texture_cache_iterator"@' test/rocprim/CMakeLists.txt
-grep texture_cach test/rocprim/CMakeLists.txt
-
 %install -a
 rm -f %{buildroot}%{_prefix}/share/doc/rocprim/LICENSE.md
-%if %{with test}
-# force the cmake test file to use absolute paths for its referenced binaries
-sed -i -e 's@\.\.@\/usr\/bin@' %{buildroot}%{_bindir}/%{name}/CTestTestfile.cmake
-%endif
 
 %files devel
 %doc README.md
@@ -96,13 +67,6 @@ sed -i -e 's@\.\.@\/usr\/bin@' %{buildroot}%{_bindir}/%{name}/CTestTestfile.cmak
 %license NOTICES.txt
 %{_includedir}/%{name}
 %{_libdir}/cmake/rocprim
-
-%if %{with test}
-%files test
-%{_bindir}/test*
-%{_libdir}/libtest*
-%{_bindir}/%{name}/
-%endif
 
 %changelog
 %{?autochangelog}
