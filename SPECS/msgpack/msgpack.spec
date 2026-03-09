@@ -15,11 +15,12 @@ URL:            http://msgpack.org
 Source0:        https://github.com/msgpack/msgpack-c/releases/download/cpp-%{version}/%{name}-%{version}.tar.gz
 BuildSystem:    cmake
 
+BuildOption(conf):  -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
 # https://github.com/msgpack/msgpack-c/commit/53d2ea9ad3cc20e1beac2e1c014082c25e221182
 Patch0:         0001-Fixed-724.patch
 Patch1:         0002-msgpack-cmake4.patch
 
-BuildRequires:  make
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  doxygen
@@ -42,9 +43,6 @@ Libraries and header files for %{name}
 %prep -a
 # gtest 1.17.0 requires at least C++17
 sed -i "s|-std=c++98|-std=gnu++17|g" CMakeLists.txt
-
-%build -p
-export CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 %check -p
 # https://github.com/msgpack/msgpack-c/issues/697
