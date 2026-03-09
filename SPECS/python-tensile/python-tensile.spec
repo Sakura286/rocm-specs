@@ -35,9 +35,12 @@ Provides:       python3-%{srcname}
 %patchlist
 0001-fix-python-shebang.patch
 0002-fix-tensile-get-path.patch
+# TODO: joblib is not enabled on openRuyi
 0003-reduce-requirements.patch
 0004-ignore-asm-cap-cache.patch
+# no bundled clang is used on openRuyi
 0005-no-amdclang-when-rocm-llvm-is-unbundled.patch
+# /opt is not used on openRuyi packaging
 0006-use-system-path-instead-of-default.patch
 
 %description
