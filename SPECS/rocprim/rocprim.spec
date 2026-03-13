@@ -19,13 +19,12 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_TEST=OFF
-BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
-BuildOption(conf):  -DCMAKE_BUILD_TYPE=%build_type
-BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++
-BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
+BuildOption(conf):  -DCMAKE_AR=%{rocmllvm_bindir}/llvm-ar
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_LINKER=%{rocmllvm_bindir}/ld.lld
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
-BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
+BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
@@ -50,8 +49,6 @@ for developing performant GPU-accelerated code on AMD ROCm platform.
 
 %package        devel
 Summary:        ROCm parallel primatives
-Provides:       %{name}-static = %{version}-%{release}
-# the devel subpackage is only headers and cmake infra
 BuildArch:      noarch
 
 %description    devel
