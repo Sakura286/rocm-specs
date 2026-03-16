@@ -99,7 +99,7 @@ rm -rf llama/llama.cpp/vendor
 
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
-# Building order is not important.
+# Building order of go/cmake is not important.
 %build -a
 %cmake \
     -G Ninja \
@@ -116,13 +116,12 @@ rm -rf llama/llama.cpp/vendor
 %cmake_install
 rm -rvf %{buildroot}%{_bindir}/lib*.so
 
-
 %files
 %license LICENSE*
 %doc README*
 %{_bindir}/%{_name}
-%dir %{_exec_prefix}/lib/ollama
-%{_exec_prefix}/lib/ollama/*
+%dir %{_libdir}/ollama
+%{_libdir}/ollama/*
 
 %changelog
 %{?autochangelog}
