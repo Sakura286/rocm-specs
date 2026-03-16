@@ -28,6 +28,7 @@ BuildOption(prep):  -n %{_name}-%{version}
 
 Patch0:         0001-ollama-0.14.2_add-riscv.patch
 Patch1:         0002-go-riscv64.patch
+Patch2:         0003-disable-httpmuxgo121-on-newer-version-of-go.patch
 
 BuildRequires:  cmake
 BuildRequires:  fdupes
@@ -97,15 +98,15 @@ rm -rf llama/llama.cpp/vendor
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order is not important.
 %build -a
-cmake \
-    -B build \
-%if %{with rocm}
-    -DCMAKE_HIP_COMPILER=%rocmllvm_bindir/clang++ \
-    -DAMDGPU_TARGETS=%{rocm_gpu_list_default} \
-%endif
+%cmake \
     -G Ninja \
-    -W no-dev
-cmake --build build --parallel
+    -W no-dev \
+%if %{with rocm}
+    -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
+    -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+%endif
+
+%cmake_build
 
 %install
 %buildsystem_golang_install
