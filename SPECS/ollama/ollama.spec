@@ -28,6 +28,7 @@ BuildOption(prep):  -n %{_name}-%{version}
 
 Patch0:         0001-ollama-0.14.2_add-riscv.patch
 Patch1:         0002-go-riscv64.patch
+# https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 Patch2:         0003-disable-httpmuxgo121-on-newer-version-of-go.patch
 
 BuildRequires:  cmake
