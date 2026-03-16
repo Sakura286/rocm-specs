@@ -26,11 +26,6 @@ BuildSystem:    golang
 
 BuildOption(prep):  -n %{_name}-%{version}
 
-Patch0:         0001-ollama-0.14.2_add-riscv.patch
-Patch1:         0002-go-riscv64.patch
-# https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
-Patch2:         0003-disable-httpmuxgo121-on-newer-version-of-go.patch
-
 BuildRequires:  cmake
 BuildRequires:  fdupes
 BuildRequires:  gcc-c++
@@ -86,6 +81,13 @@ Requires:       hipblas
 Requires:       rocblas
 %endif
 
+%patchlist
+0001-ollama-0.14.2_add-riscv.patch
+0002-go-riscv64.patch
+# https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
+0003-disable-httpmuxgo121-on-newer-version-of-go.patch
+0004-use-lib64-instead-of-lib.patch
+
 %description
 Ollama is an open-source platform designed to run large language models locally.
 It allows users to generate text, assist with coding, and create content privately
@@ -112,6 +114,8 @@ rm -rf llama/llama.cpp/vendor
 %install
 %buildsystem_golang_install
 %cmake_install
+rm -rvf %{buildroot}%{_bindir}/lib*.so
+
 
 %files
 %license LICENSE*
