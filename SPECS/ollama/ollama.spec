@@ -11,8 +11,8 @@
 
 # Ollama bundles some ggml libs
 # They should be kept private and the scans of these files should be disabled
-%global __provides_exclude_from ^%{_exec_prefix}/lib/ollama/.*\\.so(\\..*)?$
-%global __requires_exclude ^libggml-base\\.so\\.0\\(\\).*
+%global __provides_exclude ^libggml-.*\\.so(\\..*)?$
+%global __requires_exclude ^libggml-.*\\.so(\\..*)?$
 
 Name:           ollama
 Version:        0.13.5
@@ -114,7 +114,17 @@ rm -rf llama/llama.cpp/vendor
 %install
 %buildsystem_golang_install
 %cmake_install
-rm -rvf %{buildroot}%{_bindir}/lib*.so
+# Remove bundled contents
+rm -rvf %{buildroot}%{_bindir}/lib* \
+    %{buildroot}%{_libdir}/libamd*  \
+    %{buildroot}%{_libdir}/libdrm*  \
+    %{buildroot}%{_libdir}/libelf*  \
+    %{buildroot}%{_libdir}/libhip*  \
+    %{buildroot}%{_libdir}/libhsa*  \
+    %{buildroot}%{_libdir}/libnuma* \
+    %{buildroot}%{_libdir}/libroc*  \
+    %{buildroot}%{_libdir}/libroc*  \
+    %{buildroot}%{_libdir}/rocblas/
 
 %files
 %license LICENSE*
