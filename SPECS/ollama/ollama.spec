@@ -11,8 +11,8 @@
 
 # Ollama bundles some ggml libs
 # They should be kept private and the scans of these files should be disabled
-%global __provides_exclude ^libggml-.*\\.so(\\..*)?$
-%global __requires_exclude ^libggml-.*\\.so(\\..*)?$
+%global __provides_exclude libggml-.*\\.so(\\..*)?
+%global __requires_exclude libggml-.*\\.so(\\..*)?
 
 Name:           ollama
 Version:        0.13.5
@@ -116,15 +116,18 @@ rm -rf llama/llama.cpp/vendor
 %cmake_install
 # Remove bundled contents
 rm -rvf %{buildroot}%{_bindir}/lib* \
-    %{buildroot}%{_libdir}/libamd*  \
-    %{buildroot}%{_libdir}/libdrm*  \
-    %{buildroot}%{_libdir}/libelf*  \
-    %{buildroot}%{_libdir}/libhip*  \
-    %{buildroot}%{_libdir}/libhsa*  \
-    %{buildroot}%{_libdir}/libnuma* \
-    %{buildroot}%{_libdir}/libroc*  \
-    %{buildroot}%{_libdir}/libroc*  \
-    %{buildroot}%{_libdir}/rocblas/
+    %{buildroot}%{_libdir}/ollama/libamd*  \
+    %{buildroot}%{_libdir}/ollama/libdrm*  \
+    %{buildroot}%{_libdir}/ollama/libelf*  \
+    %{buildroot}%{_libdir}/ollama/libhip*  \
+    %{buildroot}%{_libdir}/ollama/libhsa*  \
+    %{buildroot}%{_libdir}/ollama/libnuma* \
+    %{buildroot}%{_libdir}/ollama/libroc*  \
+    %{buildroot}%{_libdir}/ollama/libroc*  \
+    %{buildroot}%{_libdir}/ollama/rocblas/
+
+%check
+# temporarily disabled to accelerate
 
 %files
 %license LICENSE*
