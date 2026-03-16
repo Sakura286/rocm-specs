@@ -60,9 +60,12 @@ BuildRequires:  ninja
 
 %if %{with rocm}
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(Clang)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(LLD)
+BuildRequires:  cmake(LLVM)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocsolver)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
@@ -70,12 +73,9 @@ BuildRequires:  pkgconfig(libelf)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
-BuildRequires:  clang-devel
 BuildRequires:  clang-tools-extra-devel
 BuildRequires:  compiler-rt
 BuildRequires:  hipcc
-BuildRequires:  lld-devel
-BuildRequires:  llvm-devel
 
 Requires:       hipblas
 Requires:       rocblas
