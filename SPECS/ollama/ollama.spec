@@ -104,6 +104,7 @@ rm -rf llama/llama.cpp/vendor
 # Building order of go/cmake is not important.
 %build -a
 cmake \
+    -B build \
     -G Ninja \
     -W no-dev \
 %if %{with rocm}
@@ -114,7 +115,7 @@ cmake --build build --parallel
 
 %install
 %buildsystem_golang_install
-%cmake_install
+cmake --install build
 # Remove bundled contents
 rm -rvf %{buildroot}%{_bindir}/lib*
     # %{buildroot}%{_libdir}/ollama/libamd*  \
