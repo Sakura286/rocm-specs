@@ -101,8 +101,8 @@ rm -rf llama/llama.cpp/vendor
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
 %build -p
-%cmake \
-    -B Build
+cmake \
+    -B build \
     -G Ninja \
     -W no-dev \
 %if %{with rocm}
