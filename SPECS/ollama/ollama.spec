@@ -86,7 +86,7 @@ Requires:       rocblas
 0002-go-riscv64.patch
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 0003-disable-httpmuxgo121-on-newer-version-of-go.patch
-# 0004-use-lib64-instead-of-lib.patch
+0004-use-lib64-instead-of-lib.patch
 # GGML_CPU_ALL_VARIANTS only supports x86_64
 # 0005-disable-cpu-variants.patch
 
@@ -119,15 +119,15 @@ cmake --build build --parallel
 cmake --install build
 # Remove bundled contents
 rm -rvf %{buildroot}%{_bindir}/lib* \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libamd*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libdrm*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libelf*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libhip*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libhsa*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libnuma* \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libroc*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/libroc*  \
-    %{buildroot}%{_exec_prefix}/lib/ollama/rocblas/
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libamd*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libdrm*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libelf*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libhip*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libhsa*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libnuma* \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libroc*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/libroc*  \
+    %{buildroot}%{_exec_prefix}/lib64/ollama/rocblas/
 
 %check
 # temporarily disabled to accelerate build
@@ -136,8 +136,8 @@ rm -rvf %{buildroot}%{_bindir}/lib* \
 %license LICENSE*
 %doc README*
 %{_bindir}/%{_name}
-%dir %{_exec_prefix}/lib/ollama
-%{_exec_prefix}/lib/ollama/*
+%dir %{_exec_prefix}/lib64/ollama
+%{_exec_prefix}/lib64/ollama/*
 
 %changelog
 %{?autochangelog}
