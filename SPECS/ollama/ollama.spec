@@ -11,7 +11,7 @@
 
 # Ollama bundles some ggml libs
 # They should be kept private and the scans of these files should be disabled
-%global __provides_exclude libggml-.*\\.so(\\..*)?
+%global __provides_exclude lib.*\\.so(\\..*)?
 %global __requires_exclude libggml-.*\\.so(\\..*)?
 
 Name:           ollama
@@ -120,16 +120,16 @@ rm -rf llama/llama.cpp/vendor
 %buildsystem_golang_install
 %cmake_install
 # Remove bundled contents
-rm -rvf %{buildroot}%{_bindir}/lib* \
-    %{buildroot}%{_libdir}/ollama/libamd*  \
-    %{buildroot}%{_libdir}/ollama/libdrm*  \
-    %{buildroot}%{_libdir}/ollama/libelf*  \
-    %{buildroot}%{_libdir}/ollama/libhip*  \
-    %{buildroot}%{_libdir}/ollama/libhsa*  \
-    %{buildroot}%{_libdir}/ollama/libnuma* \
-    %{buildroot}%{_libdir}/ollama/libroc*  \
-    %{buildroot}%{_libdir}/ollama/libroc*  \
-    %{buildroot}%{_libdir}/ollama/rocblas/
+rm -rvf %{buildroot}%{_bindir}/lib*
+    # %{buildroot}%{_libdir}/ollama/libamd*  \
+    # %{buildroot}%{_libdir}/ollama/libdrm*  \
+    # %{buildroot}%{_libdir}/ollama/libelf*  \
+    # %{buildroot}%{_libdir}/ollama/libhip*  \
+    # %{buildroot}%{_libdir}/ollama/libhsa*  \
+    # %{buildroot}%{_libdir}/ollama/libnuma* \
+    # %{buildroot}%{_libdir}/ollama/libroc*  \
+    # %{buildroot}%{_libdir}/ollama/libroc*  \
+    # %{buildroot}%{_libdir}/ollama/rocblas/
 
 %check
 # temporarily disabled to accelerate build
