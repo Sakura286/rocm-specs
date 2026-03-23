@@ -87,6 +87,7 @@ Requires:       rocblas
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 0003-disable-httpmuxgo121-on-newer-version-of-go.patch
 0004-use-lib64-instead-of-lib.patch
+test.diff
 
 %description
 Ollama is an open-source platform designed to run large language models locally.
@@ -101,16 +102,16 @@ rm -rf llama/llama.cpp/vendor
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
 %build -p
-cmake \
-    -B build \
+%cmake \
     -G Ninja \
     -W no-dev \
+    -DGGML_RV_ZFH=ON \
+    -DGGML_RV_ZVFH=ON \
 %if %{with rocm}
     -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
     -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %endif
-
-cmake --build build --parallel
+%cmake_build
 
 %install
 %buildsystem_golang_install
