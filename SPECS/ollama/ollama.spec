@@ -136,8 +136,8 @@ rm -rvf %{buildroot}%{_bindir}/lib* \
 %license LICENSE*
 %doc README*
 %{_bindir}/%{_name}
-%dir %{_libdir}/ollama
-%{_libdir}/ollama/*
+%dir %{_exec_prefix}/lib/ollama
+%{_exec_prefix}/lib/ollama/*
 
 %changelog
 %{?autochangelog}
