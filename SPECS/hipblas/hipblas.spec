@@ -7,8 +7,6 @@
 
 %global rocm_version 7.1.1
 
-%bcond test 0
-
 Name:           hipblas
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -48,22 +46,13 @@ application. hipBLAS exports an interface that does not require
 the client to change, regardless of the chosen backend. Currently,
 hipBLAS supports rocBLAS and cuBLAS as backends.
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(hipblas-common)
 
-%description devel
+%description    devel
 %{summary}
-
-%if %{with test}
-%package test
-Summary:        Tests for %{name}
-Requires:       %{name}%{?_isa} = %{version}-%{release}
-
-%description test
-%{summary}
-%endif
 
 %prep -a
 # This is a tarball, no .git to query
@@ -81,11 +70,6 @@ rm -f %{buildroot}%{_prefix}/share/doc/hipblas/LICENSE.md
 %{_includedir}/hipblas/
 %{_libdir}/libhipblas.so
 %{_libdir}/cmake/hipblas/
-
-%if %{with test}
-%files test
-%{_bindir}/hipblas*
-%endif
 
 %changelog
 %{?autochangelog}
