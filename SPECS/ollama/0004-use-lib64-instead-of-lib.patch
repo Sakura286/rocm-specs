@@ -1,12 +1,14 @@
-From df2351ea1c9844383def149e72d9745a91c83b3f Mon Sep 17 00:00:00 2001
+From eb50883178cae3a721ca8658dde6988ee22c8918 Mon Sep 17 00:00:00 2001
 From: Sakura286 <chenxuan@iscas.ac.cn>
 Date: Mon, 16 Mar 2026 15:45:18 +0800
 Subject: [PATCH] use lib64 instead of lib
 
 ---
- CMakeLists.txt | 4 ++--
- ml/path.go     | 2 +-
- 2 files changed, 3 insertions(+), 3 deletions(-)
+ CMakeLists.txt                   | 4 ++--
+ discover/types.go                | 2 +-
+ ml/backend/ggml/ggml/src/ggml.go | 2 +-
+ ml/path.go                       | 2 +-
+ 4 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 1aa976a..4bd9250 100644
@@ -23,6 +25,32 @@ index 1aa976a..4bd9250 100644
  
  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY         ${OLLAMA_BUILD_DIR})
  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${OLLAMA_BUILD_DIR})
+diff --git a/discover/types.go b/discover/types.go
+index efc69ec..5848ea4 100644
+--- a/discover/types.go
++++ b/discover/types.go
+@@ -31,7 +31,7 @@ func LogDetails(devices []ml.DeviceInfo) {
+ 	for _, dev := range devices {
+ 		var libs []string
+ 		for _, dir := range dev.LibraryPath {
+-			if strings.Contains(dir, filepath.Join("lib", "ollama")) {
++			if strings.Contains(dir, filepath.Join("lib64", "ollama")) {
+ 				libs = append(libs, filepath.Base(dir))
+ 			}
+ 		}
+diff --git a/ml/backend/ggml/ggml/src/ggml.go b/ml/backend/ggml/ggml/src/ggml.go
+index 7e21591..23f58a1 100644
+--- a/ml/backend/ggml/ggml/src/ggml.go
++++ b/ml/backend/ggml/ggml/src/ggml.go
+@@ -65,7 +65,7 @@ var OnceLoad = sync.OnceFunc(func() {
+ 	case "windows":
+ 		value = filepath.Join(filepath.Dir(exe), "lib", "ollama")
+ 	default:
+-		value = filepath.Join(filepath.Dir(exe), "..", "lib", "ollama")
++		value = filepath.Join(filepath.Dir(exe), "..", "lib64", "ollama")
+ 	}
+ 
+ 	// Avoid potentially loading incompatible GGML libraries
 diff --git a/ml/path.go b/ml/path.go
 index ac93af4..3af726c 100644
 --- a/ml/path.go
