@@ -119,15 +119,15 @@ cmake --build build --parallel
 cmake --install build
 # Remove bundled contents
 rm -rvf %{buildroot}%{_bindir}/lib* \
-    %{buildroot}%{_libdir}/ollama/libamd*  \
-    %{buildroot}%{_libdir}/ollama/libdrm*  \
-    %{buildroot}%{_libdir}/ollama/libelf*  \
-    %{buildroot}%{_libdir}/ollama/libhip*  \
-    %{buildroot}%{_libdir}/ollama/libhsa*  \
-    %{buildroot}%{_libdir}/ollama/libnuma* \
-    %{buildroot}%{_libdir}/ollama/libroc*  \
-    %{buildroot}%{_libdir}/ollama/libroc*  \
-    %{buildroot}%{_libdir}/ollama/rocblas/
+    %{_exec_prefix}/lib/ollama/libamd*  \
+    %{_exec_prefix}/lib/ollama/libdrm*  \
+    %{_exec_prefix}/lib/ollama/libelf*  \
+    %{_exec_prefix}/lib/ollama/libhip*  \
+    %{_exec_prefix}/lib/ollama/libhsa*  \
+    %{_exec_prefix}/lib/ollama/libnuma* \
+    %{_exec_prefix}/lib/ollama/libroc*  \
+    %{_exec_prefix}/lib/ollama/libroc*  \
+    %{_exec_prefix}/lib/ollama/rocblas/
 
 %check
 # temporarily disabled to accelerate build
