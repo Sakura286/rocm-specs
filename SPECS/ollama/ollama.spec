@@ -109,24 +109,25 @@ cmake \
     -W no-dev \
 %if %{with rocm}
     -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
-    -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+    -DAMDGPU_TARGETS=%{rocm_gpu_list_default} \
 %endif
+    -DCMAKE_INSTALL_PREFIX=%{buildroot}/usr
 cmake --build build --parallel
 
 %install
 %buildsystem_golang_install
 cmake --install build
 # Remove bundled contents
-rm -rvf %{buildroot}%{_bindir}/lib*
-    # %{buildroot}%{_libdir}/ollama/libamd*  \
-    # %{buildroot}%{_libdir}/ollama/libdrm*  \
-    # %{buildroot}%{_libdir}/ollama/libelf*  \
-    # %{buildroot}%{_libdir}/ollama/libhip*  \
-    # %{buildroot}%{_libdir}/ollama/libhsa*  \
-    # %{buildroot}%{_libdir}/ollama/libnuma* \
-    # %{buildroot}%{_libdir}/ollama/libroc*  \
-    # %{buildroot}%{_libdir}/ollama/libroc*  \
-    # %{buildroot}%{_libdir}/ollama/rocblas/
+rm -rvf %{buildroot}%{_bindir}/lib* \
+    %{buildroot}%{_libdir}/ollama/libamd*  \
+    %{buildroot}%{_libdir}/ollama/libdrm*  \
+    %{buildroot}%{_libdir}/ollama/libelf*  \
+    %{buildroot}%{_libdir}/ollama/libhip*  \
+    %{buildroot}%{_libdir}/ollama/libhsa*  \
+    %{buildroot}%{_libdir}/ollama/libnuma* \
+    %{buildroot}%{_libdir}/ollama/libroc*  \
+    %{buildroot}%{_libdir}/ollama/libroc*  \
+    %{buildroot}%{_libdir}/ollama/rocblas/
 
 %check
 # temporarily disabled to accelerate build
