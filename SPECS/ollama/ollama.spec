@@ -100,8 +100,9 @@ rm -rf llama/llama.cpp/vendor
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
-%build -a
+%build -p
 %cmake \
+    -B Build
     -G Ninja \
     -W no-dev \
 %if %{with rocm}
@@ -109,7 +110,7 @@ rm -rf llama/llama.cpp/vendor
     -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %endif
 
-%cmake_build
+cmake --build build --parallel
 
 %install
 %buildsystem_golang_install
