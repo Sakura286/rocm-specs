@@ -58,7 +58,7 @@ Requires:       cmake(hipblas-common)
 # This is a tarball, no .git to query
 sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' library/CMakeLists.txt
 
-%build -a
+%install -a
 rm -f %{buildroot}%{_prefix}/share/doc/hipblas/LICENSE.md
 
 %files
