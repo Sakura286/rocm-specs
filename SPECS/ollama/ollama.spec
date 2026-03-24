@@ -101,6 +101,8 @@ Requires:       rocblas
 # 0004-use-lib64-instead-of-lib.patch
 # GGML_CPU_ALL_VARIANTS only supports x86_64
 0005-disable-cpu-variants.patch
+# Llama.cpp(ggml) on riscv64's ROCm frequently produce nonsense
+# Give parameter '-b 8 -ub 8' can prevent this situation
 0006-limit-batch-size-to-stablize.patch
 
 %description
