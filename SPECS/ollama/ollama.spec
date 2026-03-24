@@ -106,12 +106,15 @@ rm -rf llama/llama.cpp/vendor
 # Building order of go/cmake is not important.
 %build -a
 %cmake \
-    -B build \
     -G Ninja \
     -W no-dev \
+    -DCMAKE_INSTALL_LIBDIR:PATH=lib \
+    -DCMAKE_INSTALL_FULL_LIBDIR:PATH=/usr/lib \
+    -DLIB_INSTALL_DIR:PATH=/usr/lib \
+    -DLIB_SUFFIX= \
 %if %{with rocm}
     -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
-    -DAMDGPU_TARGETS=%{rocm_gpu_list_default} \
+    -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %endif
 %cmake_build
 
