@@ -91,6 +91,7 @@ Requires:       rocblas
 # 0004-use-lib64-instead-of-lib.patch
 # GGML_CPU_ALL_VARIANTS only supports x86_64
 0005-disable-cpu-variants.patch
+0006-limit-batch-size-to-stablize.patch
 
 %description
 Ollama is an open-source platform designed to run large language models locally.
