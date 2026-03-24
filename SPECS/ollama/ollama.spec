@@ -89,7 +89,10 @@ Requires:       rocblas
 %endif
 
 %patchlist
+# Ollama vendors ggml code, but it does not sync riscv64 code by default
+# Manually sync riscv64 code here
 0001-ollama-0.14.2_add-riscv.patch
+# Ollama put ggml-cpu code(cpp) inside 'ollama' binary file(go)
 0002-go-riscv64.patch
 # Golang buildsystem on openRuyi use GO11MODULE=off, makes
 # httpmuxgo121=1, which is deprecated in newer version of go
@@ -102,8 +105,8 @@ Requires:       rocblas
 # GGML_CPU_ALL_VARIANTS only supports x86_64
 0005-disable-cpu-variants.patch
 # Llama.cpp(ggml) on riscv64's ROCm frequently produce nonsense
-# Give parameter '-b 8 -ub 8' can prevent this situation
-0006-limit-batch-size-to-stablize.patch
+# Give parameter '-b 8 -ub 8' can stabilize it
+0006-limit-batch-size-to-stabilize.patch
 
 %description
 Ollama is an open-source platform designed to run large language models locally.
@@ -150,9 +153,6 @@ install -p -D -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/ollama.service
 install -p -D -m 0644 %{SOURCE2} %{buildroot}%{_sysusersdir}/ollama.conf
 # home dir
 mkdir -p %{buildroot}%{_var}/lib/ollama
-
-%check
-# temporarily disabled to accelerate build
 
 %pre
 %sysusers_create_package ollama %{SOURCE2}
