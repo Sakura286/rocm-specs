@@ -152,7 +152,7 @@ mkdir -p %{buildroot}%{_var}/lib/ollama
 # temporarily disabled to accelerate build
 
 %pre
-%sysusers_create_compat %{SOURCE2}
+%sysusers_create_package ollama %{SOURCE2}
 
 %preun
 %systemd_preun ollama.service
