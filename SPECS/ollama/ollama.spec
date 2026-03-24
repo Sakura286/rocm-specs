@@ -86,9 +86,11 @@ Requires:       rocblas
 0002-go-riscv64.patch
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 0003-disable-httpmuxgo121-on-newer-version-of-go.patch
-0004-use-lib64-instead-of-lib.patch
+# This patch breaks dlopen of ollama, temporarily disable it
+# Install ollama to /usr/lib as workaround
+# 0004-use-lib64-instead-of-lib.patch
 # GGML_CPU_ALL_VARIANTS only supports x86_64
-# 0005-disable-cpu-variants.patch
+0005-disable-cpu-variants.patch
 
 %description
 Ollama is an open-source platform designed to run large language models locally.
@@ -103,7 +105,7 @@ rm -rf llama/llama.cpp/vendor
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
 %build -a
-cmake \
+%cmake \
     -B build \
     -G Ninja \
     -W no-dev \
@@ -111,23 +113,22 @@ cmake \
     -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
     -DAMDGPU_TARGETS=%{rocm_gpu_list_default} \
 %endif
-    -DCMAKE_INSTALL_PREFIX=%{buildroot}/usr
-cmake --build build --parallel
+%cmake_build
 
 %install
 %buildsystem_golang_install
-cmake --install build
+%cmake_install
 # Remove bundled contents
 rm -rvf %{buildroot}%{_bindir}/lib* \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libamd*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libdrm*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libelf*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libhip*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libhsa*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libnuma* \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libroc*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/libroc*  \
-    %{buildroot}%{_exec_prefix}/lib64/ollama/rocblas/
+    %{buildroot}%{_exec_prefix}/lib/ollama/libamd*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libdrm*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libelf*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libhip*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libhsa*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libnuma* \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libroc*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/libroc*  \
+    %{buildroot}%{_exec_prefix}/lib/ollama/rocblas/
 
 %check
 # temporarily disabled to accelerate build
@@ -136,8 +137,8 @@ rm -rvf %{buildroot}%{_bindir}/lib* \
 %license LICENSE*
 %doc README*
 %{_bindir}/%{_name}
-%dir %{_exec_prefix}/lib64/ollama
-%{_exec_prefix}/lib64/ollama/*
+%dir %{_exec_prefix}/lib/ollama
+%{_exec_prefix}/lib/ollama/*
 
 %changelog
 %{?autochangelog}
