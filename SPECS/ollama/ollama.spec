@@ -19,9 +19,10 @@ Version:        0.13.5
 Release:        %autorelease
 Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models.
 License:        Apache-2.0 AND MIT
-URL:            https://github.com/ollama/ollama
+URL:            https://ollama.com/
+VCS:            git:https://github.com/ollama/ollama
 #!RemoteAsset
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/ollama/ollama/archive/refs/tags/v%{version}.tar.gz
 BuildSystem:    golang
 
 BuildOption(prep):  -n %{_name}-%{version}
@@ -84,6 +85,9 @@ Requires:       rocblas
 %patchlist
 0001-ollama-0.14.2_add-riscv.patch
 0002-go-riscv64.patch
+# Golang buildsystem on openRuyi use GO11MODULE=off, makes
+# httpmuxgo121=1, which is deprecated in newer version of go
+# Without this patch, ollama cannot provide even the basic http functions
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 0003-disable-httpmuxgo121-on-newer-version-of-go.patch
 # This patch breaks dlopen of ollama, temporarily disable it
