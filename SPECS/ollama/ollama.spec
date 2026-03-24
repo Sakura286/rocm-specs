@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
 # SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
 # SPDX-FileContributor: misaka00251 <liuxin@iscas.ac.cn>
+# SPDX-FileContributor: Sakura286 <chenxuan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
@@ -18,7 +19,7 @@ Name:           ollama
 Version:        0.13.5
 Release:        %autorelease
 Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models.
-License:        Apache-2.0 AND MIT
+License:        MIT
 URL:            https://ollama.com/
 VCS:            git:https://github.com/ollama/ollama
 #!RemoteAsset
