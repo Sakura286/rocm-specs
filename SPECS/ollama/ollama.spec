@@ -23,6 +23,8 @@ URL:            https://ollama.com/
 VCS:            git:https://github.com/ollama/ollama
 #!RemoteAsset
 Source0:        https://github.com/ollama/ollama/archive/refs/tags/v%{version}.tar.gz
+Source1:        ollama.service
+Source2:        ollama.sysusers
 BuildSystem:    golang
 
 BuildOption(prep):  -n %{_name}-%{version}
@@ -58,7 +60,7 @@ BuildRequires:  go(golang.org/x/tools)
 BuildRequires:  go(gonum.org/v1/gonum)
 BuildRequires:  go(google.golang.org/protobuf)
 BuildRequires:  ninja
-
+BuildRequires:  systemd-rpm-macros
 %if %{with rocm}
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(Clang)
@@ -77,7 +79,10 @@ BuildRequires:  rocminfo
 BuildRequires:  clang-tools-extra-devel
 BuildRequires:  compiler-rt
 BuildRequires:  hipcc
+%endif
 
+%{?systemd_requires}
+%if %{with rocm}
 Requires:       hipblas
 Requires:       rocblas
 %endif
@@ -138,15 +143,32 @@ rm -rvf %{buildroot}%{_bindir}/lib* \
     %{buildroot}%{_exec_prefix}/lib/ollama/libroc*  \
     %{buildroot}%{_exec_prefix}/lib/ollama/rocblas/
 
+install -p -D -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/ollama.service
+install -p -D -m 0644 %{SOURCE2} %{buildroot}%{_sysusersdir}/ollama.conf
+# home dir
+mkdir -p %{buildroot}%{_var}/lib/ollama
+
 %check
 # temporarily disabled to accelerate build
+
+%preun
+%systemd_preun ollama.service
+
+%post
+%systemd_post ollama.service
+
+%postun
+%systemd_postun_with_restart ollama.service
 
 %files
 %license LICENSE*
 %doc README*
-%{_bindir}/%{_name}
 %dir %{_exec_prefix}/lib/ollama
+%attr(0755,ollama,ollama) %dir %{_var}/lib/ollama/
+%{_bindir}/ollama
 %{_exec_prefix}/lib/ollama/*
+%{_unitdir}/ollama.service
+%{_sysusersdir}/ollama.conf
 
 %changelog
 %{?autochangelog}
