@@ -106,6 +106,8 @@ Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{k
 Source8:       https://github.com/onnx/onnx/archive/refs/tags/v%{onnx_ver}.tar.gz
 %endif
 
+Patch0:         0001-python-torch-check-if-tuning_cache-exists.patch
+
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
 # Although eigen3 enabled on openruyi, it cannot be detected during conf

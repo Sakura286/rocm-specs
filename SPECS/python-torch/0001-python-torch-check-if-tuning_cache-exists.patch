@@ -1,0 +1,40 @@
+From 4a58e5ebe5263d5dd5e5c44f28bce0ce256438f9 Mon Sep 17 00:00:00 2001
+From: Tom Rix <Tom.Rix@amd.com>
+Date: Tue, 17 Feb 2026 08:11:25 -0800
+Subject: [PATCH] python-torch check if tuning_cache exists
+
+---
+ tools/amd_build/build_amd.py | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/tools/amd_build/build_amd.py b/tools/amd_build/build_amd.py
+index b2c2461a0888..2570730ce498 100755
+--- a/tools/amd_build/build_amd.py
++++ b/tools/amd_build/build_amd.py
+@@ -225,9 +225,9 @@ fbgemm_dir = (
+     / "third_party/fbgemm/fbgemm_gpu/experimental/gen_ai/src/quantize/common/include/fbgemm_gpu/quantize"
+ )
+ 
+-if not buck_build:
+-    fbgemm_original = fbgemm_dir / "tuning_cache.cuh"
++fbgemm_original = fbgemm_dir / "tuning_cache.cuh"
+ 
++if not buck_build and os.path.exists(fbgemm_original):
+     extra_files.append(fbgemm_original.as_posix())
+ 
+ hipify_python.hipify(
+@@ -240,8 +240,9 @@ hipify_python.hipify(
+     hip_clang_launch=is_hip_clang(),
+ )
+ 
+-if not buck_build:
+-    fbgemm_move_src = fbgemm_dir / "hip/tuning_cache.cuh"
++fbgemm_move_src = fbgemm_dir / "hip/tuning_cache.cuh"
++
++if not buck_build and os.path.exists(fbgemm_move_src):
+     fbgemm_move_dst = fbgemm_dir / "tuning_cache_hip.cuh"
+ 
+     # only update the file if it changes or doesn't exist
+-- 
+2.52.0
+
