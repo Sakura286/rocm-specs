@@ -19,9 +19,7 @@
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
 %bcond test 0
 
-%ifarch x86_64 riscv64
-%bcond rocm 0
-%endif
+%bcond rocm 1
 
 # For testing distributed+rccl etc.
 # TODO: openmpi not included in openRuyi
