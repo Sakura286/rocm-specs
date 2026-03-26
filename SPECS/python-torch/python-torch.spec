@@ -187,11 +187,10 @@ BuildRequires:  rccl-devel
 BuildRequires:  rocprim-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-comgr-devel
-BuildRequires:  rocm-compilersupport-macros
+BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocm-core-devel
 BuildRequires:  rocm-hip-devel
-BuildRequires:  rocm-runtime-devel
-BuildRequires:  rocm-rpm-macros
+BuildRequires:  rocr-runtime-devel
 BuildRequires:  rocsolver-devel
 BuildRequires:  rocm-smi-devel
 BuildRequires:  rocthrust-devel
