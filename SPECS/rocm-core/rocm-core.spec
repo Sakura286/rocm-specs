@@ -49,7 +49,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 find %{buildroot}
 rm -rvf %{buildroot}/%{_exec_prefix}/.info
 rm -rvf %{buildroot}/%{_libdir}/rocmmod
-rm -rvf %{buildroot}/%{pkg_prefix}/share/doc/*/LICENSE.md
+rm -rvf %{buildroot}/%{_exec_prefix}/share/doc/*/LICENSE.md
 rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
 
 %files
