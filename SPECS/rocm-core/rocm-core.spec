@@ -47,27 +47,19 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %install -a
 find %{buildroot}
-rm -rf %{buildroot}/%{pkg_prefix}/.info
-rm -rf %{buildroot}/%{pkg_prefix}/%{pkg_libdir}/rocmmod
-rm -rf %{buildroot}/%{pkg_prefix}/share/rdhc
-# Extra licenses
-# Fedora
-rm -f %{buildroot}/%{pkg_prefix}/share/doc/*/LICENSE.md
-# OpenSUSE
-rm -f %{buildroot}/%{pkg_prefix}/share/doc/*/*/LICENSE.md
+rm -rvf %{buildroot}/%{_exec_prefix}/.info
+rm -rvf %{buildroot}/%{_libdir}/rocmmod
+rm -rvf %{buildroot}/%{pkg_prefix}/share/doc/*/LICENSE.md
 
-# Use the system include path
-mv  %{buildroot}/%{pkg_prefix}/include/rocm-core/*.h %{buildroot}/%{pkg_prefix}/include/
-rm -rf %{buildroot}/%{pkg_prefix}/include/rocm-core
+mv  %{buildroot}/%{_exec_prefix}/include/rocm-core/*.h %{buildroot}/%{_exec_prefix}/include/
+rm -rvf %{buildroot}/%{_exec_prefix}/include/rocm-core
 
-find %{buildroot} -type f -name 'runpath_to_rpath.py' -exec rm {} \;
+rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
 
 %files
 %doc README.md
 %license LICENSE.md
 %{_libdir}/librocm-core.so.*
-%{_bindir}/rdhc
-%{_exec_prefix}/libexec/rocm-core/
 
 %files devel
 %{_includedir}/*.h
