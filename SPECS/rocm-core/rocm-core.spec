@@ -1,23 +1,10 @@
-%global upstreamname rocm-core
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: Sakura286 <chenxuan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
-
-%global rocm_version %{rocm_release}.%{rocm_patch}
-%global pkg_src rocm-%{rocm_version}
-
-%bcond_with compat
-%if %{with compat}
-%global pkg_libdir lib
-%global pkg_prefix %{_prefix}/lib64/rocm/rocm-%{rocm_release}/
-%global pkg_suffix %{rocm_release}
-%global pkg_module rocm%{pkg_suffix}
-%else
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}
-%global pkg_module default
-%endif
+%global rocm_version 7.1.1
 
 Name:           rocm-core
 Version:        %{rocm_version}
@@ -46,11 +33,10 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 
 %install -a
-find %{buildroot}
 rm -rvf %{buildroot}/%{_exec_prefix}/.info
-rm -rvf %{buildroot}/%{_libdir}/rocmmod
-rm -rvf %{buildroot}/%{_exec_prefix}/share/doc/*/LICENSE.md
 rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
+rm -rvf %{buildroot}/%{_exec_prefix}/share/doc/*/LICENSE.md
+rm -rvf %{buildroot}/%{_libdir}/rocmmod
 
 %files
 %doc README.md
