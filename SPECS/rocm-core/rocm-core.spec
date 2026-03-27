@@ -50,10 +50,6 @@ find %{buildroot}
 rm -rvf %{buildroot}/%{_exec_prefix}/.info
 rm -rvf %{buildroot}/%{_libdir}/rocmmod
 rm -rvf %{buildroot}/%{pkg_prefix}/share/doc/*/LICENSE.md
-
-mv  %{buildroot}/%{_exec_prefix}/include/rocm-core/*.h %{buildroot}/%{_exec_prefix}/include/
-rm -rvf %{buildroot}/%{_exec_prefix}/include/rocm-core
-
 rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
 
 %files
@@ -62,7 +58,7 @@ rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
 %{_libdir}/librocm-core.so.*
 
 %files devel
-%{_includedir}/*.h
+%{_includedir}/rocm-core/*.h
 %{_libdir}/librocm-core.so
 %{_libdir}/cmake/rocm-core/
 
