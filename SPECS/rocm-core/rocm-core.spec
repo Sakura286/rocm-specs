@@ -58,9 +58,11 @@ rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
 %{_libdir}/librocm-core.so.*
 
 %files devel
+%dir %{_includedir}/rocm-core
+%dir %{_libdir}/cmake/rocm-core
 %{_includedir}/rocm-core/*.h
+%{_libdir}/cmake/rocm-core/*.cmake
 %{_libdir}/librocm-core.so
-%{_libdir}/cmake/rocm-core/
 
 %changelog
 %{?autochangelog}
