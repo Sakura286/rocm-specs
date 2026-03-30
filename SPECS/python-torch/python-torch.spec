@@ -425,6 +425,10 @@ sed -i -e 's@cmake_minimum_required(VERSION 3.1)@cmake_minimum_required(VERSION 
 %endif
 
 %if %{with rocm}
+# Fix: hipOccupancyMaxActiveBlocksPerMultiprocessor is overloaded in new ROCm,
+# force using hipModuleOccupancyMaxActiveBlocksPerMultiprocessor
+sed -i -e 's/TORCH_HIP_VERSION < 305/TORCH_HIP_VERSION < 305 \&\& TORCH_HIP_VERSION > 0/' \
+    aten/src/ATen/cuda/nvrtc_stub/ATenNVRTC.h
 # hipify
 ./tools/amd_build/build_amd.py
 # installs to /usr/include
