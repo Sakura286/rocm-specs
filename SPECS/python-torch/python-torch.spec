@@ -25,8 +25,6 @@
 # TODO: openmpi not included in openRuyi
 %bcond mpi 0
 
-# TODO: no flang on openRuyi, so we cannot enable clang
-%global toolchain gcc
 %global _lto_cflags %nil
 
 # Disable dwz with rocm because memory can be exhausted
@@ -150,14 +148,10 @@ BuildRequires:  python3dist(typing-extensions)
 BuildRequires:  cpp-httplib-devel
 %endif
 
-%if "%{toolchain}" == "gcc"
 BuildRequires:  gcc-c++
 BuildRequires:  gcc-fortran
-%endif
-%if "%{toolchain}" == "clang"
 BuildRequires:  clang
-BuildRequires:  flang
-%endif
+BuildRequires:  clang-tools-extra
 
 %if %{with system_onnx}
 BuildRequires:  onnx-devel
