@@ -186,7 +186,7 @@ BuildRequires:  rocprim-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-comgr-devel
 BuildRequires:  rocm-llvm-macros
-BuildRequires:  rocm-core-devel
+BuildRequires:  cmake(rocm-core)
 BuildRequires:  rocm-hip-devel
 BuildRequires:  rocr-runtime-devel
 BuildRequires:  rocsolver-devel
@@ -427,13 +427,6 @@ sed -i -e 's/TORCH_HIP_VERSION < 305/TORCH_HIP_VERSION < 305 \&\& TORCH_HIP_VERS
     aten/src/ATen/cuda/nvrtc_stub/ATenNVRTC.h
 # hipify
 ./tools/amd_build/build_amd.py
-# installs to /usr/include
-sed -i -e 's@rocm-core/rocm_version.h@rocm_version.h@' aten/src/ATen/hip/tunable/TunableGemm.h
-# https://github.com/pytorch/pytorch/issues/149805
-sed -i -e 's@rocm-core/rocm_version.h@rocm_version.h@' cmake/public/LoadHIP.cmake
-# installs to /usr/include
-sed -i -e 's@rocm-core/rocm_version.h@rocm_version.h@' aten/src/ATen/hip/tunable/Tunable.cpp
-sed -i -e 's@rocm-core/rocm_version.h@rocm_version.h@' aten/src/ATen/cuda/tunable/Tunable.cpp
 # use any hip, correct CMAKE_MODULE_PATH
 sed -i -e 's@lib/cmake/hip@lib64/cmake/hip@' cmake/public/LoadHIP.cmake
 sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
