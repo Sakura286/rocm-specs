@@ -152,6 +152,8 @@ BuildRequires:  gcc-c++
 BuildRequires:  gcc-fortran
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
+BuildRequires:  llvm-devel
+BuildRequires:  lld
 
 %if %{with system_onnx}
 BuildRequires:  onnx-devel
@@ -538,6 +540,7 @@ export ROCM_PATH=`hipconfig -R`
 # pytorch uses clang, not hipcc
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
+export HIPCC_FLAGS="-O2"
 %endif
 
 %pyproject_wheel
