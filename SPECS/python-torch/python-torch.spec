@@ -270,8 +270,10 @@ cp -r onnx-*/* third_party/onnx/
 %endif
 
 # Adjust for amd gpu targets currently supported
-# sed -i -e 's@"gfx1100", "gfx1101", "gfx1200", "gfx1201", "gfx908",@"gfx1100", "gfx1101", "gfx1200", "gfx1201", "gfx1151",@' aten/src/ATen/native/cuda/Blas.cpp
-sed -i -e 's@"gfx1100", "gfx1101", "gfx1200", "gfx1201", "gfx908",@"gfx1100", "gfx1101",@' aten/src/ATen/native/cuda/Blas.cpp
+# only gfx1100 supported on openruyi
+sed -i -e 's@"gfx90a", "gfx942",@@' aten/src/ATen/native/cuda/Blas.cpp
+sed -i -e 's@"gfx1100", "gfx1101", "gfx1200", "gfx1201", "gfx908"@"gfx1100", "gfx1101",@' aten/src/ATen/native/cuda/Blas.cpp
+sed -i -e 's@"gfx950", "gfx1150", "gfx1151"@@' aten/src/ATen/native/cuda/Blas.cpp
 
 # Need to pip this
 sed -i -e '/fsspec/d' setup.py
