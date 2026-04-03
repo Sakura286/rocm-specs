@@ -533,7 +533,7 @@ export HIPCC_FLAGS="-O2"
 export CC=clang
 export CXX=clang++
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
-export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
+export CMAKE_LIBRARY_PATH=/usr/lib64
 %endif
 
 %pyproject_wheel
