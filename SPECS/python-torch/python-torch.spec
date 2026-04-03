@@ -538,6 +538,8 @@ export HIPCC_FLAGS="-O2"
 #export CMAKE_C_FLAGS="-isystem /usr/lib64/clang/21/include"
 #export CMAKE_CXX_FLAGS="-isystem /usr/lib64/clang/21/include"
 
+export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
+
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
