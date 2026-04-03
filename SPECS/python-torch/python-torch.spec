@@ -532,8 +532,12 @@ export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export HIPCC_FLAGS="-O2"
 
-export CC=clang
-export CXX=clang++
+# Fix: Clang cannot find its own resource headers when using GCC's libstdc++
+# This ensures #include_next <stdlib.h> in GCC's <cstdlib> can be resolved
+CLANG_RESOURCE_DIR=$(%{_bindir}/clang -print-resource-dir)
+export CFLAGS="-isystem ${CLANG_RESOURCE_DIR}/include %{optflags}"
+export CXXFLAGS="-isystem ${CLANG_RESOURCE_DIR}/include %{optflags} -D_GLIBCXX_ASSERTIONS"
+
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
