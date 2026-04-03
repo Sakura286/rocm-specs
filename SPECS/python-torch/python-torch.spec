@@ -148,8 +148,6 @@ BuildRequires:  python3dist(typing-extensions)
 BuildRequires:  cpp-httplib-devel
 %endif
 
-BuildRequires:  gcc-c++
-BuildRequires:  gcc-fortran
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  llvm-devel
