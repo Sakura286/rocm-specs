@@ -296,6 +296,8 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unus
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
 # Use parallel jobs
 # sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -parallel-jobs=8@' cmake/Dependencies.cmake
+# Avoid error: branch size exceeds simm16
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mlong-branches@' cmake/Dependencies.cmake
 # Need to link with librocm_smi64
 sed -i -e 's@hipzrtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
 
