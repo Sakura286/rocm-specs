@@ -9,6 +9,8 @@
 
 %global srcname torch
 
+%global toolchain clang
+
 %global pypi_version 2.10.0
 %global miniz_version 3.0.2
 
