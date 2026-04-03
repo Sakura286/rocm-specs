@@ -540,6 +540,9 @@ export HIPCC_FLAGS="-O2"
 
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
 
+export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
+export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
+
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
