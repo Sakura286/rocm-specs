@@ -360,10 +360,6 @@ mv third_party/kineto .
 mv third_party/onnx .
 %endif
 
-%if %{without system_protobuf}
-mv third_party/protobuf .
-%endif
-
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
@@ -392,10 +388,6 @@ mv kineto third_party
 
 %if %{without system_onnx}
 mv onnx third_party
-%endif
-
-%if %{without system_protobuf}
-mv protobuf third_party
 %endif
 
 # Fake out pocketfft, and system header will be used
