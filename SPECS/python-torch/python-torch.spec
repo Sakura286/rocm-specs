@@ -110,6 +110,7 @@ Patch0:         0001-python-torch-check-if-tuning_cache-exists.patch
 
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
+BuildRequires:  cpuinfo
 # Although eigen3 enabled on openruyi, it cannot be detected during conf
 # TODO: Fix this
 BuildRequires:  eigen3
@@ -117,7 +118,7 @@ BuildRequires:  foxi-devel
 BuildRequires:  libomp-devel
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fmt)
-BuildRequires:  pkgconfig(libcpuinfo)
+#BuildRequires:  pkgconfig(libcpuinfo)
 BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(openblas64)
