@@ -153,6 +153,8 @@ BuildRequires:  cpp-httplib-devel
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
+BuildRequires:  libstdc++-devel
+BuildRequires:  compiler-rt
 BuildRequires:  llvm-devel
 BuildRequires:  lld
 
