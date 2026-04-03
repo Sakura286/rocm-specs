@@ -532,11 +532,11 @@ export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export HIPCC_FLAGS="-O2"
 
-%global build_cflags -isystem %{_libdir}/clang/21/include %{build_cflags}
-%global build_cxxflags -isystem %{_libdir}/clang/21/include %{build_cxxflags}
+#%%global build_cflags -isystem %{_libdir}/clang/21/include %{build_cflags}
+#%%global build_cxxflags -isystem %{_libdir}/clang/21/include %{build_cxxflags}
 
-export CMAKE_C_FLAGS="-isystem /usr/lib64/clang/21/include"
-export CMAKE_CXX_FLAGS="-isystem /usr/lib64/clang/21/include"
+#export CMAKE_C_FLAGS="-isystem /usr/lib64/clang/21/include"
+#export CMAKE_CXX_FLAGS="-isystem /usr/lib64/clang/21/include"
 
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
