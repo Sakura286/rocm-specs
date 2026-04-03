@@ -47,7 +47,7 @@
 # TODO: kineto not included in openruyi
 %bcond system_kineto 0
 # TODO: on openRuyi, onnx lack of check_model symbol
-%bcond system_onnx 0
+%bcond system_onnx 1
 # TODO: opentelemetry not included in openRuyi
 %bcond system_opentelemetry 0
 # TODO: tensorpipe not included in openRuyi
