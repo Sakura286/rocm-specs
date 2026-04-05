@@ -532,7 +532,6 @@ export ROCM_PATH=`hipconfig -R`
 # pytorch uses clang, not hipcc
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
-export HIPCC_FLAGS="-O2"
 
 #%%global build_cflags -isystem %{_libdir}/clang/21/include %{build_cflags}
 #%%global build_cxxflags -isystem %{_libdir}/clang/21/include %{build_cxxflags}
@@ -548,6 +547,9 @@ export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
+
+export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
+export CMAKE_ARGS="-DHIP_HIPCC_FLAGS_RELWITHDEBINFO=-O1"
 %endif
 
 %pyproject_wheel
