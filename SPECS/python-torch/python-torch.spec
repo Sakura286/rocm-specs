@@ -548,8 +548,11 @@ export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
 
-export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
-export CMAKE_ARGS="-DHIP_HIPCC_FLAGS_RELWITHDEBINFO=-O1"
+# useless
+#export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
+#export CMAKE_ARGS="-DHIP_HIPCC_FLAGS_RELWITHDEBINFO=-O1"
+
+export CMAKE_BUILD_TYPE=Debug
 %endif
 
 %pyproject_wheel
