@@ -16,7 +16,7 @@
 #            Backport is needed.
 %global rocm_llvm_maj_ver 20
 
-%global rocm_release 7.1
+%global rocm_release 7.2
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
