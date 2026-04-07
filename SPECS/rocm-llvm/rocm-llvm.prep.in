@@ -1,0 +1,55 @@
+##Fix issue with HIP, where compilation flags are incorrect, see issue:
+#https://github.com/RadeonOpenCompute/ROCm-CompilerSupport/issues/49
+#Remove redundant includes:
+sed -i '/Args.push_back("-isystem");/,+3d' amd/comgr/src/comgr-compiler.cpp
+#Source hard codes the libdir too:
+sed -i 's/lib\(\/clang\)/%{_lib}\1/' amd/comgr/src/comgr-compiler.cpp
+
+# Unsupported options
+sed -i 's@Args.push_back("-mlink-builtin-bitcode-postopt");@//Args.push_back("-mlink-builtin-bitcode-postopt");@' amd/comgr/src/comgr-compiler.cpp
+
+# Use system perl
+sed -i 's|\(/usr/bin/\)env perl|\1perl|' amd/hipcc/bin/hipvars.pm
+
+# Default rocm path is _prefix
+# HIPCC fixes to find clang++
+
+sed -i 's| or -e "$HIP_PATH/bin/clang"||' amd/hipcc/bin/hipvars.pm
+sed -i 's|lib/llvm/bin|%{_lib}/llvm%{llvm_maj_ver}/bin|' \
+    amd/hipcc/bin/hipvars.pm amd/hipcc/src/hipBin_amd.h amd/hipcc/src/hipBin_base.h
+sed -i 's|-e "$HIP_ROCCLR_HOME/bin/clang" or ||' amd/hipcc/bin/hipvars.pm
+
+# Fixup finding /opt/llvm
+sed -i -e 's@sys::path::append(LLVMPath, "llvm");@//sys::path::append(LLVMPath, "llvm");@' amd/comgr/src/comgr-env.cpp
+# Fixup finding /opt/rocm/hip
+sed -i -e 's@sys::path::append(HIPPath, "hip");@//sys::path::append(HIPPath, "hip");@' amd/comgr/src/comgr-env.cpp
+
+# Default rocm path is _prefix
+sed -i -e 's@/opt/rocm@%{_prefix}@' amd/hipcc/src/hipBin_base.h
+
+LLVM_BINDIR=`llvm-config --bindir`
+if [ ! -x ${LLVM_BINDIR}/clang++ ]; then
+    echo "Something wrong with llvm-config"
+    false
+fi
+echo "s@\$ROCM_PATH/lib/llvm/bin@${LLVM_BINDIR}@" > pm.sed
+echo "s@hipClangPath /= \"lib/llvm/bin\"@hipClangPath = \"${LLVM_BINDIR}\"@" > h.sed
+sed -i -f pm.sed amd/hipcc/bin/hipvars.pm
+sed -i -f h.sed amd/hipcc/src/hipBin_amd.h
+
+# ROCm upstream uses /opt for rocm-runtime, but we uses /usr
+# Don't include it again since /usr/include is already included:
+sed -i '/" -isystem " + hsaPath + "\/include"/d' amd/hipcc/src/hipBin_amd.h
+
+sed -i 's/find_package(Clang REQUIRED CONFIG)/find_package(Clang REQUIRED)/' amd/comgr/CMakeLists.txt
+sed -i 's/find_package(LLD REQUIRED CONFIG)/find_package(LLD REQUIRED)/' amd/comgr/CMakeLists.txt
+sed -i 's@${CLANG_CMAKE_DIR}/../../../@/usr/lib/clang/%{llvm_maj_ver}/@' amd/comgr/cmake/opencl_pch.cmake
+
+# CMP0053 OLD is only needed on Windows. But on new version of cmake it is deprecated.
+sed -i 's/cmake_policy(SET CMP0053 OLD)/cmake_policy(SET CMP0053 NEW)/' amd/device-libs/cmake/OCL.cmake
+
+# Fix up the path to the device libs hipcc uses
+sed -i -e 's@amdgcnBitcode = roccmPath@amdgcnBitcode = "%{_prefix}/%{amd_device_libs_prefix}/"@' amd/hipcc/src/hipBin_amd.h
+
+# Fix up the location AMD_DEVICE_LIBS_PREFIX
+sed -i 's|@AMD_DEVICE_LIBS_PREFIX_CODE@|set(AMD_DEVICE_LIBS_PREFIX "%{_prefix}/%{amd_device_libs_prefix}")|' amd/device-libs/AMDDeviceLibsConfig.cmake.in

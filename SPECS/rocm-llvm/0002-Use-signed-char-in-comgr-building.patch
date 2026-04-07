@@ -1,0 +1,15 @@
+diff --git a/amd/comgr/CMakeLists.txt b/amd/comgr/CMakeLists.txt
+index cfa170f94..e03049224 100644
+--- a/amd/comgr/CMakeLists.txt
++++ b/amd/comgr/CMakeLists.txt
+@@ -169,6 +169,10 @@ if (ADDRESS_SANITIZER)
+     "${CMAKE_SHARED_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
+ endif()
+ 
++
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ASAN_COMPILER_FLAGS} -fsigned-char")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_COMPILER_FLAGS} -fsigned-char")
++
+ set(AMD_COMGR_PRIVATE_COMPILE_OPTIONS)
+ set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS ${LLVM_DEFINITIONS})
+ set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
