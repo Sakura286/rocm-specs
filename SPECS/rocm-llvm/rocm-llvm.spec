@@ -16,7 +16,7 @@
 #            Backport is needed.
 %global rocm_llvm_maj_ver 20
 
-%global rocm_release 7.2
+%global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
@@ -161,10 +161,10 @@ LLVM_CMAKEDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --cmakedir`
 # Only enable one target to accelerate build
 GPU_TARGET="gfx1100;gfx1101;gfx1200;gfx1201"
 
-echo "%%rocmllvm_version $CLANG_VERSION"    >  macros.rocmcompiler
-echo "%%rocmllvm_bindir $LLVM_BINDIR"       >> macros.rocmcompiler
-echo "%%rocmllvm_cmakedir $LLVM_CMAKEDIR"   >> macros.rocmcompiler
-echo "%%rocm_gpu_list_default $GPU_TARGET"  >> macros.rocmcompiler
+echo "%%rocmllvm_version $CLANG_VERSION"        >  macros.rocmcompiler
+echo "%%rocmllvm_bindir $LLVM_BINDIR"           >> macros.rocmcompiler
+echo "%%rocmllvm_cmakedir $LLVM_CMAKEDIR"       >> macros.rocmcompiler
+echo "%%rocm_gpu_list_default \"$GPU_TARGET\""  >> macros.rocmcompiler
 
 export PATH=%{_libdir}/llvm%{llvm_maj_ver}/bin:$PATH
 export INCLUDE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/include
