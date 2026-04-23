@@ -21,7 +21,6 @@ BuildOption(install):  -l %{srcname}
 BuildRequires:  gcc-c++
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
-BuildRequires:  python3dist(cython)
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(setuptools)
 
@@ -40,9 +39,6 @@ rm -rf test/test_timestamp.py
 
 %generate_buildrequires
 %pyproject_buildrequires
-
-%build -p
-make cython
 
 %files -f %{pyproject_files}
 %doc README.md
