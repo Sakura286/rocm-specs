@@ -295,8 +295,8 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unus
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-result@' cmake/Dependencies.cmake
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
 # try fix branch size exceeds (llvm21: -mlong-branches removed)
-# Strategy: force long branch register reservation with high factor
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-long-branch-factor=100@' cmake/Dependencies.cmake
+# Strategy: reduce GPU optimization to -O1 to shrink function body size
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -O1@' cmake/Dependencies.cmake
 
 # Use parallel jobs
 # sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -parallel-jobs=8@' cmake/Dependencies.cmake
@@ -550,8 +550,8 @@ export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
 
-# Lower GPU optimization to reduce function body size (fix branch size exceeds)
-export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
+# useless
+#export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
 #export CMAKE_ARGS="-DHIP_HIPCC_FLAGS_RELWITHDEBINFO=-O1"
 
 # export CMAKE_BUILD_TYPE=Debug
