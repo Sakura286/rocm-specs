@@ -295,8 +295,9 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unus
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-result@' cmake/Dependencies.cmake
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
 # try fix branch size exceeds (llvm21: -mlong-branches removed)
-# Strategy: reduce GPU optimization to -O1 to shrink function body size
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -O1@' cmake/Dependencies.cmake
+# Strategy: reduce inlining by disabling early-inline-all (default) and enabling function calls (default)
+# Also set inline-max-bb to limit function body size
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-inline-max-bb=50@' cmake/Dependencies.cmake
 
 # Use parallel jobs
 # sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -parallel-jobs=8@' cmake/Dependencies.cmake
