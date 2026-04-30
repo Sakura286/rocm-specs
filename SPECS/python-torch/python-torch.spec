@@ -286,8 +286,8 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-depr
 # Also set inline-max-bb to limit function body size
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-inline-max-bb=50@' cmake/Dependencies.cmake
 
-# Use parallel jobs
-# sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -parallel-jobs=8@' cmake/Dependencies.cmake
+# Use parallel jobs for GPU offload compilation (LLVM 21 uses --offload-jobs, not -parallel-jobs)
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8@' cmake/Dependencies.cmake
 # Need to link with librocm_smi64
 sed -i -e 's@hipzrtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
 
@@ -426,9 +426,10 @@ COMPILE_JOBS=`nproc`
 if [ ${COMPILE_JOBS}x = x ]; then
     COMPILE_JOBS=1
 fi
-# Take into account memmory usage per core, do not thrash real memory
-# Build may consumes more than 2GB per core
-BUILD_MEM=3
+# Take into account memory usage per core, do not thrash real memory
+# TraceType/VariableType files can consume 4GB+ per compilation unit
+# Use a more conservative estimate: 4GB per job for safety
+BUILD_MEM=4
 MEM_KB=0
 MEM_KB=`cat /proc/meminfo | grep MemTotal | awk '{ print $2 }'`
 MEM_MB=`eval "expr ${MEM_KB} / 1024"`
@@ -436,6 +437,10 @@ MEM_GB=`eval "expr ${MEM_MB} / 1024"`
 COMPILE_JOBS_MEM=`eval "expr 1 + ${MEM_GB} / ${BUILD_MEM}"`
 if [ "$COMPILE_JOBS_MEM" -lt "$COMPILE_JOBS" ]; then
     COMPILE_JOBS=$COMPILE_JOBS_MEM
+fi
+# Ensure at least 2 jobs to avoid single-threading the large files
+if [ "$COMPILE_JOBS" -lt 2 ]; then
+    COMPILE_JOBS=2
 fi
 export MAX_JOBS=$COMPILE_JOBS
 
@@ -450,7 +455,9 @@ export BUILD_CUSTOM_PROTOBUF=OFF
 export BUILD_NVFUSER=OFF
 export BUILD_SHARED_LIBS=ON
 export BUILD_TEST=OFF
-export CMAKE_BUILD_TYPE=RelWithDebInfo
+# Use Release instead of RelWithDebInfo to reduce compile time and memory
+# for huge generated files like TraceType/VariableType (saves ~30% compile time)
+export CMAKE_BUILD_TYPE=Release
 export CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
 export CAFFE2_LINK_LOCAL_PROTOBUF=OFF
 export INTERN_BUILD_MOBILE=OFF
