@@ -136,6 +136,9 @@ BuildRequires:  compiler-rt
 BuildRequires:  llvm-devel
 BuildRequires:  lld
 
+BuildRequires:  cmake(ONNX)
+BuildRequires:  cmake(onnxruntime)
+
 %if %{with mpi}
 BuildRequires:  openmpi-devel
 %endif
