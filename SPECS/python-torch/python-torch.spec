@@ -274,10 +274,18 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-pass
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-command-line-argument@' cmake/Dependencies.cmake
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-result@' cmake/Dependencies.cmake
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
-# try fix branch size exceeds (llvm21: -mlong-branches removed)
-# Strategy: reduce inlining by disabling early-inline-all (default) and enabling function calls (default)
-# Also set inline-max-bb to limit function body size
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-inline-max-bb=50@' cmake/Dependencies.cmake
+# Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
+# Root cause: -O3 + 4 offload archs + AT_DISPATCH_*_TYPES_AND2 template
+# expansion produces functions whose s_cbranch displacements exceed simm16.
+# LLVM 21 removed -mlong-branches; fix with three orthogonal levers:
+# 1. -Os: shrink HIP device code (last -O* wins; CMake's -O3 comes earlier)
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Os@' cmake/Dependencies.cmake
+# 2. amdgpu-s-branch-bits=14: make BranchRelaxation relax at 14-bit range
+#    instead of 16, leaving 4x headroom against MIR/asm size estimation drift.
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-s-branch-bits=14@' cmake/Dependencies.cmake
+# 3. amdgpu-long-branch-factor=100: always reserve an SGPR pair so
+#    BranchRelaxation can emit s_setpc_b64 without emergency SGPR0/1 spills.
+sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-long-branch-factor=100@' cmake/Dependencies.cmake
 
 # Use parallel jobs for GPU offload compilation (LLVM 21 uses --offload-jobs, not -parallel-jobs)
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8@' cmake/Dependencies.cmake
