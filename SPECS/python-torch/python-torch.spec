@@ -93,6 +93,10 @@ Source6:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-h
 Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
 %endif
 
+%global mslk_commit 3d332d1c0c0ac7765852c97b3979c9ef913e037f
+%global mslk_scommit 3d332d1
+Source120:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
+
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
 BuildRequires:  cpuinfo
@@ -244,6 +248,10 @@ rm -rf third_party/kineto/*
 cp -r kineto-*/* third_party/kineto/
 %endif
 
+tar xf %{SOURCE120}
+rm -rf third_party/mslk/*
+cp -r MSLK-*/* third_party/mslk/
+
 # Adjust for amd gpu targets currently supported
 # only gfx1100 supported on openruyi
 sed -i -e 's@"gfx90a", "gfx942",@@' aten/src/ATen/native/cuda/Blas.cpp
@@ -332,6 +340,8 @@ mv third_party/cpp-httplib .
 mv third_party/kineto .
 %endif
 
+mv third_party/mslk .
+
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
@@ -353,6 +363,8 @@ mv cpp-httplib third_party
 %if %{without system_kineto}
 mv kineto third_party
 %endif
+
+mv mslk third_party
 
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
