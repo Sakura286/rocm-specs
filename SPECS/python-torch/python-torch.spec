@@ -21,7 +21,7 @@
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
 %bcond test 0
 
-%bcond rocm 0
+%bcond rocm 1
 
 # For testing distributed+rccl etc.
 # TODO: openmpi not included in openRuyi
@@ -92,8 +92,6 @@ Source6:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-h
 #!RemoteAsset:  sha256:c0edae39511cf3d91d66d6b383254ba3b3bee1af024a567566cfe39cbc84e674
 Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
 %endif
-
-# Patch0:         0001-python-torch-check-if-tuning_cache-exists.patch
 
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
