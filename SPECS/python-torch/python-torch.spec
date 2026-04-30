@@ -469,12 +469,7 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
 
-export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
-export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
 
-export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
-export CMAKE_LIBRARY_PATH=/usr/lib64
-export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
 
 # useless
 #export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
@@ -482,6 +477,13 @@ export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-package
 
 # export CMAKE_BUILD_TYPE=Debug
 %endif
+
+export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
+export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
+
+export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
+export CMAKE_LIBRARY_PATH=/usr/lib64
+export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
 
 %pyproject_wheel
 
