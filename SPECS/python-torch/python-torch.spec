@@ -11,7 +11,7 @@
 
 %global toolchain clang
 
-%global pypi_version 2.11.0
+%global pypi_version 2.10.0
 %global miniz_version 3.0.2
 
 # For -test subpackage
@@ -21,7 +21,7 @@
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
 %bcond test 0
 
-%bcond rocm 1
+%bcond rocm 0
 
 # For testing distributed+rccl etc.
 # TODO: openmpi not included in openRuyi
