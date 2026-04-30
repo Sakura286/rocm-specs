@@ -11,7 +11,7 @@
 
 %global toolchain clang
 
-%global pypi_version 2.10.0
+%global pypi_version 2.11.0
 %global miniz_version 3.0.2
 
 # For -test subpackage
@@ -46,12 +46,8 @@
 %bcond system_httplib 0
 # TODO: kineto not included in openruyi
 %bcond system_kineto 0
-# TODO: on openRuyi, onnx lack of check_model symbol
-%bcond system_onnx 1
 # TODO: opentelemetry not included in openRuyi
 %bcond system_opentelemetry 0
-# TODO: tensorpipe not included in openRuyi
-%bcond system_tensorpipe 0
 
 Name:           python-%{srcname}
 Version:        %{pypi_version}
@@ -68,21 +64,7 @@ Source0:        https://github.com/pytorch/pytorch/archive/refs/tags/v%{version}
 #!RemoteAsset:  sha256:7e2ef35f1af9e2aa0c6a7d0a09298c2cb86caf3d4f58c0658b306256e5bcab10
 Source1:        https://github.com/google/flatbuffers/archive/refs/tags/v%{flatbuffers_version}.tar.gz
 %endif
-%if %{without system_tensorpipe}
-# Developement on tensorpipe has stopped, repo made read only July 1, 2023, this is the last commit
-%global tp_commit 52791a2fd214b2a9dc5759d36725909c1daa7f2e
-%global tp_scommit 52791a2
-#!RemoteAsset:  sha256:7ff0b84c0623f3360ec7c34b8c4fe02e7f9a87f8fa559c303f9574e44be0bc56
-Source2:       https://github.com/pytorch/tensorpipe/archive/%{tp_commit}/tensorpipe-%{tp_scommit}.tar.gz
-# The old libuv tensorpipe uses
-#!RemoteAsset:  sha256:6cfeb5f4bab271462b4a2cc77d4ecec847fdbdc26b72019c27ae21509e6f94fa
-Source3:       https://github.com/libuv/libuv/archive/refs/tags/v1.41.0.tar.gz
-# Developement afaik on libnop has stopped, this is the last commit
-%global nop_commit 910b55815be16109f04f4180e9adee14fb4ce281
-%global nop_scommit 910b558
-#!RemoteAsset:  sha256:ec3604671f8ea11aed9588825f9098057ebfef7a8908e97459835150eea9f63a
-Source4:       https://github.com/google/libnop/archive/%{nop_commit}/libnop-%{nop_scommit}.tar.gz
-%endif
+
 %if %{without opentelemetry}
 %global ot_ver 1.14.2
 #!RemoteAsset:  sha256:c7e7801c9f6228751cdb9dd4724d0f04777ed53f524c8828e73bf4c9f894e0bd
@@ -99,11 +81,6 @@ Source6:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-h
 %global ki_scommit 31f85df
 #!RemoteAsset:  sha256:c0edae39511cf3d91d66d6b383254ba3b3bee1af024a567566cfe39cbc84e674
 Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
-%endif
-%if %{without system_onnx}
-%global onnx_ver 1.18.0
-#!RemoteAsset:  sha256:b466af96fd8d9f485d1bb14f9bbdd2dfb8421bc5544583f014088fb941a1d21e
-Source8:       https://github.com/onnx/onnx/archive/refs/tags/v%{onnx_ver}.tar.gz
 %endif
 
 Patch0:         0001-python-torch-check-if-tuning_cache-exists.patch
@@ -146,6 +123,7 @@ BuildRequires:  python3dist(sympy)
 # TODO: enable on openRuyi
 # BuildRequires:  python3dist(sphinx)
 BuildRequires:  python3dist(typing-extensions)
+BuildRequires:  tensorpipe-devel
 
 %if %{with system_httplib}
 BuildRequires:  cpp-httplib-devel
@@ -157,10 +135,6 @@ BuildRequires:  libstdc++-devel
 BuildRequires:  compiler-rt
 BuildRequires:  llvm-devel
 BuildRequires:  lld
-
-%if %{with system_onnx}
-BuildRequires:  onnx-devel
-%endif
 
 %if %{with mpi}
 BuildRequires:  openmpi-devel
@@ -232,22 +206,6 @@ rm -rf third_party/flatbuffers/*
 cp -r flatbuffers-%{flatbuffers_version}/* third_party/flatbuffers/
 %endif
 
-%if %{without system_tensorpipe}
-tar xf %{SOURCE2}
-rm -rf third_party/tensorpipe/*
-cp -r tensorpipe-*/* third_party/tensorpipe/
-tar xf %{SOURCE3}
-rm -rf third_party/tensorpipe/third_party/libuv/*
-cp -r libuv-*/* third_party/tensorpipe/third_party/libuv/
-tar xf %{SOURCE4}
-rm -rf third_party/tensorpipe/third_party/libnop/*
-cp -r libnop-*/* third_party/tensorpipe/third_party/libnop/
-
-# gcc 15 include cstdint
-sed -i '/#include <tensorpipe.*/a#include <cstdint>' third_party/tensorpipe/tensorpipe/common/allocator.h
-sed -i '/#include <tensorpipe.*/a#include <cstdint>' third_party/tensorpipe/tensorpipe/common/memory.h
-%endif
-
 %if %{without system_opentelemetry}
 tar xf %{SOURCE5}
 rm -rf third_party/opentelemetry-cpp/*
@@ -264,12 +222,6 @@ cp -r cpp-httplib-*/* third_party/cpp-httplib/
 tar xf %{SOURCE7}
 rm -rf third_party/kineto/*
 cp -r kineto-*/* third_party/kineto/
-%endif
-
-%if %{without system_onnx}
-tar xf %{SOURCE8}
-rm -rf third_party/onnx/*
-cp -r onnx-*/* third_party/onnx/
 %endif
 
 # Adjust for amd gpu targets currently supported
@@ -348,10 +300,6 @@ mv third_party/build_bundled.py .
 mv third_party/flatbuffers .
 %endif
 
-%if %{without system_tensorpipe}
-mv third_party/tensorpipe .
-%endif
-
 %if %{without system_opentelemetry}
 mv third_party/opentelemetry-cpp .
 %endif
@@ -364,10 +312,6 @@ mv third_party/cpp-httplib .
 mv third_party/kineto .
 %endif
 
-%if %{without system_onnx}
-mv third_party/onnx .
-%endif
-
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
@@ -376,10 +320,6 @@ mv miniz-%{miniz_version} third_party
 
 %if %{without system_flatbuffers}
 mv flatbuffers third_party
-%endif
-
-%if %{without system_tensorpipe}
-mv tensorpipe third_party
 %endif
 
 %if %{without system_opentelemetry}
@@ -392,10 +332,6 @@ mv cpp-httplib third_party
 
 %if %{without system_kineto}
 mv kineto third_party
-%endif
-
-%if %{without system_onnx}
-mv onnx third_party
 %endif
 
 # Fake out pocketfft, and system header will be used
@@ -411,12 +347,6 @@ sed -i -e 's@DESTINATION ${PYTHON_LIB_REL_PATH}@DESTINATION ${CMAKE_INSTALL_PREF
 
 # reenable foxi linking
 sed -i -e 's@list(APPEND Caffe2_DEPENDENCY_LIBS foxi_loader)@#list(APPEND Caffe2_DEPENDENCY_LIBS foxi_loader)@' cmake/Dependencies.cmake
-
-%if %{without system_tensorpipe}
-# cmake version changed
-sed -i -e 's@cmake_minimum_required(VERSION 3.4)@cmake_minimum_required(VERSION 3.5)@' third_party/tensorpipe/third_party/libuv/CMakeLists.txt
-sed -i -e 's@cmake_minimum_required(VERSION 3.4)@cmake_minimum_required(VERSION 3.5)@' libuv*/CMakeLists.txt
-%endif
 
 %if %{without system_opentelemetry}
 sed -i -e 's@cmake_minimum_required(VERSION 3.1)@cmake_minimum_required(VERSION 3.5)@' third_party/opentelemetry-cpp/CMakeLists.txt
@@ -498,9 +428,7 @@ export USE_PYTORCH_QNNPACK=OFF
 export USE_ROCM=OFF
 export USE_SYSTEM_SLEEF=ON
 export USE_SYSTEM_EIGEN_INSTALL=ON
-%if %{with system_onnx}
 export USE_SYSTEM_ONNX=ON
-%endif
 export USE_SYSTEM_PYBIND11=ON
 export USE_SYSTEM_LIBS=OFF
 export USE_SYSTEM_NCCL=OFF
@@ -514,9 +442,6 @@ export USE_SYSTEM_PSIMD=ON
 export USE_SYSTEM_XNNPACK=OFF
 export USE_DISTRIBUTED=ON
 export USE_TENSORPIPE=ON
-%if %{without system_tensorpipe}
-export TP_BUILD_LIBUV=OFF
-%endif
 
 %if %{with mpi}
 export USE_MPI=ON
