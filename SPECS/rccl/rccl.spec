@@ -24,7 +24,7 @@ License:        BSD-3-Clause AND MIT AND Apache-2.0
 # The NVIDIA based header files below are Apache-2.0
 #  src/include/nvtx3/nv*.h and similar
 # The URL for NVIDIA in the License.txt https://github.com/NVIDIA/NVTX is Apache-2.0
-#!RemoteAsset:  sha256:REPLACE_WITH_ACTUAL_SHA256
+#!RemoteAsset:  sha256:eaa60bcf62feb3198553f2bcf6dcbfdfcecd0fdfabda41f1dae7d3f15fadbd68
 Source:         %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
