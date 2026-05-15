@@ -38,13 +38,13 @@ BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
 BuildRequires:  cmake(hip)
-BuildRequires:  cmake(hsa-runtime)
+BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  hipify
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
-BuildRequires:  rocm-llvm-macro
+BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocprofiler-register
 
 Requires:       %{name}-data = %{version}-%{release}
