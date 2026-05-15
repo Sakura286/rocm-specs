@@ -47,6 +47,7 @@ BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipify
+BuildRequires:  llvm
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
