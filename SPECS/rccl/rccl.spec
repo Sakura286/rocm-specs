@@ -8,6 +8,9 @@
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+# rocm stack builds with clang
+%global toolchain clang
+
 Name:           rccl
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -27,8 +30,6 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TESTS=ON
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DENABLE_MSCCLPP=OFF
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
