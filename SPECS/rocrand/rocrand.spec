@@ -8,14 +8,8 @@
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}gi
-
 # rocm builds with clang
 %global toolchain clang
-
-%global gpu_list %{rocm_gpu_list_default}
 
 Name:           rocrand
 Version:        %{rocm_version}
@@ -29,44 +23,26 @@ Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DAMDGPU_TARGETS=%{gpu_list}
-BuildOption(conf):  -DBUILD_TEST=%build_test
-BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
-BuildOption(conf):  -DCMAKE_BUILD_TYPE=%build_type
-BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++
-BuildOption(conf):  -DCMAKE_EXPORT_COMPILE_COMMANDS=%{build_compile_db}
-BuildOption(conf):  -DCMAKE_INSTALL_LIBDIR=%{pkg_libdir}
-BuildOption(conf):  -DCMAKE_INSTALL_PREFIX=%{pkg_prefix}
-BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
-BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
-BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
+BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DBUILD_TEST=ON
+#BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
+#BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
+#BuildOption(conf):  -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++
+#BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
+#BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
 BuildRequires:  clang
-BuildRequires:  clang-devel
-BuildRequires:  clang-tools-extra
-BuildRequires:  clang-tools-extra-devel
 BuildRequires:  cmake
-BuildRequires:  compiler-rt
-BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  lld-devel
-BuildRequires:  llvm
-BuildRequires:  gtest-devel
-BuildRequires:  llvm-devel
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(GTest)
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  ninja
-BuildRequires:  rocm-cmake%{pkg_suffix}
-BuildRequires:  rocm-comgr%{pkg_suffix}-devel
+BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
-BuildRequires:  rocm-hip%{pkg_suffix}-devel
-BuildRequires:  rocm-llvm%{pkg_suffix}-macros
-BuildRequires:  rocr-runtime%{pkg_suffix}-devel
-
-%if %{with doc}
-BuildRequires:  doxygen
-%endif
+BuildRequires:  rocm-llvm-macros
 
 %description
 The rocRAND project provides functions that generate pseudo-random and
@@ -91,21 +67,21 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 
 %install -a
-rm -f %{buildroot}%{pkg_prefix}/share/doc/rocrand/LICENSE.md
+rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 
 %files
 %license LICENSE.md
 %doc README.md
-%{pkg_prefix}/%{pkg_libdir}/librocrand.so.1{,.*}
+%{_libdir}/librocrand.so.1{,.*}
 
 %files devel
-%{pkg_prefix}/include/rocrand/
-%{pkg_prefix}/%{pkg_libdir}/cmake/rocrand/
-%{pkg_prefix}/%{pkg_libdir}/librocrand.so
+%{_includedir}/rocrand/
+%{_libdir}/cmake/rocrand/
+%{_libdir}/librocrand.so
 
 %files test
-%{pkg_prefix}/bin/rocRAND/
-%{pkg_prefix}/bin/test_*
+%{_bindir}/rocRAND/
+%{_bindir}/test_*
 
 %changelog
 %autochangelog
