@@ -46,7 +46,9 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(rocprofiler-register)
+BuildRequires:  compiler-rt
 BuildRequires:  hipify
+BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
