@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# rocRAND need a GPU to run tests, but we could still
+# keep the test cases for packagers who have a GPU, so make it optional.
+%bcond test 0
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -24,20 +28,21 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_TEST=ON
-#BuildOption(conf):  -DCMAKE_AR=%rocmllvm_bindir/llvm-ar
-#BuildOption(conf):  -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang
-#BuildOption(conf):  -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++
-#BuildOption(conf):  -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld
-#BuildOption(conf):  -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
+%if %{with test}
+BuildOption(conf):  -DBUILD_TEST=ON
+%else
+BuildOption(conf):  -DBUILD_TEST=OFF
+%endif
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+%if %{with test}
 BuildRequires:  cmake(GTest)
+%endif
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  compiler-rt
@@ -47,6 +52,7 @@ BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
 
 %description
 The rocRAND project provides functions that generate pseudo-random and
@@ -63,15 +69,19 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description devel
 The rocRAND development package.
 
+%if %{with test}
 %package test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description test
 %{summary}
+%endif
 
+%if %{with test}
 %check -p
 export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+%endif
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
@@ -86,9 +96,11 @@ rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 %{_libdir}/cmake/rocrand/
 %{_libdir}/librocrand.so
 
+%if %{with test}
 %files test
 %{_bindir}/rocRAND/
 %{_bindir}/test_*
+%endif
 
 %changelog
 %autochangelog
