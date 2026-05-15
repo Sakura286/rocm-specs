@@ -44,11 +44,11 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocm-core)
+BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipify
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
-BuildRequires:  rocprofiler-register
 
 Requires:       %{name}-data = %{version}-%{release}
 
