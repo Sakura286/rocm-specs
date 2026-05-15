@@ -35,6 +35,7 @@ BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(prep):  -p1 -n rccl-rocm-%{version}
 
+BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
