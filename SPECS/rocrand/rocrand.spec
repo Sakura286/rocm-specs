@@ -39,6 +39,7 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  compiler-rt
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
