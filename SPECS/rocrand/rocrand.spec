@@ -70,6 +70,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description test
 %{summary}
 
+%check -p
+export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 
