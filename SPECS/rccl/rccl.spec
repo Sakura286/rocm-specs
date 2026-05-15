@@ -39,6 +39,7 @@ BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
+BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
