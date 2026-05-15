@@ -37,6 +37,10 @@ BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(prep):  -p1 -n rccl-rocm-%{version}
 
+%prep -a
+# Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
+sed -i -e 's@-fgpu-rdc@-fgpu-rdc -mllvm -amdgpu-s-branch-bits=14 -mllvm --amdgpu-long-branch-factor=100@' CMakeLists.txt
+
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
