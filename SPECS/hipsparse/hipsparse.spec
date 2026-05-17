@@ -7,7 +7,7 @@
 
 # hipSPARSE needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
+%bcond test 0
 
 %global rocm_release 7.1
 %global rocm_patch 1
