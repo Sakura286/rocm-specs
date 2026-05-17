@@ -14,7 +14,7 @@
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm builds with clang
-%global toolchain clang
+# %%global toolchain clang
 
 Name:           hipsparse
 Version:        %{rocm_version}
@@ -48,8 +48,8 @@ BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
 %endif
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+# BuildRequires:  clang
+# BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 %if %{with test}
@@ -59,9 +59,9 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+# BuildRequires:  compiler-rt
+# BuildRequires:  lld
+# BuildRequires:  llvm
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
