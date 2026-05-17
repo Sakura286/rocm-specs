@@ -35,7 +35,7 @@ BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DENABLE_MSCCLPP=OFF
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
-BuildOption(prep):  -p1 -n rccl-rocm-%{version}
+BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
