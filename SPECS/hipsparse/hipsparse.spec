@@ -59,6 +59,7 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
+BuildRequires:  gcc-fortran
 # BuildRequires:  compiler-rt
 # BuildRequires:  lld
 # BuildRequires:  llvm
