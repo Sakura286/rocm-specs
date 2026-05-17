@@ -102,7 +102,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
 sed -i -e 's@-fgpu-rdc@-fgpu-rdc -Os@' CMakeLists.txt
-sed -i -e 's@-mllvm --amdgpu-kernarg-preload-count=16@-mllvm --amdgpu-s-branch-bits=14 -mllvm --amdgpu-long-branch-factor=100 -mllvm --amdgpu-kernarg-preload-count=16@' CMakeLists.txt
+sed -i -e 's@target_compile_options(rccl PRIVATE -mllvm --amdgpu-kernarg-preload-count=16)@target_compile_options(rccl PRIVATE "SHELL:-mllvm --amdgpu-s-branch-bits=14" "SHELL:-mllvm --amdgpu-long-branch-factor=100" "SHELL:-mllvm --amdgpu-kernarg-preload-count=16")@' CMakeLists.txt
 
 %build
 # Workaround
