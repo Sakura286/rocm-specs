@@ -101,8 +101,12 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # Do not force install
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
+# -Os shrinks device code; the -mllvm flags must be added to BOTH compile and
+# link options because -fgpu-rdc has a separate device link step (amdgcn-link)
 sed -i -e 's@-fgpu-rdc@-fgpu-rdc -Os@' CMakeLists.txt
 sed -i -e 's@target_compile_options(rccl PRIVATE -mllvm --amdgpu-kernarg-preload-count=16)@target_compile_options(rccl PRIVATE "SHELL:-mllvm --amdgpu-s-branch-bits=14" "SHELL:-mllvm --amdgpu-long-branch-factor=100" "SHELL:-mllvm --amdgpu-kernarg-preload-count=16")@' CMakeLists.txt
+# Same flags for the device linker (amdgcn-link) via -Xoffload-linker
+sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=14" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=100" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@' CMakeLists.txt
 
 %build
 # Workaround
