@@ -32,7 +32,7 @@ Source:         %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_TESTS=ON
+BuildOption(conf):  -DBUILD_TESTS=OFF
 BuildOption(conf):  -DENABLE_MSCCLPP=OFF
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
