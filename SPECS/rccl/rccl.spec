@@ -110,9 +110,8 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep -a
 # Do not force install
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
-# Same flags for the device linker (amdgcn-link) via -Xoffload-linker
-# --lto-jobs parallelizes GPU LTO code generation; the serial device link step
-# (-fgpu-rdc + 4 GPU targets) otherwise dominates total build time (~7400s)
+# -amdgpu-s-branch-bits and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
+# --lto-partitions to accelerate linking time
 sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)")@' CMakeLists.txt
 
 %install -a
