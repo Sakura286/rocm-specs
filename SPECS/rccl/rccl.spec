@@ -13,7 +13,6 @@
 %global toolchain clang
 # lto causes "branch size exceeds simm16" linker errors with AMDGPU HIP code
 %define _lto_cflags %{nil}
-%global _smp_mflags -j16
 
 Name:           rccl
 Version:        %{rocm_version}
