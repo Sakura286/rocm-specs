@@ -112,16 +112,7 @@ sed -i -e 's@target_compile_options(rccl PRIVATE -mllvm --amdgpu-kernarg-preload
 # Same flags for the device linker (amdgcn-link) via -Xoffload-linker
 # --lto-jobs parallelizes GPU LTO code generation; the serial device link step
 # (-fgpu-rdc + 4 GPU targets) otherwise dominates total build time (~7400s)
-sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=14" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=100" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=16")@' CMakeLists.txt
-
-%build
-# Workaround
-(while true; do echo "[heartbeat] $(date) - build still running..."; sleep 300; done) &
-HEARTBEAT_PID=$!
-
-%cmake_build
-
-kill $HEARTBEAT_PID 2>/dev/null || true
+sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=14" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=100" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)")@' CMakeLists.txt
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
