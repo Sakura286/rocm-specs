@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 # Two reasons to disable test package:
-# 1. The tests are too big that the build may timeout
+# 1. The tests are too big to take too much time to build
 # 2. The tests require a GPU environment to run
 # So keep this bcond for future use
 %bcond test 0
@@ -37,7 +37,6 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DENABLE_MSCCLPP=OFF
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
@@ -114,7 +113,7 @@ sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependen
 # Same flags for the device linker (amdgcn-link) via -Xoffload-linker
 # --lto-jobs parallelizes GPU LTO code generation; the serial device link step
 # (-fgpu-rdc + 4 GPU targets) otherwise dominates total build time (~7400s)
-sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=14" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=100" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)")@' CMakeLists.txt
+sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)")@' CMakeLists.txt
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
