@@ -5,6 +5,12 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# Two reasons to disable test package:
+# 1. The tests are too big that the build may timeout
+# 2. The tests require a GPU environment to run
+# So keep this bcond for future use
+%bcond test 0
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -31,11 +37,13 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_TESTS=OFF
 BuildOption(conf):  -DENABLE_MSCCLPP=OFF
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+%if %{without test}
+BuildOption(conf):  -DROCCL_BUILD_TESTS=OFF
+%endif
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -91,12 +99,14 @@ BuildArch:      noarch
 %description data
 Data for %{name}
 
+%if %{with test}
 %package test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description test
 %{summary}
+%endif
 
 %prep -a
 # Do not force install
@@ -124,8 +134,10 @@ rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
 %{_libdir}/cmake/rccl/
 %{_libdir}/librccl.so
 
+%if %{with test}
 %files test
 %{_bindir}/rccl-UnitTests
+%endif
 
 %changelog
 %autochangelog
