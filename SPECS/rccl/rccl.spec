@@ -11,8 +11,6 @@
 
 # rocm stack builds with clang
 %global toolchain clang
-# lto causes "branch size exceeds simm16" linker errors with AMDGPU HIP code
-%define _lto_cflags %{nil}
 
 Name:           rccl
 Version:        %{rocm_version}
