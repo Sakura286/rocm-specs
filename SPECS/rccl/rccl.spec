@@ -112,7 +112,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # -amdgpu-s-branch-bits and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
 # --lto-partitions to accelerate linking time
-sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)")@' CMakeLists.txt
+sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
