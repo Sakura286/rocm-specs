@@ -7,7 +7,7 @@
 
 # hipSPARSE needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
+%bcond test 1
 
 %if %{with test}
 %global build_test ON
@@ -34,8 +34,7 @@ BuildSystem:    cmake
 # https://github.com/ROCm/hipSPARSE (upstream patch)
 Patch0:         0001-hipsparse-change-test-download-dir.patch
 
-BuildOption(prep):  -p1 -n hipSPARSE-rocm-%{version}
-
+BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
@@ -54,6 +53,7 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
 BuildRequires:  gcc-fortran
+BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
