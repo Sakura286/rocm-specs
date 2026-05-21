@@ -7,8 +7,7 @@
 
 # hipSPARSE needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
-
+%bcond test 0
 %if %{with test}
 %global build_test ON
 %else
@@ -23,7 +22,6 @@ Name:           hipsparse
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
-
 Url:            https://github.com/ROCm/hipSPARSE
 VCS:            git:https://github.com/ROCm/hipSPARSE.git
 License:        MIT
