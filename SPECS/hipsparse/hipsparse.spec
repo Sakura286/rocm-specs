@@ -35,6 +35,7 @@ BuildSystem:    cmake
 Patch0:         0001-hipsparse-change-test-download-dir.patch
 
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
