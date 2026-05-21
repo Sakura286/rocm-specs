@@ -9,6 +9,12 @@
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond test 0
 
+%if %{with test}
+%global build_test ON
+%else
+%global build_test OFF
+%endif
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -34,16 +40,9 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
-BuildOption(conf):  -DBUILD_FORTRAN_CLIENTS=OFF
-%if %{with test}
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{build_test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/hipsparse-test-matrices/
-%else
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
-%endif
 
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
