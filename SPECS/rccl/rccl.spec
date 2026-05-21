@@ -40,8 +40,8 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
-%if %{without test}
-BuildOption(conf):  -DROCCL_BUILD_TESTS=OFF
+%if %{with test}
+BuildOption(conf):  -DBUILD_TESTS=ON
 %endif
 
 BuildRequires:  clang
