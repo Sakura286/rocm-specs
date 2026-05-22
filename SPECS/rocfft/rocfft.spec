@@ -34,14 +34,13 @@ Patch0:         0001-cmake-use-gnu-installdirs.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
-BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_BENCH=OFF
+BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
+BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
+BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
+BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
+BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -59,11 +58,11 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 %if %{with test}
+BuildRequires:  boost-devel
 BuildRequires:  cmake(GTest)
+BuildRequires:  fftw-devel
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  pkgconfig(fftw3)
-BuildRequires:  pkgconfig(boost)
 %endif
 
 %description
@@ -99,6 +98,11 @@ find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} /us
 rm -rf %{buildroot}/%{_prefix}/.info
 
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
+
+%check
+%if %{with test}
+%{_vpath_builddir}/clients/staging/rocfft-test
+%endif
 
 %files
 %doc README.md
