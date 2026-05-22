@@ -26,7 +26,6 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 Url:            https://github.com/ROCm/rocFFT
-VCS:            git:https://github.com/ROCm/rocFFT.git
 License:        MIT
 #!RemoteAsset:  sha256:047e4e93e0b12869bf42136b5eb683df3a1635b01a58bbb25c8861df291ab285
 Source:         %{url}/archive/rocm-%{version}.tar.gz
@@ -58,11 +57,11 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 %if %{with test}
-BuildRequires:  boost-devel
 BuildRequires:  cmake(GTest)
-BuildRequires:  fftw-devel
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(rocrand)
+BuildRequires:  pkgconfig(fftw3)
+BuildRequires:  pkgconfig(boost)
 %endif
 
 %description
@@ -73,6 +72,7 @@ AMD GPU hardware, rocFFT also works on CPU devices to facilitate testing.
 %package devel
 Summary:        The rocFFT development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       cmake(hip)
 
 %description devel
 The rocFFT development package.
