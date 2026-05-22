@@ -1,162 +1,115 @@
-%global upstreamname rocthrust
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
+
+# rocThrust needs a GPU to run tests, but we could still
+# keep the test cases for packagers who have a GPU, so make it optional.
+%bcond test 0
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%bcond compat 0
-%if %{with compat}
-%global pkg_libdir lib
-%global pkg_prefix %{_prefix}/lib64/rocm/rocm-%{rocm_release}
-%global pkg_suffix -%{rocm_release}
-%global pkg_module rocm%{pkg_suffix}
-%else
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}
-%global pkg_module default
-%endif
+# rocm builds with clang
+%global toolchain clang
 
-# Compiler is hipcc, which is clang based:
-%global toolchain rocm
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-# there is no debug package
-%global debug_package %{nil}
-
-# Option to test suite for testing on real HW:
-%bcond check 0
-%if %{with check}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
-
-# Compression type and level for source/binary package payloads.
-#  "w7T0.xzdio"	xz level 7 using %%{getncpus} threads
-# Threaded compression reduces the build time.
-%global _source_payload w7T0.xzdio
-%global _binary_payload w7T0.xzdio
-
-Name:           rocthrust%{pkg_suffix}
+Name:           rocthrust
 Version:        %{rocm_version}
-Release:        1%{?dist}
-Summary:        ROCm Thrust libary
+Release:        %autorelease
+Summary:        ROCm Thrust library
 
+Url:            https://github.com/ROCm/rocThrust
+VCS:            git:https://github.com/ROCm/rocThrust.git
 License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT AND LicenseRef-Fedora-Public-Domain
 # All files are Apache 2.0 with some exceptions:
 # ./cmake contains only files under MIT
 # ./internal/benchmark/*.py are dual licensed Apache 2.0 and Boost 1.0
-# ./thrust/ contain some headers files that are Boost 1.0 licensed
+# ./thrust/ contain some header files that are Boost 1.0 licensed
 # ./thrust/ contain some headers that are dual Apache 2.0 and Boost 1.0
 # ./thrust/cmake/FindTBB.cmake is public domain
 # ./thrust/detail/allocator/allocator_traits.h is dual Apache 2.0 and MIT
 # ./thrust/detail/complex contains BSD 2 clause licensed headers
+#!RemoteAsset:  sha256:TODO
+Source:         %{url}/archive/rocm-%{version}.tar.gz
+BuildSystem:    cmake
 
-URL:            https://github.com/ROCm/rocm-libraries
-Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz#/%{upstreamname}-%{version}.tar.gz
-
-BuildRequires:  llvm
-BuildRequires:  llvm-devel
-BuildRequires:  clang
-BuildRequires:  clang-devel
-BuildRequires:  clang-tools-extra
-BuildRequires:  clang-tools-extra-devel
-BuildRequires:  lld
-BuildRequires:  lld-devel
-BuildRequires:  hipcc
-BuildRequires:  compiler-rt
-BuildRequires:  rocm-device-libs
-
-BuildRequires:  cmake
-BuildRequires:  gcc-c++
-BuildRequires:  rocm-cmake%{pkg_suffix}
-BuildRequires:  rocm-comgr%{pkg_suffix}-devel
-BuildRequires:  rocm-llvm%{pkg_suffix}-macros
-BuildRequires:  rocm-hip%{pkg_suffix}-devel
-BuildRequires:  cmake(rocprim)
-BuildRequires:  rocr-runtime%{pkg_suffix}-devel
-#BuildRequires:  rocm-rpm-macros%{pkg_suffix}
-
-%if %{with check}
-BuildRequires:  gtest-devel
-BuildRequires:  rocminfo
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
+BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
+%if %{with test}
+BuildOption(conf):  -DBUILD_TEST=ON
+%else
+BuildOption(conf):  -DBUILD_TEST=OFF
 %endif
 
-ExclusiveArch:  x86_64 riscv64
+BuildRequires:  clang
+BuildRequires:  clang-tools-extra
+BuildRequires:  cmake
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(rocprim)
+%if %{with test}
+BuildRequires:  cmake(GTest)
+BuildRequires:  compiler-rt
+BuildRequires:  lld
+BuildRequires:  llvm
+BuildRequires:  rocm-device-libs
+%endif
+BuildRequires:  ninja
+BuildRequires:  rocm-cmake
+BuildRequires:  rocm-llvm-macros
 
 %description
 Thrust is a parallel algorithm library. This library has been
 ported to HIP/ROCm platform, which uses the rocPRIM library.
 
 %package devel
-Summary:        The %{upstreamname} development package
-Provides:       %{name}-static = %{version}-%{release}
+Summary:        Libraries and headers for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Provides:       cmake(rocthrust) = %{version}
 
 %description devel
-The %{upstreamname} development package.
+%{summary}
 
-%prep
-%if %{with gitcommit}
-%setup -q -n rocm-libraries-%{commit0}
-cd projects/rocthrust
-%else
-%autosetup -n %{upstreamname} -p1
+%if %{with test}
+%package test
+Summary:        Tests for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description test
+%{summary}
 %endif
 
-#
-# The ROCMExportTargetsHeaderOnly.cmake file
-# generates a files that reference the install location of other files
-# Make this change so they match
-sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{pkg_libdir}/' cmake/ROCMExportTargetsHeaderOnly.cmake
+%prep -a
+# ROCMExportTargetsHeaderOnly.cmake hardcodes 'lib' as the library directory.
+# Change it to the correct platform-specific library directory.
+sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' cmake/ROCMExportTargetsHeaderOnly.cmake
 
-%build
-%if %{with gitcommit}
-cd projects/rocthrust
+%install -a
+rm -f %{buildroot}%{_docdir}/rocthrust/LICENSE
+
+%if %{with test}
+%check -p
+export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}:$LD_LIBRARY_PATH
 %endif
 
-
-%if %{with check}
-# Building all the gpu's does not make sense
-# Build only the first one, this only works well with rpmbuild.
-gpu=`rocm_agent_enumerator | head -n 1`
-%endif
-
-%cmake \
-    -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang \
-    -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++ \
-    -DCMAKE_INSTALL_LIBDIR=%{pkg_libdir} \
-    -DCMAKE_INSTALL_PREFIX=%{pkg_prefix} \
-    -DCMAKE_LINKER=%rocmllvm_bindir/ld.lld \
-    -DCMAKE_AR=%rocmllvm_bindir/llvm-ar \
-    -DCMAKE_RANLIB=%rocmllvm_bindir/llvm-ranlib \
-    -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF \
-    -DBUILD_TEST=%{build_test} \
-%if %{with check}
-    -DAMDGPU_TARGETS=${gpu} \
-%endif
-    -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/.. \
-    -DROCM_SYMLINK_LIBS=OFF
-
-%cmake_build
-
-%install
-%cmake_install
-
-# Extra license
-rm -f %{buildroot}%{pkg_prefix}/share/doc/rocthrust/LICENSE
-
-%check
-%if %{with check}
-%ctest
-%endif
-
-%files devel
+%files
 %doc README.md
 %license LICENSE
 %license NOTICES.txt
-%{pkg_prefix}/include/thrust
-%{pkg_prefix}/%{pkg_libdir}/cmake/rocthrust/
+
+%files devel
+%{_includedir}/thrust/
+%{_libdir}/cmake/rocthrust/
+
+%if %{with test}
+%files test
+%{_bindir}/test_*
+%{_bindir}/rocthrust/
+%endif
 
 %changelog
-* Mon Jan 26 2026 Yifan Xu <xuyifan@iscas.ac.cn> - 7.1.1-1
-- Import from upstream
+%autochangelog
