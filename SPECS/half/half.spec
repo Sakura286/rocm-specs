@@ -1,64 +1,44 @@
-# there is no debug package
-%global debug_package %{nil}
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
+
+%global rocm_release 7.1
+%global rocm_patch   1
+%global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           half
-Version:        2.2.0
-Release:        1%{?dist}
-Summary:        A C++ half-precision floating point type
+Version:        %{rocm_version}
+Release:        %autorelease
+Summary:        ROCm half-precision floating point library
+Url:            https://github.com/ROCm/half
+VCS:            git:https://github.com/ROCm/half.git
 License:        MIT
+#!RemoteAsset:  sha256:1b5de9e50513560265a79022fd74322b77216f9bf938be688709a8e7d1d8d09d
+Source:         %{url}/archive/rocm-%{version}.tar.gz
+BuildSystem:    cmake
 
-URL:            http://sourceforge.net/projects/half
-Source0:        %{url}/files/%{name}/%{version}/%{name}-%{version}.zip
-BuildArch:      noarch
+BuildOption(conf):  -G Ninja
 
-BuildRequires:  unzip
+BuildRequires:  cmake
+BuildRequires:  ninja
+BuildRequires:  rocm-cmake
+
+Provides:       cmake(half) = %{version}
 
 %description
-This is a C++ header-only library to provide an IEEE-754 conformant
-half-precision floating point type along with corresponding arithmetic
-operators, type conversions and common mathematical functions. It aims
-for both efficiency and ease of use, trying to accurately mimic the
-behaviour of the builtin floating point types at the best performance
-possible. It automatically uses and provides C++11 features when
-possible, but stays completely C++98-compatible when neccessary.
+half is a C++ header-only library providing an IEEE-754 conformant
+half-precision floating point type along with arithmetic operators,
+type conversions, and common mathematical functions. It is part of
+the ROCm software stack.
 
-%package devel
-Summary:        A C++ half-precision floating point type
-Provides:       %{name}-static = %{version}-%{release}
-
-%description devel
-This is a C++ header-only library to provide an IEEE-754 conformant
-half-precision floating point type along with corresponding arithmetic
-operators, type conversions and common mathematical functions. It aims
-for both efficiency and ease of use, trying to accurately mimic the
-behaviour of the builtin floating point types at the best performance
-possible. It automatically uses and provides C++11 features when
-possible, but stays completely C++98-compatible when neccessary.
-
-%prep
-rm -rf %{name}-%{version}
-unzip -d %{name}-%{version} %{SOURCE0}
-cd %{name}-%{version}
-# change dos endings to unix
-sed -i "s|\r||g" include/half.hpp
-sed -i "s|\r||g" LICENSE.txt
-sed -i "s|\r||g" README.txt
-
-%install
-cd %{name}-%{version}
-mkdir -p %{buildroot}%{_includedir}
-install -m 644 include/half.hpp %{buildroot}%{_includedir}
-
-mkdir -p %{buildroot}%{_docdir}/%{name}/
-install -m 644 LICENSE.txt %{buildroot}%{_docdir}/%{name}/
-install -m 644 README.txt %{buildroot}%{_docdir}/%{name}/
-
-%files devel
-%dir %{_docdir}/%{name}
-%doc %{_docdir}/%{name}/README.txt
-%license %{_docdir}/%{name}/LICENSE.txt
-%{_includedir}/half.hpp
+%files
+%license LICENSE.txt
+%doc README.txt
+%{_includedir}/half/
+%{_libdir}/cmake/half/
 
 %changelog
-* Mon Feb 2 2026 Yifan Xu <xuyifan@iscas.ac.cn> - 2.2.0-1
-- Import from upstream
+%autochangelog
