@@ -1,117 +1,52 @@
-%bcond test 0
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
 
-# Header only package
+# This is a header-only library. No compiled runtime library is produced.
+# All files (headers + CMake config) go into the base package per SOP rule 6.
 %global debug_package %{nil}
 
-Summary:        Header-only library for using Keras (TensorFlow) models in C++
 Name:           frugally-deep
-License:        MIT
-# Main license is MIT
-# BSD-2-Clause is only for cmake/HunterGate.cmake and that is not distributed
 Version:        0.15.30
-Release:        1%{?dist}
+Release:        %autorelease
+Summary:        Header-only library for Keras model inference using pure C++
+Url:            https://github.com/Dobiasd/frugally-deep
+VCS:            git:https://github.com/Dobiasd/frugally-deep.git
+License:        MIT
+#!RemoteAsset:  sha256:8932f7b42612598402269a54f957af09084dc2cb812d32887d991d6e45b280fb
+Source:         %{url}/archive/v%{version}.tar.gz
+BuildSystem:    cmake
 
-URL:            https://github.com/Dobiasd/frugally-deep
-Source0:        %{url}/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DFDEEP_USE_OPENCV=OFF
 
 BuildRequires:  cmake
-BuildRequires:  eigen3
-BuildRequires:  fplus-devel
-#BuildRequires:  nlohmann_json-devel
-BuildRequires:  nlohmann-json
 BuildRequires:  gcc-c++
+BuildRequires:  eigen3-devel
+BuildRequires:  fplus-devel
+BuildRequires:  nlohmann-json
+BuildRequires:  ninja
+
+# No compiled runtime: provide cmake() so dependents can use cmake(frugally-deep)
+Provides:       cmake(frugally-deep) = %{version}
 
 %description
-Would you like to build/train a model using Keras/Python? And would
-you like to run the prediction (forward pass) on your model in C++
-without linking your application against TensorFlow? Then
-frugally-deep is exactly for you.
+frugally-deep is a small header-only library to run Keras (TensorFlow) models
+natively in C++ without any overhead introduced by surrounding frameworks.
 
-frugally-deep
+%prep -a
+# Update cmake minimum required version to avoid policy errors
+sed -i -e 's@cmake_minimum_required(VERSION 3.2)@cmake_minimum_required(VERSION 3.5)@' \
+    CMakeLists.txt
 
-* is a small header-only library written in modern and pure C++.
-* is very easy to integrate and use.
-* depends only on FunctionalPlus, Eigen and json - also header-only
-  libraries.
-* supports inference (model.predict) not only for sequential models
-  but also for computational graphs with a more complex topology,
-  created with the functional API.
-* re-implements a (small) subset of TensorFlow, i.e., the operations
-  needed to support prediction.
-* results in a much smaller binary size than linking against TensorFlow.
-* works out-of-the-box also when compiled into a 32-bit executable.
-  (Of course, 64 bit is fine too.)
-* avoids temporarily allocating (potentially large chunks of)
-  additional RAM during convolutions (by not materializing the im2col
-  input matrix).
-* utterly ignores even the most powerful GPU in your system and uses
-  only one CPU core per prediction. ;-)
-* but is quite fast on one CPU core, and you can run multiple
-  predictions in parallel, thus utilizing as many CPUs as you like
-  to improve the overall prediction throughput of your
-  application/pipeline.
-
-%package devel
-
-Summary:        Header-only library for using Keras (TensorFlow) models in C++
-Provides:       %{name}-static = %{version}-%{release}
-
-%description devel
-Would you like to build/train a model using Keras/Python? And would
-you like to run the prediction (forward pass) on your model in C++
-without linking your application against TensorFlow? Then
-frugally-deep is exactly for you.
-
-frugally-deep
-
-* is a small header-only library written in modern and pure C++.
-* is very easy to integrate and use.
-* depends only on FunctionalPlus, Eigen and json - also header-only
-  libraries.
-* supports inference (model.predict) not only for sequential models
-  but also for computational graphs with a more complex topology,
-  created with the functional API.
-* re-implements a (small) subset of TensorFlow, i.e., the operations
-  needed to support prediction.
-* results in a much smaller binary size than linking against TensorFlow.
-* works out-of-the-box also when compiled into a 32-bit executable.
-  (Of course, 64 bit is fine too.)
-* avoids temporarily allocating (potentially large chunks of)
-  additional RAM during convolutions (by not materializing the im2col
-  input matrix).
-* utterly ignores even the most powerful GPU in your system and uses
-  only one CPU core per prediction. ;-)
-* but is quite fast on one CPU core, and you can run multiple
-  predictions in parallel, thus utilizing as many CPUs as you like
-  to improve the overall prediction throughput of your
-  application/pipeline.
-
-%prep
-%autosetup -p1 -n %{name}-%{version}
-
-# cmake changed
-sed -i -e 's@cmake_minimum_required(VERSION 3.2)@cmake_minimum_required(VERSION 3.5)@' CMakeLists.txt
-
-%build
-%cmake 
-%cmake_build
-
-%if %{with test}
-%check
-%ctest
-%endif
-
-%install
-%cmake_install
-
-%files devel
-%dir %_includedir/fdeep
-%dir %_libdir/cmake/%{name}
-%license LICENSE
+%files
 %doc README.md
-%_includedir/fdeep/*
-%_libdir/cmake/%{name}/*
+%license LICENSE
+%{_includedir}/fdeep/
+%{_libdir}/cmake/frugally-deep/
 
 %changelog
-* Mon Feb 2 2026 Yifan Xu <xuyifan@iscas.ac.cn> - 0.15.30-1
-- Import from upstream
+%autochangelog

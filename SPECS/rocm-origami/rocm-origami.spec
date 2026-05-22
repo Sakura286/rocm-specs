@@ -1,118 +1,84 @@
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
-%global upstreamname origami
 
-%bcond compat 0
-%if %{with compat}
-%global pkg_libdir lib
-%global pkg_prefix %{_prefix}/lib64/rocm/rocm-%{rocm_release}
-%global pkg_suffix -%{rocm_release}
-%global pkg_module rocm%{pkg_suffix}
-%else
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}
-%global pkg_module default
-%endif
-%global origami_name rocm-origami%{pkg_suffix}
+# rocm stack builds with clang
+%global toolchain clang
 
-Name:       rocm-origami%{pkg_suffix}
-Version:    %{rocm_version}
-Release:    1%{?dist}
-Summary:    Analytical GEMM Solution Selection
+Name:           rocm-origami
+Version:        %{rocm_version}
+Release:        %autorelease
+Summary:        Analytical GEMM Solution Selection for ROCm
+Url:            https://github.com/ROCm/rocm-libraries
+VCS:            git:https://github.com/ROCm/rocm-libraries.git
+License:        MIT
+#!RemoteAsset:  sha256:1fb56e620a06e198aeec2cf37c11e6879d0c67c62e295b48779b7f486e34acb4
+Source:         %{url}/releases/download/rocm-%{version}/origami.tar.gz
+# The LICENSE.md is not bundled in the release tarball
+Source2:        https://raw.githubusercontent.com/ROCm/rocm-libraries/rocm-%{version}/shared/origami/LICENSE.md
+# Patch paths are relative to shared/origami/ in the monorepo, so strip 3 levels (-p3)
+Patch1:         0001-rocm-origami-remove-scope-for-variables.patch
+BuildSystem:    cmake
 
-License:    MIT
-URL:        https://github.com/ROCm/rocm-libraries
-Source0:    %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz#/%{upstreamname}-%{version}.tar.gz
-# License file is not in the 7.1.0 tag, but is here
-Source2:    https://github.com/ROCm/rocm-libraries/tree/develop/shared/origami/LICENSE.md
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
+BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
-#
-# Workaround this hipblaslt build issue
-# CMake Error at /usr/lib64/cmake/origami/origami-config.cmake:11 (message):
-#   origami::origami target is missing
-#
-# hipblaslt from rocm-libraries does not use cmake to find origami
-# https://github.com/ROCm/rocm-libraries/issues/2422
-# So they would not have run into this issue.
-Patch1:     0001-rocm-origami-remove-scope-for-variables.patch
-
-ExclusiveArch: x86_64 riscv64
-
-BuildRequires: cmake
-BuildRequires: gcc-c++
-BuildRequires: rocm-cmake%{pkg_suffix}
-BuildRequires: rocm-comgr%{pkg_suffix}-devel
-BuildRequires: rocm-llvm%{pkg_suffix}-macros
-BuildRequires: rocm-hip%{pkg_suffix}-devel
-BuildRequires: rocr-runtime%{pkg_suffix}-devel
-
-BuildRequires:  llvm
-BuildRequires:  llvm-devel
 BuildRequires:  clang
-BuildRequires:  clang-devel
 BuildRequires:  clang-tools-extra
-BuildRequires:  clang-tools-extra-devel
-BuildRequires:  lld
-BuildRequires:  lld-devel
-BuildRequires:  hipcc
+BuildRequires:  cmake
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  compiler-rt
+BuildRequires:  lld
+BuildRequires:  llvm
+BuildRequires:  ninja
+BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
-BuildRequires:  git
+BuildRequires:  rocm-llvm-macros
 
 %description
-The name "origami" still evokes the elegance of transforming
-a flat (2-D) sheet into intricate higher dimensional
-structures. In this context, however, Origami has evolved
-into a tool set for **GEMM solution selection and
-optimization**. Inspired by the art of paper folding, the
-library now enables users to explore a range of tiling and
-mapping configurations and to make informed decisions on
-data and computation mapping for high-performance GEMM
-operations.
+rocm-origami (Origami) is an analytical GEMM solution selection library
+for ROCm. It provides fast GPU-based general matrix multiply performance
+estimation without requiring actual kernel execution.
 
 %package devel
-Summary: Libraries and headers for %{name}
-Requires: %{origami_name}%{?_isa} = %{version}-%{release}
+Summary:        The rocm-origami development package
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
-%{summary}
+The rocm-origami development package.
 
 %prep
-%autosetup -p3 -n %{upstreamname}
-
-# The license file
+# The tarball extracts to "origami/" and the patch needs -p3
+# (strips a/shared/origami/ prefix from the monorepo patch context)
+%autosetup -p3 -n origami
+# Use system rocm-cmake, do not try to download it
+sed -i -e 's@if(NOT ROCM_FOUND)@if(FALSE)@' cmake/dependencies.cmake
+# Install the license file that is absent from the release tarball
 cp %{SOURCE2} .
 
-# Use system rocm-cmake, no downloading
-sed -i -e 's@if(NOT ROCM_FOUND)@if(FALSE)@' cmake/dependencies.cmake
+%install -a
+rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
 
-%build
-%cmake \
-    -DCMAKE_C_COMPILER=%rocmllvm_bindir/clang \
-    -DCMAKE_CXX_COMPILER=%rocmllvm_bindir/clang++ \
-    -DCMAKE_INSTALL_LIBDIR=%{pkg_libdir} \
-    -DCMAKE_INSTALL_PREFIX=%{pkg_prefix}
-
-%cmake_build
-
-%install
-%cmake_install
-
-# Extra license
-rm -f %{buildroot}%{pkg_prefix}/share/doc/origami/LICENSE.md
-
-%files -n %{origami_name}
+%files
 %doc README.md
 %license LICENSE.md
-%{pkg_prefix}/%{pkg_libdir}/liborigami.so.0{,.*}
+%{_libdir}/liborigami.so.0{,.*}
 
 %files devel
-%{pkg_prefix}/include/origami/
-%{pkg_prefix}/%{pkg_libdir}/cmake/origami/
-%{pkg_prefix}/%{pkg_libdir}/liborigami.so
+%{_includedir}/origami/
+%{_libdir}/cmake/origami/
+%{_libdir}/liborigami.so
 
 %changelog
-* Mon Feb 23 2026 Yifan Xu <xuyifan@iscas.ac.cn> - 7.1.1-1
-- Import from upstream
+%autochangelog
