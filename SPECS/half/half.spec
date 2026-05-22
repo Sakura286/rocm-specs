@@ -26,19 +26,19 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 
-Provides:       cmake(half) = %{version}
-
 %description
 half is a C++ header-only library providing an IEEE-754 conformant
 half-precision floating point type along with arithmetic operators,
 type conversions, and common mathematical functions. It is part of
 the ROCm software stack.
 
+%install -a
+rm -f %{buildroot}%{_datadir}/doc/half/LICENSE.txt
+
 %files
 %license LICENSE.txt
 %doc README.txt
 %{_includedir}/half/
-%{_libdir}/cmake/half/
 
 %changelog
 %autochangelog
