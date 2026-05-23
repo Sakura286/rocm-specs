@@ -35,9 +35,7 @@ Source:         %{url}/releases/download/rocm-%{version}/hipcub.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=%{build_test}
 
 BuildRequires:  clang
