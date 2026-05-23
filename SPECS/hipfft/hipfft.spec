@@ -55,7 +55,7 @@ BuildRequires:  rocm-llvm-macros
 %if %{with test}
 BuildRequires:  boost-devel
 BuildRequires:  cmake(GTest)
-BuildRequires:  fftw-devel
+BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(rocrand)
 %endif
