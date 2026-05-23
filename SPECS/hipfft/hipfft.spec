@@ -90,7 +90,7 @@ sed -i -e 's@find_package( HIP MODULE REQUIRED )@find_package( HIP REQUIRED )@' 
     clients/tests/CMakeLists.txt
 
 %install -a
-rm -f %{buildroot}%{_datadir}/doc/hipfft/LICENSE.md
+rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
 
 %files
 %doc README.md

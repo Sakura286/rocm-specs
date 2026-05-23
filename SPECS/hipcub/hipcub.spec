@@ -79,6 +79,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' \
     cmake/ROCMExportTargetsHeaderOnly.cmake
 
+%install -a
+rm -f %{buildroot}/%{_datadir}/doc/hipcub/LICENSE.txt
+
 %files
 %doc README.md
 %license LICENSE.txt
