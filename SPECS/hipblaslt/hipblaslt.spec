@@ -70,7 +70,7 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  gcc-fortran
 BuildRequires:  cmake(hipblas)
-BuildRequires:  libzstd-devel
+BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  rocminfo
 BuildRequires:  rocm-cmake
@@ -79,8 +79,8 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm-origami)
-BuildRequires:  rocm-smi-lib-devel
-BuildRequires:  zlib-devel
+BuildRequires:  cmake(rocm_smi)
+BuildRequires:  pkgconfig(zlib)
 BuildRequires:  python3-devel
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
@@ -91,8 +91,7 @@ BuildRequires:  blis-devel
 BuildRequires:  lapack-devel
 BuildRequires:  ninja
 %if %{with test}
-BuildRequires:  gmock-devel
-BuildRequires:  gtest-devel
+BuildRequires:  cmake(GTest)
 %endif
 %if %{with nanobind}
 BuildRequires:  python3dist(nanobind)
@@ -221,22 +220,18 @@ fi
     -DGPU_TARGETS=%{gpu_list} \
     -DBLIS_INCLUDE_DIR=%{_includedir}/blis \
     -DBLIS_LIB=%{_libdir}/libblis.so \
-    -DBUILD_CLIENTS_TESTS=%{build_test} \
-    -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF \
-    -DBUILD_VERBOSE=ON \
+    -DHIPBLASLT_BUILD_TESTING=%{build_test} \
     -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang \
     -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++ \
     -DCMAKE_INSTALL_LIBDIR=%{_lib} \
     -DCMAKE_INSTALL_PREFIX=%{_prefix} \
     -DCMAKE_PREFIX_PATH=%{python3_sitelib}/nanobind \
     -DCMAKE_VERBOSE_MAKEFILE=ON \
-    -DHIP_PLATFORM=amd \
     -DHIPBLASLT_ENABLE_CLIENT=%{build_test} \
     -DHIPBLASLT_ENABLE_MARKER=OFF \
     -DHIPBLASLT_ENABLE_OPENMP=OFF \
     -DHIPBLASLT_ENABLE_ROCROLLER=OFF \
     -DHIPBLASLT_ENABLE_SAMPLES=OFF \
-    -DROCM_SYMLINK_LIBS=OFF \
     -DTensile_LIBRARY_FORMAT=msgpack \
     -DTensile_VERBOSE=%{tensile_verbose} \
     -DVIRTUALENV_BIN_DIR=%{_bindir} \
