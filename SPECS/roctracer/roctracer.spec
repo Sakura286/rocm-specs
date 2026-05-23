@@ -84,6 +84,10 @@ sed -i -e 's@add_subdirectory(test)@#add_subdirectory(test)@' CMakeLists.txt
 sed -i -e 's@../lib/@../%{_lib}/@' test/run.sh
 %endif
 
+%install -a
+rm -f %{buildroot}%{_datadir}/doc/%{name}/LICENSE.md
+rm -rf %{buildroot}%{_datadir}/doc/%{name}-asan
+
 %files
 %license LICENSE.md
 %doc README.md
