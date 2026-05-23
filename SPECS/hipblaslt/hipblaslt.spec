@@ -93,7 +93,7 @@ BuildRequires:  rocm-cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  cmake(hip)
-BuildRequires:  cmake(rocm-origami)
+BuildRequires:  cmake(origami)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  pkgconfig(zlib)
