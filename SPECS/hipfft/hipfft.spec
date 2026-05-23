@@ -34,12 +34,9 @@ Patch1:         0001-hipfft-hipfftw-soversion.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-BuildOption(conf):  -DHIP_PLATFORM=amd
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
