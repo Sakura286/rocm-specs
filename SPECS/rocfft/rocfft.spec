@@ -5,17 +5,13 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# Without a GPU, the test cases will fail with `what():  hipGetDeviceCount failed`
 # rocFFT needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
+%bcond test 0
 
 %global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_patch 1 
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -34,36 +30,33 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
-## BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 
+BuildRequires:  boost-devel
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(GTest)
+BuildRequires:  cmake(rocrand)
 BuildRequires:  compiler-rt
+BuildRequires:  libomp-devel
 BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  ninja
+BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-%if %{with test}
-BuildRequires:  boost-devel
-BuildRequires:  cmake(GTest)
-BuildRequires:  cmake(hiprand)
-BuildRequires:  cmake(rocrand)
-BuildRequires:  libomp-devel
-BuildRequires:  pkgconfig(fftw3)
-%endif
 
 %description
 rocFFT is a software library for computing fast Fourier transforms (FFTs) written
@@ -78,14 +71,12 @@ Requires:       cmake(hip)
 %description devel
 The rocFFT development package.
 
-%if %{with test}
 %package test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description test
 %{summary}
-%endif
 
 %prep -a
 # Do not care so much about the sqlite version
@@ -100,8 +91,9 @@ rm -rf %{buildroot}/%{_prefix}/.info
 
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 
-%check
+
 %if %{with test}
+%check
 %{_vpath_builddir}/clients/staging/rocfft-test
 %endif
 
@@ -115,11 +107,9 @@ rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 %{_libdir}/librocfft.so
 %{_libdir}/cmake/rocfft/
 
-%if %{with test}
 %files test
 %{_bindir}/rocfft-test
 %{_bindir}/rtc_helper_crash
-%endif
 
 %changelog
 %autochangelog
