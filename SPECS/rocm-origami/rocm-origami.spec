@@ -22,11 +22,16 @@ Source:         %{url}/releases/download/rocm-%{version}/origami.tar.gz
 
 # License file is not included in the release tarball
 Source1:        https://raw.githubusercontent.com/ROCm/rocm-libraries/develop/shared/origami/LICENSE.md
+BuildSystem:    cmake
 
 # Workaround hipblaslt build issue:
 #   origami::origami target is missing
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch1:         0001-rocm-origami-remove-scope-for-variables.patch
+
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -64,20 +69,7 @@ sed -i -e 's@if(NOT ROCM_FOUND)@if(FALSE)@' cmake/dependencies.cmake
 # We are building from a tarball, not a git repo
 sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/dependencies.cmake
 
-%build
-%cmake -G Ninja \
-       -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang \
-       -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++ \
-       -DCMAKE_INSTALL_LIBDIR=%{_lib} \
-       -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-       -DCMAKE_VERBOSE_MAKEFILE=ON \
-       %{nil}
-
-%cmake_build
-
-%install
-%cmake_install
-
+%install -a
 rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
 
 %files
