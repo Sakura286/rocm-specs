@@ -22,13 +22,13 @@ Source0:         %{url}/releases/download/rocm-%{version}/origami.tar.gz
 Source1:        https://raw.githubusercontent.com/ROCm/rocm-libraries/develop/shared/origami/LICENSE.md
 BuildSystem:    cmake
 
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+
 # Workaround hipblaslt build issue:
 #   origami::origami target is missing
 # https://github.com/ROCm/rocm-libraries/issues/2422
-Patch1:         0001-rocm-origami-remove-scope-for-variables.patch
-
-BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 
 BuildRequires:  clang
 BuildRequires:  cmake
