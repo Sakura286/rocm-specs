@@ -56,11 +56,11 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 %if %{with test}
+BuildRequires:  boost-devel
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(rocrand)
 BuildRequires:  pkgconfig(fftw3)
-BuildRequires:  pkgconfig(boost)
 %endif
 
 %description
