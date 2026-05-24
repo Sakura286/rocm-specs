@@ -92,6 +92,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 %endif
 
+%install -a
+rm -f %{buildroot}%{_datadir}/doc/hipsolver/LICENSE.md
+
 %files
 %doc README.md
 %license LICENSE.md
