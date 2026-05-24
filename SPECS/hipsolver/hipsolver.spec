@@ -34,15 +34,12 @@ VCS:            git:https://github.com/ROCm/hipSOLVER.git
 License:        MIT
 #!RemoteAsset:  sha256:bd664e3cd43bfcc7e94d5a387c27262c4b218d6d2e71e086992b174349dd1c10
 Source:         %{url}/archive/rocm-%{version}.tar.gz
-Patch0:         0001-hipsolver-so-version-fortran-bindings.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DHIP_PLATFORM=amd
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
 
 BuildRequires:  clang
