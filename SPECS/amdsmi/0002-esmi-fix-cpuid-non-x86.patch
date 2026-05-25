@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: openRuyi Packaging Team <packaging@openruyi.org>
+Date: Sun, 25 May 2026 00:00:00 +0000
+Subject: [PATCH] esmi: guard cpuid.h and detect_packages() for non-x86 arches
+
+cpuid.h (providing __get_cpuid) is an x86-only GCC intrinsic header.
+esmi_ib_library is specific to AMD EPYC processors; on non-x86 arches
+simply return ESMI_NOT_SUPPORTED from detect_packages() so the library
+still compiles and callers get a sensible error at runtime.
+---
+ esmi_ib_library/src/e_smi.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/esmi_ib_library/src/e_smi.c b/esmi_ib_library/src/e_smi.c
+index 0000000..0000001 100644
+--- a/esmi_ib_library/src/e_smi.c
++++ b/esmi_ib_library/src/e_smi.c
+@@ -4,9 +4,11 @@
+  * Copyright (c) 2020-2023, Advanced Micro Devices, Inc. All rights reserved.
+  *
+  */
++#ifdef __x86_64__
+ #include <cpuid.h>
++#endif
+ #include <dirent.h>
+ #include <errno.h>
+ #include <math.h>
+@@ -317,6 +319,10 @@
+         if (NULL == psm) {
+                 return ESMI_IO_ERROR;
+         }
++#ifndef __x86_64__
++        /* esmi_ib_library relies on AMD EPYC x86 CPUID; not supported here */
++        return ESMI_NOT_SUPPORTED;
++#endif
+         if (!__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
+                 return ESMI_IO_ERROR;
+         }

@@ -49,14 +49,12 @@ BuildSystem:    cmake
 
 # https://github.com/ROCm/amdsmi/pull/165
 Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
+# Guard x86-only cpuid.h in bundled esmi_ib_library for non-x86 builds
+Patch1:         0002-esmi-fix-cpuid-non-x86.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=%{build_test}
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
-%ifnarch x86_64
-# esmi_ib_library uses cpuid.h which is x86-only; ESMI itself targets AMD EPYC
-BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
-%endif
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -96,10 +94,15 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep
-%autosetup -p1 -n %{upstreamname}
+%autosetup -p1 -N -n %{upstreamname}
+%patch 0 -p1
 
 tar xf %{SOURCE1}
 mv esmi_ib_library-* esmi_ib_library
+# esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
+%ifnarch x86_64
+%patch 1 -p1
+%endif
 # So we can pick up this license
 mv esmi_ib_library/License.txt esmi_ib_library_License.txt
 # The esmi version check uses git tags, but we use tar's without git files.
