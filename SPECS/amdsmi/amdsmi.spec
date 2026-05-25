@@ -49,6 +49,8 @@ BuildSystem:    cmake
 
 # https://github.com/ROCm/amdsmi/pull/165
 Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
+# The Go shim references CPU/ESMI-only APIs; only build it when ESMI is on
+Patch1:         0002-Disable-goamdsmi_shim-when-ESMI-is-off.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=%{build_test}
@@ -98,6 +100,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep
 %autosetup -p1 -N -n %{upstreamname}
 %patch 0 -p1
+%patch 1 -p1
 
 %ifarch x86_64
 tar xf %{SOURCE1}
@@ -174,7 +177,9 @@ fi
 %license esmi_ib_library_License.txt
 %endif
 %{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
+%ifarch x86_64
 %{_libdir}/libgoamdsmi_shim64.so.1{,.*}
+%endif
 %{_bindir}/amd-smi
 %{_libexecdir}/amdsmi_cli
 %{_libdir}/python%{python3_version}/site-packages/amdsmi
@@ -184,7 +189,9 @@ fi
 %{_includedir}/*.h
 %{_libdir}/libamd_smi.so
 %{_libdir}/cmake/amd_smi/
+%ifarch x86_64
 %{_libdir}/libgoamdsmi_shim64.so
+%endif
 
 %if %{with test}
 %files test

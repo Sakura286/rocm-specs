@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yifan Xu <xuyifan@iscas.ac.cn>
+Date: Mon, 25 May 2026 00:00:00 +0800
+Subject: [PATCH] Disable goamdsmi_shim when ESMI is off
+
+The Go shim in goamdsmi_shim/smiwrapper/amdsmi_go_shim.c calls CPU-only
+APIs such as amdsmi_get_cpu_core_energy, amdsmi_get_threads_per_core
+and amdsmi_get_processor_handles_by_type. In include/amd_smi/amdsmi.h
+these are all guarded by `#ifdef ENABLE_ESMI_LIB`, so when ESMI is
+disabled (e.g. on riscv64 / non-x86 architectures) the declarations
+disappear and the shim fails to build with implicit-function-declaration
+errors.
+
+Only build the Go shim when ESMI is enabled.
+---
+ CMakeLists.txt | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -363,7 +363,9 @@ install(
+     PATTERN "build*" EXCLUDE
+     PATTERN ".cache*" EXCLUDE)
+ 
+-# Make for goamdsmi_shim library
+-add_subdirectory(goamdsmi_shim)
++# The Go shim uses CPU APIs gated by ENABLE_ESMI_LIB; only build it when ESMI is on
++if(ENABLE_ESMI_LIB)
++    add_subdirectory(goamdsmi_shim)
++endif()
+ 
+ #Debian package specific variables
+-- 
+2.51.1
+
