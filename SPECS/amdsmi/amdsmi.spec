@@ -43,10 +43,8 @@ Url:            https://github.com/ROCm/rocm-systems
 VCS:            git:https://github.com/ROCm/rocm-systems.git
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
 Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
-%ifarch x86_64
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
-%endif
 BuildSystem:    cmake
 
 # https://github.com/ROCm/amdsmi/pull/165
