@@ -19,7 +19,7 @@ Only build the Go shim when ESMI is enabled.
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -363,7 +363,9 @@ install(
+@@ -363,8 +363,10 @@
      PATTERN "build*" EXCLUDE
      PATTERN ".cache*" EXCLUDE)
  
@@ -31,6 +31,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +endif()
  
  #Debian package specific variables
+ set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3-argcomplete, libdrm-dev, libdrm-amdgpu-dev")
 -- 
 2.51.1
 
