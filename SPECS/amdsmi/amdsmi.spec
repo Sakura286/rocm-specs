@@ -175,21 +175,19 @@ fi
 %license LICENSE
 %ifarch x86_64
 %license esmi_ib_library_License.txt
-%endif
-%{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
-%ifarch x86_64
 %{_libdir}/libgoamdsmi_shim64.so.1{,.*}
 %endif
 %{_bindir}/amd-smi
 %{_libexecdir}/amdsmi_cli
+%{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
 %{_libdir}/python%{python3_version}/site-packages/amdsmi
 
 %files devel
 %{_includedir}/amd_smi/
-%{_includedir}/*.h
-%{_libdir}/libamd_smi.so
 %{_libdir}/cmake/amd_smi/
+%{_libdir}/libamd_smi.so
 %ifarch x86_64
+%{_includedir}/*.h
 %{_libdir}/libgoamdsmi_shim64.so
 %endif
 
