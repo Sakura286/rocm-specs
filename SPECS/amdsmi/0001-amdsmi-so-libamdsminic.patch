@@ -1,0 +1,28 @@
+From a7f199353dbafabcc8c4ab56c01f69e442d5edca Mon Sep 17 00:00:00 2001
+From: Tom Rix <Tom.Rix@amd.com>
+Date: Mon, 18 May 2026 04:48:16 -0700
+Subject: [PATCH] amdsmi so libamdsminic
+
+---
+ projects/amdsmi/src/nic/ai-nic/amdsmi_unified/CMakeLists.txt | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/projects/amdsmi/src/nic/ai-nic/amdsmi_unified/CMakeLists.txt b/projects/amdsmi/src/nic/ai-nic/amdsmi_unified/CMakeLists.txt
+index 34696e340aa6..96214dce9e11 100644
+--- a/projects/amdsmi/src/nic/ai-nic/amdsmi_unified/CMakeLists.txt
++++ b/projects/amdsmi/src/nic/ai-nic/amdsmi_unified/CMakeLists.txt
+@@ -45,7 +45,10 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${NIC_LINKER_FLAGS}"
+ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${NIC_LINKER_FLAGS}")
+ 
+ file(GLOB CPP_SRCS "${NIC_SOURCE_DIR}/*.cpp")
+-add_library(amdsminic STATIC ${CPP_SRCS})
++add_library(amdsminic SHARED ${CPP_SRCS})
++set_property(TARGET amdsminic PROPERTY SOVERSION "${MAJOR}")
++set_property(TARGET amdsminic PROPERTY VERSION "${SO_VERSION_STRING}")
++
+ set_target_properties(amdsminic PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${NIC_BUILD_DIR})
+ target_include_directories(
+     amdsminic
+-- 
+2.53.0
+
