@@ -1,183 +1,84 @@
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
 #
-# Copyright Fedora Project Authors.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-#
-%global upstreamname amdsmi
+# SPDX-License-Identifier: MulanPSL-2.0
 
-%global pkg_library_name amd_smi
-%global pkg_library_version 26
-
-%bcond_with preview
-%if %{with preview}
-%global rocm_release 7.13
-%global rocm_patch 0
-%global pkg_src therock-%{rocm_release}
-%else
-%global rocm_release 7.2
-%global rocm_patch 1
-%global pkg_src rocm-%{rocm_release}.%{rocm_patch}
-%endif
-
-%global rocm_version %{rocm_release}.%{rocm_patch}
-
-%bcond_with compat
-%if %{with compat}
-%global pkg_libdir lib
-%global pkg_prefix %{_prefix}/lib64/rocm/rocm-%{rocm_release}
-%global pkg_suffix %{rocm_release}
-%global pkg_module rocm%{pkg_suffix}
-%else
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}
-%global pkg_module default
-%endif
-
-%if 0%{?suse_version}
-%global pkg_name %{NAME}-libs
-%else
-%global pkg_name %{NAME}
-%endif
-
-# Downloads its own googletest
-# Testing also depends on having AMD hardware cpu and/or gpu installed.
-# Not suitable for a general check
-#
-# Non root result for gfx1100 and this kernel 6.13.0-0.rc0.20241126git7eef7e306d3c.10.fc42.x86_64
-# 25 pass, 5 fail
-# No oops
-%bcond_with test
+%bcond test 0
 %if %{with test}
 %global build_test ON
 %else
 %global build_test OFF
 %endif
 
-%bcond_with static
-%if %{with static}
-%global build_static ON
-%else
-%global build_static OFF
-%if %{with preview}
-# Test does not link without static libs, disable tests
-%global build_test OFF
-%endif
-%endif
+%global rocm_release 7.2
+%global rocm_patch 1
+%global rocm_version %{rocm_release}.%{rocm_patch}
 
-Name:       amdsmi%{pkg_suffix}
-Version:    %{rocm_version}
-%if %{with preview}
-Release:    0%{?dist}
-%else
-Release:    3%{?dist}
-%endif
-Summary:    AMD System Management Interface
-
-License:    MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
-# Main license is MIT
-# 
-# This file is GPL-2.0
-# include/amd_smi/impl/amd_hsmp.h
-# esmi_ib_library/include/asm/amd_hsmp.h
-# Both carry this license
-# /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-# But license check says, incorrectly they are
-# *No copyright* GNU General Public License, Version 2
-#
-# NSCA
-# Covers the bundled esmi_ib_library
-
-URL:        https://github.com/ROCm/rocm-systems
-Source0:    %{url}/releases/download/%{pkg_src}/%{upstreamname}.tar.gz#/%{upstreamname}-%{version}.tar.gz
+%global upstreamname amdsmi
 # esmi_ib_library is not suitable for packaging
 # https://github.com/amd/esmi_ib_library/issues/13
-# This tag was choosen by the amdsmi project because 4.0+ introduced variables not
-# found in the upstream kernel.
-%if %{without preview}
+# This tag was chosen by the amdsmi project because 4.0+ introduced variables
+# not found in the upstream kernel.
 %global esmi_ver 4.2
-%else
-%global esmi_ver 5.1.1
-%endif
-Source1:    https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
-%if %{without preview}
+%global pkg_library_version 26
+
+Name:           amdsmi
+Version:        %{rocm_version}
+Release:        %autorelease
+Summary:        AMD System Management Interface
+
+License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
+# Main license is MIT
+#
+# This file is GPL-2.0:
+# include/amd_smi/impl/amd_hsmp.h
+# esmi_ib_library/include/asm/amd_hsmp.h
+# Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
+#
+# NSCA covers the bundled esmi_ib_library
+
+Url:            https://github.com/ROCm/rocm-systems
+VCS:            git:https://github.com/ROCm/rocm-systems.git
+#!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
+Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
+#!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
+Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
+BuildSystem:    cmake
+
 # https://github.com/ROCm/amdsmi/pull/165
-Patch1:     0001-Fix-compilation-with-libdrm-2.4.130.patch
-%else
-# https://github.com/ROCm/rocm-systems/issues/4535
-Patch1:     0001-amdsmi-so-libamdsminic.patch
-%endif
+Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
 
-ExclusiveArch: x86_64
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DBUILD_TESTS=%{build_test}
+BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
 
-BuildRequires: chrpath
-BuildRequires: cmake
-BuildRequires: gcc-c++
-BuildRequires: kernel-devel
-BuildRequires: libdrm-devel
-# No python install in compat mode.
-%if %{without compat}
-BuildRequires: python3-devel
-%endif
-BuildRequires: rocm-filesystem%{pkg_suffix}
-
+BuildRequires:  cmake
+BuildRequires:  gcc-c++
+BuildRequires:  kernel-devel
+BuildRequires:  ninja
+BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(libdrm_amdgpu)
+BuildRequires:  python3-devel
+BuildRequires:  rocm-filesystem
 %if %{with test}
-%if 0%{?suse_version}
-BuildRequires: gtest
-%else
-BuildRequires: gtest-devel
-%endif
+BuildRequires:  cmake(GTest)
 %endif
 
-%if %{without compat}
-Requires:      python3dist(pyyaml)
-%endif
-
-%if %{with compat}
-Requires:       rocm-filesystem%{pkg_suffix}
-%endif
-
-%if 0%{?suse_version}
-Requires:       %{pkg_name}%{?_isa} = %{version}-%{release}
-%endif
+Requires:       python3dist(pyyaml)
 
 # University of Illinois/NCSA Open Source License
-Provides: bundled(esmi_ib_library) = %{esmi_ver}
+Provides:       bundled(esmi_ib_library) = %{esmi_ver}
 
 %description
 The AMD System Management Interface Library, or AMD SMI library, is a C
 library for Linux that provides a user space interface for applications
 to monitor and control AMD devices.
 
-%if 0%{?suse_version}
-%package -n %{pkg_name}
-Summary:        Runtime for %{name}
-
-%description -n %{pkg_name}
-%summary
-
-%ldconfig_scriptlets -n %{pkg_name}
-%endif
-
 %package devel
 Summary:        Libraries and headers for %{name}
-Requires:       %{pkg_name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 %{summary}
@@ -185,39 +86,19 @@ Requires:       %{pkg_name}%{?_isa} = %{version}-%{release}
 %if %{with test}
 %package test
 Summary:        Tests for %{name}
-Requires:       %{pkg_name}%{?_isa} = %{version}-%{release}
-%if 0%{?suse_version}
-Requires:       libgoamdsmi_shim64-1%{?_isa} = %{version}-%{release}
-%endif
-Requires:       libdrm-devel
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description test
 %{summary}
 %endif
 
-%if %{with preview}
-%if %{with static}
-%package static
-Summary: Static libraries for %{name}
-Requires: amdsmi%{pkg_suffix}-devel = %{version}-%{release}
-Provides:  amdsmi%{pkg_suffix}-static = %{version}-%{release}
-
-%description static
-%{summary}
-%endif
-%endif
-
 %prep
-%if %{without preview}
 %autosetup -p1 -n %{upstreamname}
-%else
-%autosetup -p3 -n %{upstreamname}
-%endif
 
 tar xf %{SOURCE1}
 mv esmi_ib_library-* esmi_ib_library
 # So we can pick up this license
-mv esmi_ib_library/License.txt esmi_ib_library_License.txt 
+mv esmi_ib_library/License.txt esmi_ib_library_License.txt
 # The esmi version check uses git tags, but we use tar's without git files.
 # Just inject in the tag that we've pulled into the version check:
 sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
@@ -226,282 +107,80 @@ sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
 chmod a-x README.md
 
 # /usr/libexec/amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
-#   bdf_regex = "(?:[0-6]?[0-9a-fA-F]{1,4}:)?[0-2]?[0-9a-fA-F]{1,2}:[0-9a-fA-F]{1,2}\.[0-7]"
 sed -i -e 's@bdf_regex = "@bdf_regex = r"@' amdsmi_cli/BDF.py
 
 # Fix script shebang
 sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
 
+%if %{with test}
 # Install local gtests in same dir as tests
 sed -i -e 's@${CPACK_PACKAGING_INSTALL_PREFIX}/lib@${SHARE_INSTALL_PREFIX}/tests@' tests/amd_smi_test/CMakeLists.txt
+%endif
 
 # fix cstdint include
 # https://github.com/ROCm/amdsmi/issues/123
 sed -i '/#include <unordered_set.*/a#include <cstdint>' rocm_smi/include/rocm_smi/rocm_smi_common.h
 
+%if %{with test}
 # fix iomanip include
 # https://github.com/ROCm/amdsmi/issues/124
 sed -i '/#include <string.*/a#include <iomanip>' tests/amd_smi_test/test_common.h
+%endif
 
-# Do not hardcode share dir
-sed -i 's@set(SHARE_INSTALL_PREFIX@#set(SHARE_INSTALL_PREFIX@' CMakeLists.txt
-
-%build
-%cmake \
-    -DAUTO_BUILD_STATIC_LIBS=%{build_static} \
-    -DBUILD_BOTH_LIBS=%{build_static} \
-    -DBUILD_KERNEL_ASM_DIR=/usr/include/asm \
-    -DBUILD_TESTS=%{build_test} \
-    -DCMAKE_INSTALL_LIBDIR=%{pkg_libdir} \
-    -DCMAKE_INSTALL_PREFIX=%{pkg_prefix} \
-    -DCMAKE_SKIP_INSTALL_RPATH=TRUE \
-    -DSHARE_INSTALL_PREFIX=%{pkg_prefix}/share \
-    -DUSE_SYSTEM_GTEST=%{build_test} \
-    %{nil}
-
-%cmake_build
-
-%install
-%cmake_install
-
-%if %{without compat}
-mkdir -p %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages
-if [ -d %{buildroot}%{pkg_prefix}/share/amd_smi/amdsmi ]; then
-    mv %{buildroot}%{pkg_prefix}/share/amd_smi/amdsmi %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages
-    mv %{buildroot}%{pkg_prefix}/share/amd_smi/pyproject.toml %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi/
+%install -a
+mkdir -p %{buildroot}%{_libdir}/python%{python3_version}/site-packages
+if [ -d %{buildroot}%{_datadir}/amd_smi/amdsmi ]; then
+    mv %{buildroot}%{_datadir}/amd_smi/amdsmi %{buildroot}%{_libdir}/python%{python3_version}/site-packages
+    mv %{buildroot}%{_datadir}/amd_smi/pyproject.toml %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/
 else
-    mv %{buildroot}%{pkg_prefix}/share/amdsmi %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages
-    mv %{buildroot}%{pkg_prefix}/share/pyproject.toml %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi/
+    mv %{buildroot}%{_datadir}/amdsmi %{buildroot}%{_libdir}/python%{python3_version}/site-packages
+    mv %{buildroot}%{_datadir}/pyproject.toml %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/
 fi
 
-# W: unstripped-binary-or-object /usr/lib/python3.13/site-packages/amdsmi/libamd_smi.so
-# Does an explict open, so can not just rm it
-# let's just strip it
-strip %{buildroot}/%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi/*.so
+# W: unstripped-binary-or-object .../amdsmi/libamd_smi.so
+# Does an explicit open, so can not just rm it; strip it instead
+strip %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/*.so
 # E: non-executable-script .../amdsmi_cli/amdsmi_cli_exceptions.py 644 /usr/bin/env python3
-chmod a+x %{buildroot}/%{pkg_prefix}/libexec/amdsmi_cli/amdsmi_*.py
+chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
 
-%else
-rm -f %{buildroot}/%{pkg_prefix}/bin/amd-smi
-rm -rf %{buildroot}/%{pkg_prefix}/libexec/amdsmi_cli
-rm -rf %{buildroot}/%{pkg_prefix}/share/amdsmi
-rm -rf %{buildroot}/%{pkg_prefix}/share/pyproject.toml
+rm -rf %{buildroot}%{_datadir}/example
+rm -rf %{buildroot}%{_datadir}/amd_smi/example
+rm -f %{buildroot}%{_datadir}/doc/amd_smi-asan/LICENSE.txt
+rm -f %{buildroot}%{_datadir}/doc/amd-smi-lib/LICENSE.txt
+rm -f %{buildroot}%{_datadir}/doc/amd-smi-lib/README.md
+rm -rf %{buildroot}%{_datadir}/doc/amd-smi-lib/copyright
+rm -f %{buildroot}%{_datadir}/_version.py
+rm -f %{buildroot}%{_datadir}/amd_smi/_version.py
+rm -f %{buildroot}%{_datadir}/setup.py
+rm -f %{buildroot}%{_datadir}/amd_smi/setup.py
 
-# Not going to handle golang in compat mode
-rm -rf %{buildroot}/%{pkg_prefix}/%{pkg_libdir}/libgoamdsmi_shim64*
-%endif
-
-# Remove some things
-rm -rf %{buildroot}/%{pkg_prefix}/share/example
-rm -rf %{buildroot}/%{pkg_prefix}/share/amd_smi/example
-rm -rf %{buildroot}/%{pkg_prefix}/share/doc/amd_smi-asan/LICENSE.txt
-rm -f %{buildroot}/%{pkg_prefix}/share/doc/amd-smi-lib/LICENSE.txt
-rm -f %{buildroot}/%{pkg_prefix}/share/doc/amd-smi-lib/README.md
-rm -rf %{buildroot}/%{pkg_prefix}/share/doc/amd-smi-lib/copyright
-rm -f %{buildroot}%{pkg_prefix}/share/_version.py
-rm -f %{buildroot}%{pkg_prefix}/share/amd_smi/_version.py
-rm -f %{buildroot}%{pkg_prefix}/share/setup.py
-rm -f %{buildroot}%{pkg_prefix}/share/amd_smi/setup.py
-
-if [ -e %{buildroot}%{pkg_prefix}/share/tests ]; then
-  # put the test files in a reasonable place
-  mkdir %{buildroot}%{pkg_prefix}/share/amdsmi
-  mv %{buildroot}%{pkg_prefix}/share/tests %{buildroot}%{pkg_prefix}/share/amdsmi/
+if [ -e %{buildroot}%{_datadir}/amd_smi/tests ]; then
+    mkdir -p %{buildroot}%{_datadir}/amdsmi
+    mv %{buildroot}%{_datadir}/amd_smi/tests %{buildroot}%{_datadir}/amdsmi/
 fi
 
-%if %{with preview}
-#ERROR   0002: file '/usr/lib/python3.14/site-packages/amdsmi/libamd_smi.so' contains an invalid runpath '/builddir/build/BUILD/amdsmi-7.12.0-build/amdsmi/redhat-linux-build/src/nic/ai-nic/amdsmi_unified/build' in [/builddir/build/BUILD/amdsmi-7.12.0-build/amdsmi/redhat-linux-build/src/nic/ai-nic/amdsmi_unified/build:]
-chrpath -d %{buildroot}%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi/lib%{pkg_library_name}.so
-
-%endif
-
-%if 0%{?suse_version}
-%files
-%{pkg_prefix}/bin/amd-smi
-%{pkg_prefix}/libexec/amdsmi_cli
-%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi
-
-%files -n %{pkg_name}
-%doc README.md
-%license LICENSE
-%license esmi_ib_library_License.txt 
-%{pkg_prefix}/%{pkg_libdir}/lib%{pkg_library_name}.so.%{pkg_library_version}{,.*}
-%{pkg_prefix}/%{pkg_libdir}/libgoamdsmi_shim64.so.1{,.*}
-
-%else
-
 %files
 %doc README.md
 %license LICENSE
-%license esmi_ib_library_License.txt 
-%{pkg_prefix}/%{pkg_libdir}/lib%{pkg_library_name}.so.%{pkg_library_version}{,.*}
-%if %{without compat}
-%{pkg_prefix}/%{pkg_libdir}/libgoamdsmi_shim64.so.1{,.*}
-%{pkg_prefix}/bin/amd-smi
-%{pkg_prefix}/libexec/amdsmi_cli
-%{pkg_prefix}/lib/python%{python3_version}/site-packages/amdsmi
-%endif
-%if %{with preview}
-%{pkg_prefix}/%{pkg_libdir}/libamdsminic.so.*
-%endif
-%endif
+%license esmi_ib_library_License.txt
+%{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
+%{_libdir}/libgoamdsmi_shim64.so.1{,.*}
+%{_bindir}/amd-smi
+%{_libexecdir}/amdsmi_cli
+%{_libdir}/python%{python3_version}/site-packages/amdsmi
 
 %files devel
-%{pkg_prefix}/include/amd_smi/
-%{pkg_prefix}/include/*.h
-%{pkg_prefix}/%{pkg_libdir}/lib%{pkg_library_name}.so
-%{pkg_prefix}/%{pkg_libdir}/cmake/amd_smi/
-%if %{without compat}
-%{pkg_prefix}/%{pkg_libdir}/libgoamdsmi_shim64.so
-%endif
-%if %{with preview}
-%{pkg_prefix}/include/e_smi/
-%{pkg_prefix}/include/rocm_smi/
-%{pkg_prefix}/%{pkg_libdir}/libamdsminic.so
-%endif
+%{_includedir}/amd_smi/
+%{_includedir}/*.h
+%{_libdir}/libamd_smi.so
+%{_libdir}/cmake/amd_smi/
+%{_libdir}/libgoamdsmi_shim64.so
 
-%if %{without preview}
 %if %{with test}
 %files test
-%{pkg_prefix}/share/amdsmi/
-%endif
-%endif
-
-%if %{with preview}
-%if %{with static}
-%files static
-%{pkg_prefix}/%{pkg_libdir}/lib%{pkg_library_name}_static.a
-%endif
+%{_datadir}/amdsmi/
 %endif
 
 %changelog
-* Fri Apr 17 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.1-3
-- Generate suse package names
-
-* Tue Apr 14 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.1-2
-- Add --with static
-
-* Tue Mar 24 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.1-1
-- Update to 7.2.1
-
-* Sat Mar 21 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.0-5
-- Merge back amdsmi7.2
-
-* Wed Mar 11 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.0-4
-- No python for compat
-
-* Wed Mar 11 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.0-3
-- Add --with preview
-- Change URL to rocm-systems
-
-* Thu Feb 12 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.0-2
-- Update license
-
-* Mon Jan 26 2026 Tom Rix <Tom.Rix@amd.com> - 7.2.0-1
-- Update to 7.2.0
-
-* Fri Jan 16 2026 Fedora Release Engineering <releng@fedoraproject.org> - 7.1.1-5
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_44_Mass_Rebuild
-
-* Fri Jan 16 2026 Fedora Release Engineering <releng@fedoraproject.org> - 7.1.1-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_44_Mass_Rebuild
-
-* Tue Jan 6 2026 Tom Rix <Tom.Rix@amd.com> - 7.1.1-3
-- Fix Tumbleweed
-
-* Mon Dec 22 2025 Tom Rix <Tom.Rix@amd.com> - 7.1.1-2
-- Add --with compat
-
-* Wed Nov 26 2025 Tom Rix <Tom.Rix@amd.com> - 7.1.1-1
-- Update to 7.1.1
-
-* Wed Nov 19 2025 Tom Rix <Tom.Rix@amd.com> - 7.1.0-3
-- Fix SUSE 15.6 build, remove unneeded include
-
-* Mon Nov 10 2025 Tim Flink <tflink@fedoraproject.org> - 7.1.0-2
-- update and re-enable gcc15 include patch for upstream 7.1.0 so test subpackage builds
-- removed extra dir in test subpackage
-
-* Fri Oct 31 2025 Tom Rix <Tom.Rix@amd.com> - 7.1.0-1
-- Update to 7.1.0
-
-* Fri Oct 10 2025 Tom Rix <Tom.Rix@amd.com> - 7.0.2-1
-- Update to 7.0.2
-
-* Fri Sep 19 2025 Python Maint <python-maint@redhat.com> - 7.0.0-2
-- Rebuilt for Python 3.14.0rc3 bytecode
-
-* Tue Sep 16 2025 Tom Rix <Tom.Rix@amd.com> - 7.0.0-1
-- Update to 7.0.0
-
-* Wed Aug 27 2025 Tom Rix <Tom.Rix@amd.com> - 6.4.2-6
-- Add Fedora copyright
-
-* Mon Aug 25 2025 Tom Rix <Tom.Rix@amd.com> - 6.4.2-5
-- Simplify file removal
-
-* Fri Aug 15 2025 Python Maint <python-maint@redhat.com> - 6.4.2-4
-- Rebuilt for Python 3.14.0rc2 bytecode
-
-* Wed Aug 13 2025 Tom Rix <Tom.Rix@amd.com> - 6.4.2-3
-- Build -test on SUSE
-
-* Wed Jul 23 2025 Fedora Release Engineering <releng@fedoraproject.org> - 6.4.2-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_43_Mass_Rebuild
-
-* Tue Jul 22 2025 Jeremy Newton <alexjnewt at hotmail dot com> - 6.4.2-1
-- Update to 6.4.2
-
-* Wed Jun 18 2025 Tim Flink <tflink@fedoraproject.org> - 6.4.1-4
-- update so that test subpackage builds cleanly in mock and runs outside of build environment
-
-* Mon Jun 2 2025 Tom Rix <Tom.Rix@amd.com> - 6.4.1-3
-- handle movement of copyright file on suse
-
-* Mon Jun 02 2025 Python Maint <python-maint@redhat.com> - 6.4.1-2
-- Rebuilt for Python 3.14
-
-* Thu May 22 2025 Jeremy Newton <alexjnewt at hotmail dot com> - 6.4.1-1
-- Update to 6.4.1
-
-* Wed Apr 16 2025 Jeremy Newton <alexjnewt at hotmail dot com> - 6.4.0-1
-- Update to 6.4.0
-
-* Tue Mar 11 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.3-3
-- Adjust install of python for fedora
-
-* Thu Feb 27 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.3-2
-- Install amd_smi-config.cmake
-
-* Wed Feb 19 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.3-1
-- Update to 6.3.3
-
-* Wed Jan 29 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.2-1
-- Update to 6.3.2
-
-* Fri Jan 17 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.1-6
-- Cleanup for suse
-
-* Thu Jan 16 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.1-5
-- Improve empty return patch
-- Fix shebangs
-
-* Thu Jan 16 2025 Fedora Release Engineering <releng@fedoraproject.org> - 6.3.1-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_42_Mass_Rebuild
-
-* Wed Jan 8 2025 Tom Rix <Tom.Rix@amd.com> - 6.3.1-3
-- Include cstdint for gcc 15
-
-* Tue Dec 31 2024 Tom Rix <Tom.Rix@amd.com> - 6.3.1-2
-- Require pyyaml
-
-* Sun Dec 22 2024 Tom Rix <Tom.Rix@amd.com> - 6.3.1-1
-- Update to 6.3.1
-
-* Sat Dec 7 2024 Tom Rix <Tom.Rix@amd.com> - 6.3.0-1
-- Update to 6.3
-
-* Sun Nov 3 2024 Tom Rix <Tom.Rix@amd.com> - 6.2.1-1
-- Stub for tumbleweed
-
+%autochangelog
 
