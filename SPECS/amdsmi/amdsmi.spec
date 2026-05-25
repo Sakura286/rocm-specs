@@ -56,7 +56,7 @@ BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  kernel-devel
+BuildRequires:  linux-devel
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
