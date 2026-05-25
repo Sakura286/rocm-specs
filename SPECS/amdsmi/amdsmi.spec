@@ -43,18 +43,21 @@ Url:            https://github.com/ROCm/rocm-systems
 VCS:            git:https://github.com/ROCm/rocm-systems.git
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
 Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
+%ifarch x86_64
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
+%endif
 BuildSystem:    cmake
 
 # https://github.com/ROCm/amdsmi/pull/165
 Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
-# Guard x86-only cpuid.h in bundled esmi_ib_library for non-x86 builds
-Patch1:         0002-esmi-fix-cpuid-non-x86.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=%{build_test}
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
+%ifnarch x86_64
+BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
+%endif
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -69,8 +72,9 @@ BuildRequires:  cmake(GTest)
 
 Requires:       python3dist(pyyaml)
 
-# University of Illinois/NCSA Open Source License
+%ifarch x86_64
 Provides:       bundled(esmi_ib_library) = %{esmi_ver}
+%endif
 
 %description
 The AMD System Management Interface Library, or AMD SMI library, is a C
@@ -97,17 +101,17 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %autosetup -p1 -N -n %{upstreamname}
 %patch 0 -p1
 
+%ifarch x86_64
 tar xf %{SOURCE1}
 mv esmi_ib_library-* esmi_ib_library
 # esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
-%ifnarch x86_64
-%patch 1 -p1
-%endif
+
 # So we can pick up this license
 mv esmi_ib_library/License.txt esmi_ib_library_License.txt
 # The esmi version check uses git tags, but we use tar's without git files.
 # Just inject in the tag that we've pulled into the version check:
 sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
+%endif
 
 # W: spurious-executable-perm /usr/share/doc/amdsmi/README.md
 chmod a-x README.md
@@ -168,7 +172,9 @@ fi
 %files
 %doc README.md
 %license LICENSE
+%ifarch x86_64
 %license esmi_ib_library_License.txt
+%endif
 %{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
 %{_libdir}/libgoamdsmi_shim64.so.1{,.*}
 %{_bindir}/amd-smi
