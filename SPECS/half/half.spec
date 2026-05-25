@@ -32,10 +32,19 @@ half-precision floating point type along with arithmetic operators,
 type conversions, and common mathematical functions. It is part of
 the ROCm software stack.
 
+%package        devel
+Summary:        Headers for %{name}
+
+%description    devel
+half is a C++ header-only library providing an IEEE-754 conformant
+half-precision floating point type along with arithmetic operators,
+type conversions, and common mathematical functions. It is part of
+the ROCm software stack.
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/half/LICENSE.txt
 
-%files
+%files devel
 %license LICENSE.txt
 %doc README.txt
 %{_includedir}/half/
