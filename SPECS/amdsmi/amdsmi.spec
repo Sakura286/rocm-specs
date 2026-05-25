@@ -61,7 +61,6 @@ BuildRequires:  ninja
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
 BuildRequires:  python3-devel
-BuildRequires:  rocm-filesystem
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
