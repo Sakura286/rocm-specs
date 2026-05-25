@@ -54,9 +54,9 @@ BuildOption(conf):  -DMIOPEN_USE_COMPOSABLEKERNEL=OFF
 BuildOption(conf):  -DMIOPEN_USE_HIPBLASLT=OFF
 BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
 
+BuildRequires:  boost-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(Boost)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
