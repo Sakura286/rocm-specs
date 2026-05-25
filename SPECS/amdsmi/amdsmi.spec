@@ -53,6 +53,10 @@ Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=%{build_test}
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
+%ifnarch x86_64
+# esmi_ib_library uses cpuid.h which is x86-only; ESMI itself targets AMD EPYC
+BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
+%endif
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
