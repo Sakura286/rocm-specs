@@ -65,6 +65,7 @@ BuildRequires:  cmake(rocrand)
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  clang
+BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
 BuildRequires:  half-devel
 BuildRequires:  hipcc
@@ -131,13 +132,6 @@ sed -i -e 's@opts.push_back("-fno-offload-uniform-block");@//opts.push_back("-fn
 
 # Fix the path used to locate the ROCm clang binary at build time
 sed -i -e 's@llvm/bin/clang@bin/clang@' src/hip/hip_build_utils.cpp
-
-%build
-# Ensure ROCm LLVM tools (lld, llvm-link) are in PATH for HIP device linking.
-# Without this, GetProgramPath("lld") fails during offload compilation
-# because lld may not be present in the default build PATH.
-export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
-%cmake_build
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/miopen-hip/LICENSE.md
