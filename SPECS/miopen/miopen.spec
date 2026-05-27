@@ -114,12 +114,6 @@ sed -i -e 's@clang-tidy@true@' cmake/ClangTidy.cmake
 # Workaround: bunzip2 detection uses lbunzip2 which may not be present
 sed -i -e 's@lbunzip2 bunzip2@bunzip2@' CMakeLists.txt
 
-# https://github.com/ROCm/MIOpen/issues/2672
-# The distro half package installs <half.hpp>, not <half/half.hpp>
-sed -i -e 's@find_path(HALF_INCLUDE_DIR half/half.hpp)@#find_path(HALF_INCLUDE_DIR half/half.hpp)@' CMakeLists.txt
-for f in $(find . -type f \( -name '*.hpp' -o -name '*.cpp' \)); do
-    sed -i -e 's@#include <half/half.hpp>@#include <half.hpp>@' "$f"
-done
 # half_float::detail::expr is not present in all half versions
 sed -i -e 's@std::is_same_v<T, half_float::detail::expr>@0@' test/verify.hpp
 
