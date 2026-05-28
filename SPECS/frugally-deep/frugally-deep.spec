@@ -24,11 +24,11 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DFDEEP_USE_OPENCV=OFF
 
 BuildRequires:  cmake
-BuildRequires:  gcc-c++
-BuildRequires:  eigen3-devel
 BuildRequires:  cmake(FunctionalPlus)
+BuildRequires:  gcc-c++
 BuildRequires:  nlohmann-json
 BuildRequires:  ninja
+BuildRequires:  pkgconfig(eigen3)
 
 # No compiled runtime: provide cmake() so dependents can use cmake(frugally-deep)
 Provides:       cmake(frugally-deep) = %{version}
