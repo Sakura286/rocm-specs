@@ -20,7 +20,8 @@ License:        BSL-1.0
 Source:         %{url}/archive/v%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):  -G Ninja
+BuildOption(conf):   -G Ninja
+BuildOption(setup):  -n FunctionalPlus-%{version}
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++

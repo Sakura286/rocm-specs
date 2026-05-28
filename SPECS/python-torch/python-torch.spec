@@ -412,6 +412,9 @@ sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
 sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/concurrentqueue@' cmake/Dependencies.cmake
 
 %build
+export CXXFLAGS="${CXXFLAGS//-DC10_NODEPRECATED/}"
+export CFLAGS="${CFLAGS//-DC10_NODEPRECATED/}"
+
 # Control the number of jobs
 # The build can fail if too many threads exceed the physical memory
 # Run at least one thread, more if CPU & memory resources are available.
