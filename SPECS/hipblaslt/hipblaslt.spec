@@ -1,30 +1,16 @@
-%define python_exec python3
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
 
-%bcond gitcommit 0
-%if %{with gitcommit}
-%global commit0 2584e35062ad9c2edb68d93c464cf157bc57e3b0
-%global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
-%global date0 20250926
-%endif
+%define python_exec python3
 
 %global upstreamname hipblaslt
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
-
-%bcond compat 0
-%if %{with compat}
-%global pkg_libdir lib
-%global pkg_prefix %{_prefix}/lib64/rocm/rocm-%{rocm_release}
-%global pkg_suffix -%{rocm_release}
-%global pkg_module rocm%{pkg_suffix}
-%else
-%global pkg_libdir %{_lib}
-%global pkg_prefix %{_prefix}
-%global pkg_suffix %{nil}
-%global pkg_module default
-%endif
-%global hipblaslt_name hipblaslt%{pkg_suffix}
 
 %global toolchain rocm
 # hipcc does not support some clang flags
@@ -65,49 +51,24 @@
 %global _source_payload w7T0.xzdio
 %global _binary_payload w7T0.xzdio
 
-# hipblaslt does not support our default set
-#%global gpu_list %{rocm_gpu_list_hipblaslt}
-%global gpu_list %{rocm_gpu_list_default}
-# For testing
-%global _gpu_list "gfx1100"
-
-# Use ninja if it is available
-# Ninja is available on suse but obs times out with ninja build, make doesn't
-%bcond ninja 1
-
-%if %{with ninja}
-%global cmake_generator -G Ninja
-%else
-%global cmake_generator %{nil}
-%endif
-
-# Request for python-nanobind on EPEL
-# https://bugzilla.redhat.com/show_bug.cgi?id=2402409
-%bcond nanobind 0
-
-Name:           %{hipblaslt_name}
-%if %{with gitcommit}
-Version:        git%{date0}.%{shortcommit0}
-Release:        2%{?dist}
-%else
-Version:        %{rocm_version}
-Release:        1%{?dist}
-%endif
-Summary:        ROCm general matrix operations beyond BLAS
-License:        MIT AND BSD-3-Clause
-URL:            https://github.com/ROCm/rocm-libraries
-
-%if %{with gitcommit}
-Source0:        %{url}/archive/%{commit0}/rocm-libraries-%{shortcommit0}.tar.gz
-%else
-Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz#/%{upstreamname}-%{version}.tar.gz
-%endif
+%global tensile_verbose 1
 
 %global nanobind_version 2.9.2
 %global nanobind_giturl https://github.com/wjakob/nanobind
-Source1:        %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
 %global robinmap_version 1.3.0
 %global robinmap_giturl https://github.com/Tessil/robin-map
+
+Name:           hipblaslt
+Version:        %{rocm_version}
+Release:        %autorelease
+Summary:        ROCm general matrix operations beyond BLAS
+License:        MIT AND BSD-3-Clause
+URL:            https://github.com/ROCm/rocm-libraries
+VCS:            git:https://github.com/ROCm/hipBLASLt.git
+#!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
+Source:         %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
+
+Source1:        %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
 Source2:        %{robinmap_giturl}/archive/v%{robinmap_version}/robin-map-%{robinmap_version}.tar.gz
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
@@ -122,41 +83,34 @@ Patch4:         0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
 Patch5:         0001-hipblaslt-cmake-compile-and-link-pools.patch
 
 BuildRequires:  llvm
-BuildRequires:  llvm-devel
 BuildRequires:  clang
-BuildRequires:  clang-devel
 BuildRequires:  clang-tools-extra
-BuildRequires:  clang-tools-extra-devel
 BuildRequires:  lld
-BuildRequires:  lld-devel
 BuildRequires:  compiler-rt
 BuildRequires:  rocm-device-libs
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  gcc-fortran
-BuildRequires:  hipblas%{pkg_suffix}-devel
-BuildRequires:  hipcc%{pkg_suffix}
-BuildRequires:  libzstd-devel
-BuildRequires:  rocblas%{pkg_suffix}-devel
-BuildRequires:  rocminfo%{pkg_suffix}
-BuildRequires:  rocm-cmake%{pkg_suffix}
-BuildRequires:  rocm-comgr%{pkg_suffix}-devel
-BuildRequires:  rocm-llvm%{pkg_suffix}-macros
-BuildRequires:  rocm-hip%{pkg_suffix}-devel
-BuildRequires:  rocm-origami%{pkg_suffix}-devel
-BuildRequires:  rocr-runtime%{pkg_suffix}-devel
-BuildRequires:  rocm-smi%{pkg_suffix}-devel
-BuildRequires:  zlib-devel
+BuildRequires:  cmake(hipblas)
+BuildRequires:  hipcc
+BuildRequires:  pkgconfig(libzstd)
+BuildRequires:  cmake(rocblas)
+BuildRequires:  rocminfo
+BuildRequires:  rocm-cmake
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-llvm-macros
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(origami)
+BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(rocm_smi)
+BuildRequires:  pkgconfig(zlib)
+BuildRequires:  ninja
 
 # For tensilelite
 BuildRequires:  python3-devel
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
-%if %{with nanobind}
-BuildRequires:  python3dist(nanobind)
-%endif
-%global tensile_verbose 1
 BuildRequires:  python3dist(joblib)
 # https://github.com/ROCm/hipBLASLt/issues/1734
 BuildRequires:  python3dist(msgpack)
@@ -165,25 +119,13 @@ BuildRequires:  msgpack-devel
 %if %{with test}
 BuildRequires:  blis-devel
 BuildRequires:  lapack-devel
-BuildRequires:  gmock-devel
-BuildRequires:  gtest-devel
+BuildRequires:  cmake(GMock)
+BuildRequires:  cmake(GTest)
 %endif
 
-%if %{with ninja}
-BuildRequires:  ninja
-%define __builder ninja
-%endif
-
-Provides:       hipblaslt%{pkg_suffix} = %{version}-%{release}
 Provides:       bundled(python-tensile) = %{tensile_version}
-
-%if %{without nanobind}
-# BSD-3-Clause
 Provides:       bundled(nanobind) = %{nanobind_version}
 Provides:       bundled(robin-map) = %{robinmap_version}
-%endif
-
-ExclusiveArch:  x86_64 riscv64
 
 %description
 hipBLASLt is a library that provides general matrix-matrix
@@ -195,7 +137,6 @@ algorithmic implementations and heuristics.
 %package devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
-Provides:       hipblaslt%{pkg_suffix}-devel = %{version}-%{release}
 
 %description devel
 %{summary}
@@ -210,14 +151,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep
-%if %{with gitcommit}
-%setup -q -n rocm-libraries-%{commit0}
-cd projects/hipblaslt
-%patch -P1 -p1
-%patch -P2 -p1
-%else
 %autosetup -p1 -n %{upstreamname}
-%endif
 
 # Use PATH to find where TensileGetPath and other tensile bins are
 sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g'            tensilelite/Tensile/cmake/TensileConfig.cmake
@@ -231,10 +165,6 @@ sed -i -e 's@virtualenv_install@#virtualenv_install@'                          C
 # Disable trying to download rocm-cmake
 sed -i -e 's@if(NOT ROCmCMakeBuildTools_FOUND)@if(FALSE)@' cmake/dependencies.cmake
 
-%if %{with nanobind}
-# Disable download of nanobind
-sed -i -e 's@FetchContent_MakeAvailable(nanobind)@find_package(nanobind)@' tensilelite/rocisa/CMakeLists.txt
-%else
 # Use bundled nanobind
 tar xf %{SOURCE1}
 mv nanobind-* nanobind
@@ -243,12 +173,11 @@ tar xf %{SOURCE2}
 cp -r robin-map-*/* ext/robin_map/
 cd ..
 tar czf nanobind.tar.gz nanobind
-%endif
 
 # As of 6.4, there is a long poll
 # compile_code_object.sh gfx90a,gfx1100,gfx1101,gfx1151,gfx1200,gfx1201 RelWithDebInfo sha1 hipblasltTransform.hsaco
 # This compiles a large file with multiple gpus.
-GPUS=`echo %{gpu_list} | grep -o 'gfx' | wc -l`
+GPUS=`echo %{rocm_gpu_list_default} | grep -o 'gfx' | wc -l`
 
 HIP_JOBS=`lscpu | grep 'Core(s)' | awk '{ print $4 }'`
 if [ ${HIP_JOBS}x = x ]; then
@@ -280,9 +209,6 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
 %build
-%if %{with gitcommit}
-cd projects/hipblaslt
-%endif
 
 # Do a manual install instead of cmake's virtualenv
 cd tensilelite
@@ -292,7 +218,7 @@ TL=$PWD
 cd ..
 
 # Should not have to do this
-export PATH=%{pkg_prefix}/bin:$PATH
+export PATH=%{_prefix}/bin:$PATH
 CLANG_PATH=`hipconfig --hipclangpath`
 ROCM_CLANG=${CLANG_PATH}/clang
 RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
@@ -304,8 +230,6 @@ export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
 export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
-# Uncomment and see if the path is sane
-# TensileGetPath
 
 cat /proc/cpuinfo
 cat /proc/meminfo
@@ -341,27 +265,19 @@ if [ "$LINK_JOBS" -lt "$JOBS" ]; then
     JOBS=$LINK_JOBS
 fi
 
-%cmake %{cmake_generator} \
-       -DGPU_TARGETS=%{gpu_list} \
-       -DBLIS_INCLUDE_DIR=%{_includedir}/blis \
-       -DBLIS_LIB=%{_libdir}/libblis.so \
+%cmake -G Ninja \
+       -DGPU_TARGETS=%{rocm_gpu_list_default} \
        -DBUILD_CLIENTS_TESTS=%{build_test} \
-       -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF \
-       -DBUILD_VERBOSE=ON \
-       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
        -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang \
        -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++ \
-       -DCMAKE_INSTALL_LIBDIR=%{pkg_libdir} \
-       -DCMAKE_INSTALL_PREFIX=%{pkg_prefix} \
-       -DCMAKE_PREFIX_PATH=%{python3_sitelib}/nanobind \
+       -DCMAKE_INSTALL_LIBDIR=%{_lib} \
+       -DCMAKE_INSTALL_PREFIX=%{_prefix} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DHIP_PLATFORM=amd \
        -DHIPBLASLT_ENABLE_CLIENT=%{build_test} \
        -DHIPBLASLT_ENABLE_MARKER=OFF \
        -DHIPBLASLT_ENABLE_OPENMP=OFF \
        -DHIPBLASLT_ENABLE_ROCROLLER=OFF \
        -DHIPBLASLT_ENABLE_SAMPLES=OFF \
-       -DROCM_SYMLINK_LIBS=OFF \
        -DTensile_LIBRARY_FORMAT=msgpack \
        -DTensile_VERBOSE=%{tensile_verbose} \
        -DVIRTUALENV_BIN_DIR=%{_bindir} \
@@ -372,43 +288,33 @@ fi
 %cmake_build
 
 %install
-%if %{with gitcommit}
-cd projects/hipblaslt
-%endif
 
 %cmake_install
 
 # Extra license
-rm -f %{buildroot}%{pkg_prefix}/share/doc/hipblaslt/LICENSE.md
+rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
 
 %post  -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 
 %files
-%if %{with gitcommit}
-%doc projects/hipblaslt/README.md
-%license projects/hipblaslt/LICENSE.md
-%else
 %doc README.md
 %license LICENSE.md
-%endif
-
-%{pkg_prefix}/%{pkg_libdir}/libhipblaslt.so.*
-%{pkg_prefix}/%{pkg_libdir}/hipblaslt/
+%{_libdir}/libhipblaslt.so.*
+%{_libdir}/hipblaslt/
 
 %files devel
-%{pkg_prefix}/include/hipblaslt/
-%{pkg_prefix}/include/hipblaslt-export.h
-%{pkg_prefix}/include/hipblaslt-version.h
-%{pkg_prefix}/%{pkg_libdir}/cmake/hipblaslt/
-%{pkg_prefix}/%{pkg_libdir}/libhipblaslt.so
+%{_includedir}/hipblaslt/
+%{_includedir}/hipblaslt-export.h
+%{_includedir}/hipblaslt-version.h
+%{_libdir}/cmake/hipblaslt/
+%{_libdir}/libhipblaslt.so
 
 %if %{with test}
 %files test
-%{pkg_prefix}/bin/hipblaslt*
-%{pkg_prefix}/bin/sequence.yaml
+%{_bindir}/hipblaslt*
+%{_bindir}/sequence.yaml
 %endif
 
 %changelog
-* Mon Feb 9 2026 Yifan Xu <xuyifan@iscas.ac.cn> - 7.1.1-1
-- Import from upstream
+%autochangelog
