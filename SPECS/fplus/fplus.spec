@@ -39,12 +39,24 @@ run. It pursues these goals by providing pure and easy-to-use
 functions that free you from implementing commonly used flows of
 control over and over again.
 
+%package        devel
+Summary:        Development files for Functional Programming Library for C++
+
+%description    devel
+FunctionalPlus is a small header-only library supporting you in
+reducing code noise and in dealing with only one single level
+of abstraction at a time. By increasing brevity and maintainability
+of your code it can improve productivity (and fun!) in the long
+run. It pursues these goals by providing pure and easy-to-use
+functions that free you from implementing commonly used flows of
+control over and over again.
+
 %prep -a
 # License check flags this as BSD 3-Clause
 # api_search not distributed, remove to make license simpler
 rm -rf api_search
 
-%files
+%files devel
 %doc README.md
 %license LICENSE
 %{_includedir}/fplus/
