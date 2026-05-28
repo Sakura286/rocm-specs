@@ -78,10 +78,10 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(rocm-origami)
-BuildRequires:  rocm-smi-lib-devel
+BuildRequires:  cmake(origami)
+BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  cmake(roctracer)
+BuildRequires:  roctracer-devel
 BuildRequires:  zlib-devel
 BuildRequires:  python3-devel
 BuildRequires:  python3dist(setuptools)
@@ -91,7 +91,7 @@ BuildRequires:  python3dist(msgpack)
 BuildRequires:  msgpack-devel
 BuildRequires:  chrpath
 BuildRequires:  flexiblas-devel
-BuildRequires:  gcc-gfortran
+BuildRequires:  gcc-fortran
 BuildRequires:  rocm-omp-devel
 %if %{with test}
 BuildRequires:  gtest-devel
