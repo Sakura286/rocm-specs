@@ -26,7 +26,7 @@ BuildOption(conf):  -DFDEEP_USE_OPENCV=OFF
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  eigen3-devel
-BuildRequires:  fplus-devel
+BuildRequires:  cmake(FunctionalPlus)
 BuildRequires:  nlohmann-json
 BuildRequires:  ninja
 
