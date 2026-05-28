@@ -5,33 +5,14 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%define python_exec python3
-
-%global upstreamname hipblaslt
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global toolchain rocm
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
 
-# Fortran is only used in testing
-# clang and gfortran fedora toolchain args do not mix
-%global build_fflags %{nil}
-
-# Reduce link memory pressure
-%global _lto_cflags %{nil}
-
-# may run out of memory for both compile and link
-# Calculate a good -j number below
-%global _smp_mflags %{nil}
-
-# gfx90a: 10343 pass, 152 fail
 %bcond test 0
-# Disable rpatch checks for a local build
 %if %{with test}
-%global __brp_check_rpaths %{nil}
 %global build_test ON
 %else
 %global build_test OFF
@@ -45,11 +26,6 @@
 # https://github.com/ROCm/hipBLASLt/issues/535
 # The problem with the fork has been raised here.
 # https://github.com/ROCm/hipBLASLt/issues/908
-
-# Compression type and level for source/binary package payloads.
-#  "w7T0.xzdio"	xz level 7 using %%{getncpus} threads
-%global _source_payload w7T0.xzdio
-%global _binary_payload w7T0.xzdio
 
 %global tensile_verbose 1
 
@@ -66,21 +42,20 @@ License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
 VCS:            git:https://github.com/ROCm/hipBLASLt.git
 #!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
-Source:         %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
-
+Source0:         %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 Source1:        %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
 Source2:        %{robinmap_giturl}/archive/v%{robinmap_version}/robin-map-%{robinmap_version}.tar.gz
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
-Patch1:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
+Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
 # change hard coded vendor paths to fedoras
-Patch2:         0001-hipblaslt-tensilelite-use-fedora-paths.patch
+Patch1:         0001-hipblaslt-tensilelite-use-fedora-paths.patch
 # https://github.com/ROCm/rocm-libraries/issues/2422
-Patch3:         0001-hipblaslt-find-origami-package.patch
+Patch2:         0001-hipblaslt-find-origami-package.patch
 # do not try to fetch, point to the nanobind tarball
-Patch4:         0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
+Patch3:         0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
 # compile and link jobpools
-Patch5:         0001-hipblaslt-cmake-compile-and-link-pools.patch
+Patch4:         0001-hipblaslt-cmake-compile-and-link-pools.patch
 
 BuildRequires:  llvm
 BuildRequires:  clang
@@ -108,13 +83,13 @@ BuildRequires:  pkgconfig(zlib)
 BuildRequires:  ninja
 
 # For tensilelite
-BuildRequires:  python3-devel
+BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
 # https://github.com/ROCm/hipBLASLt/issues/1734
 BuildRequires:  python3dist(msgpack)
-BuildRequires:  msgpack-devel
+BuildRequires:  cmake(msgpack)
 
 %if %{with test}
 BuildRequires:  blis-devel
@@ -214,7 +189,7 @@ find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/am
 cd tensilelite
 TL=$PWD
 
-%python_exec setup.py install --root $TL
+python3 setup.py install --root $TL
 cd ..
 
 # Should not have to do this
