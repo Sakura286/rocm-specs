@@ -27,9 +27,6 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  ninja
 
-# No compiled runtime: provide cmake() so dependents can use cmake(FunctionalPlus)
-Provides:       cmake(FunctionalPlus) = %{version}
-
 %description
 FunctionalPlus is a small header-only library supporting you in
 reducing code noise and in dealing with only one single level
