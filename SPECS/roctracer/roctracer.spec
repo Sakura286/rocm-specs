@@ -34,9 +34,6 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DHIP_PLATFORM=amd
-BuildOption(conf):  -DBUILD_SHARED_LIBS=ON
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
