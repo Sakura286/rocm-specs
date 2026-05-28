@@ -5,23 +5,18 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# This is a header-only library. No compiled runtime library is produced.
-# All files (headers + CMake config) go into the base package per SOP rule 6.
-%global debug_package %{nil}
-
 Name:           fplus
 Version:        0.2.25
 Release:        %autorelease
 Summary:        Functional Programming Library for C++
 Url:            https://github.com/Dobiasd/FunctionalPlus
-VCS:            git:https://github.com/Dobiasd/FunctionalPlus.git
 License:        BSL-1.0
 #!RemoteAsset:  sha256:9b5e24bbc92f43b977dc83efbc173bcf07dbe07f8718fc2670093655b56fcee3
 Source:         %{url}/archive/v%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):   -G Ninja
 BuildOption(setup):  -n FunctionalPlus-%{version}
+BuildOption(conf):   -G Ninja
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
