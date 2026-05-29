@@ -167,7 +167,7 @@ BuildRequires:  pkgconfig(flatbuffers)
 %if %{with rocm}
 BuildRequires:  hipblas-devel
 BuildRequires:  hipblaslt-devel
-BuildRequires:  hipcub-devel
+BuildRequires:  cmake(hipcub)
 BuildRequires:  hipfft-devel
 BuildRequires:  hiprand-devel
 BuildRequires:  hipsparse-devel
