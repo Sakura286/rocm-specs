@@ -46,18 +46,16 @@ Name:           hipsparselt
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        A SPARSE marshaling library
-Url:            https://github.com/ROCm/hipSPARSELt
-VCS:            git:https://github.com/ROCm/hipSPARSELt.git
 License:        MIT
-#!RemoteAsset:  sha256:31047a7187c128cf85fdbd822ba057ab1f9ae2f5ceceb230ca428042a96e24d4
-Source:         %{url}/archive/rocm-%{version}.tar.gz
-Source1:        https://github.com/ROCm/hipBLASLt/archive/%{hipblaslt_commit}/hipBLASLt-%{hipblaslt_scommit}.tar.gz
+URL:            https://github.com/ROCm/rocm-libraries
+#!RemoteAsset
+Source0:        %{url}/releases/download/%{pkg_src}/%{upstreamname}.tar.gz
+Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
 Source3:        0001-hipblaslt-tensilelite-use-fedora-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
 Source5:        0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
-Source6:        0001-hipblaslt-tensilelite-use-clang.patch
 Source10:       %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
 Source11:       %{robinmap_giturl}/archive/v%{robinmap_version}/robin-map-%{robinmap_version}.tar.gz
 
@@ -132,12 +130,11 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep
-%autosetup -p1 -n hipSPARSELt-rocm-%{version}
 
-# Extract and set up hipBLASLt (for its Tensile)
+%autosetup -p1 -n %{name}
+
 tar xf %{SOURCE1}
-mv hipBLASLt-%{hipblaslt_commit} hipBLASLt
-cd hipBLASLt
+cd hipblaslt
 
 patch -p1 < %{SOURCE2}
 patch -p1 < %{SOURCE3}
@@ -186,11 +183,11 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipBLASLt/
 sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Dependencies.cmake
 
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
-find hipBLASLt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
+find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
 %build
-HIPBLASLT_PATH=$PWD/hipBLASLt
-cd hipBLASLt
+HIPBLASLT_PATH=$PWD/hipblaslt
+cd hipblaslt
 
 # disable openmp in hipBLASLt
 sed -i -e 's@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." ON)@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." OFF)@' CMakeLists.txt
