@@ -179,7 +179,7 @@ sed -i -e 's@set( BLAS_LIBRARY "blas" )@set( BLAS_LIBRARY "flexiblas" )@' client
 sed -i -e 's@lapack cblas@flexiblas@' clients/gtest/CMakeLists.txt
 
 # We are building from a tarball, not a git repo
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipBLASLt/cmake/dependencies.cmake
+sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipblaslt/cmake/dependencies.cmake
 sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Dependencies.cmake
 
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
