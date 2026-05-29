@@ -49,7 +49,7 @@ Summary:        A SPARSE marshaling library
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset
-Source0:        %{url}/releases/download/%{pkg_src}/%{upstreamname}.tar.gz
+Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
