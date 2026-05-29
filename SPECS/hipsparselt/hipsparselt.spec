@@ -89,14 +89,17 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
 BuildRequires:  python3dist(msgpack)
 BuildRequires:  msgpack-devel
+
+BuildRequires:  gcc-fortran
+
+%if %{with test}
 BuildRequires:  chrpath
 BuildRequires:  flexiblas-devel
-BuildRequires:  gcc-fortran
 BuildRequires:  rocm-omp-devel
-%if %{with test}
 BuildRequires:  gtest-devel
 BuildRequires:  gmock-devel
 %endif
+
 %if %{with nanobind}
 BuildRequires:  python3dist(nanobind)
 %endif
