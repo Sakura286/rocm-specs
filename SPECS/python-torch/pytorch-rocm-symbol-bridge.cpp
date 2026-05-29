@@ -6,11 +6,13 @@
 //   libtorch_hip.so references the TensorBase data-pointer template family
 //   (const_data_ptr / mutable_data_ptr / data_ptr) using a NON-SFINAE
 //   mangling form (...Li0EEE... — only the non-type template parameter
-//   value is encoded). But the explicit specialisations emitted from
-//   TensorMethods.cpp into libtorch_cpu.so are mangled WITH the SFINAE
-//   template-template-parameter encoded (...Tn NSt9enable_if... Li0EEE...).
-//   Same C++ source, two clang mangling conventions, no link-time error
-//   thanks to lld's --allow-shlib-undefined → runtime dlopen reports
+//   value is encoded). The explicit specialisations emitted from
+//   TensorMethods.cpp into libtorch_cpu.so may or may not be mangled
+//   the same way depending on clang's handling of SFINAE NTTPs in this
+//   specific clang/ROCm/arch combination (we have observed both: cpu
+//   exporting the Li0E form, and cpu only exporting the Tn...enable_if
+//   form). No link-time error in the latter case thanks to lld's
+//   --allow-shlib-undefined → runtime dlopen reports
 //   "undefined symbol: _ZNK2at10TensorBase14const_data_ptrI*Li0EEEPK*v"
 //   when libtorch_hip.so is loaded.
 //
@@ -18,11 +20,15 @@
 //   (closed as not planned; pytorch treats this as a clang/ROCm gap)
 //
 // Bridge strategy:
-//   Provide the missing Li0E-only manglings as free functions linked into
-//   libtorch_cpu.so, with default visibility so the dynamic linker can
-//   resolve libtorch_hip.so against them. Each bridge body delegates to
-//   the non-templated public accessor on TensorBase, which returns the
-//   raw underlying data pointer.
+//   Provide every plausibly-missing mangling as a weak free function
+//   linked into libtorch_cpu.so with default visibility. Where the cpp
+//   specialisation already provides the same mangled name as a strong
+//   symbol, the linker discards the bridge weak symbol and uses the
+//   cpp version (which preserves the runtime check_type call). Where
+//   the cpp does NOT emit the same mangling, the bridge weak symbol
+//   fills the gap so libtorch_hip.so dlopen resolves. Each bridge body
+//   delegates to the non-templated public accessor on TensorBase,
+//   which returns the raw underlying data pointer.
 //
 // Semantics note:
 //   The non-templated TensorBase::const_data_ptr() / mutable_data_ptr() /
@@ -55,12 +61,15 @@
 
 extern "C" {
 
+// `weak` is essential: the cpp's TensorMethods.cpp specialisation emits
+// the same mangled name as a strong global on some build configurations.
+// Without `weak` the link step fails with a duplicate-symbol error.
 #define BRIDGE_READ(MangledName) \
-  __attribute__((visibility("default"))) \
+  __attribute__((weak, visibility("default"))) \
   const void* MangledName(const at::TensorBase* t) { return t->const_data_ptr(); }
 
 #define BRIDGE_WRITE(MangledName) \
-  __attribute__((visibility("default"))) \
+  __attribute__((weak, visibility("default"))) \
   void* MangledName(const at::TensorBase* t) { return t->mutable_data_ptr(); }
 
 // ---- const_data_ptr<T, 0>  (non-const T, plain Li0E form) ----
