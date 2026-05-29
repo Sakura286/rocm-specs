@@ -97,6 +97,12 @@ Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{k
 %global mslk_scommit 3d332d1
 Source120:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
 
+# pytorch upstream issue #173707: libtorch_hip.so references the
+# const_data_ptr / mutable_data_ptr / data_ptr template family with a
+# different (non-SFINAE) mangling than libtorch_cpu.so exports.
+# Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
+Source122:       pytorch-rocm-symbol-bridge.cpp
+
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
 BuildRequires:  cpuinfo
@@ -406,15 +412,17 @@ sed -i -e 's@lib/cmake/hip@lib64/cmake/hip@' cmake/public/LoadHIP.cmake
 sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
 # silence an assert
 # sed -i -e '/qvalue = std::clamp(qvalue, qmin, qmax);/d' aten/src/ATen/native/cuda/IndexKernel.cu
+
+# Append ROCm symbol bridge — see Source122 header for full context.
+# Without this, libtorch_hip.so dlopen fails on:
+#   undefined symbol: _ZNK2at10TensorBase14const_data_ptrI*Li0EEEPK*v
+cat %{SOURCE122} >> aten/src/ATen/core/Tensor.cpp
 %endif
 
 # moodycamel include path needs adjusting to use the system's
 sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/concurrentqueue@' cmake/Dependencies.cmake
 
 %build
-export CXXFLAGS="${CXXFLAGS//-DC10_NODEPRECATED/}"
-export CFLAGS="${CFLAGS//-DC10_NODEPRECATED/}"
-
 # Control the number of jobs
 # The build can fail if too many threads exceed the physical memory
 # Run at least one thread, more if CPU & memory resources are available.
