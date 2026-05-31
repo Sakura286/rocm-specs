@@ -405,6 +405,20 @@ sed -i -e 's@cmake_minimum_required(VERSION 3.4)@cmake_minimum_required(VERSION 
 # force using hipModuleOccupancyMaxActiveBlocksPerMultiprocessor
 sed -i -e 's/TORCH_HIP_VERSION < 305/TORCH_HIP_VERSION < 305 \&\& TORCH_HIP_VERSION > 0/' \
     aten/src/ATen/cuda/nvrtc_stub/ATenNVRTC.h
+# pytorch upstream issue #173707 (gemm/bgemm variant):
+# clang 21 mangles the instantiation-dependent SFINAE non-type template parameter
+#   typename std::enable_if<...,Dtype>::type* = nullptr
+# of at::cuda::blas::gemm/bgemm differently at an explicit specialization (the
+# definition, Tn...enable_if form) than at a deduced call site (the reference,
+# ...IffLPf0E... form), so libtorch_hip.so fails to dlopen with e.g.
+#   undefined symbol: _ZN2at4cuda4blas4gemmIffLPf0EEEvcclllNS_10OpMathTypeIT_E4typeEPKS5_lS9_lS7_PT0_l
+# Every real dtype is provided by an explicit specialization, so the SFINAE guard
+# is redundant: drop it so the two overloads collapse to one primary template and
+# clang emits a single consistent mangling everywhere. Must run before hipify.
+sed -i \
+    -e 's/, typename std::enable_if<!CUDABLAS_GEMM_DTYPE_IS_FLOAT_TYPE_AND_C_DTYPE_IS_FLOAT, Dtype>::type\* = nullptr>/>/g' \
+    -e 's/, typename std::enable_if<CUDABLAS_GEMM_DTYPE_IS_FLOAT_TYPE_AND_C_DTYPE_IS_FLOAT, Dtype>::type\* = nullptr>/>/g' \
+    aten/src/ATen/cuda/CUDABlas.h
 # hipify
 ./tools/amd_build/build_amd.py
 # use any hip, correct CMAKE_MODULE_PATH
