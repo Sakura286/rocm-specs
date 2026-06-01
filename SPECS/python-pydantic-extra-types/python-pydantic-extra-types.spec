@@ -20,12 +20,12 @@ BuildSystem:    pyproject
 
 BuildOption(install):  %{pypi_name}
 # Skip submodules whose optional dependencies are not packaged yet
-BuildOption(check):  -e 'pydantic_extra_types.cron' \
-                     -e 'pydantic_extra_types.mongo_object_id' \
-                     -e 'pydantic_extra_types.pendulum_dt' \
-                     -e 'pydantic_extra_types.phone_numbers' \
-                     -e 'pydantic_extra_types.semantic_version' \
-                     -e 'pydantic_extra_types.ulid'
+BuildOption(check):  -e 'pydantic_extra_types.cron'
+BuildOption(check):  -e 'pydantic_extra_types.mongo_object_id'
+BuildOption(check):  -e 'pydantic_extra_types.pendulum_dt'
+BuildOption(check):  -e 'pydantic_extra_types.phone_numbers'
+BuildOption(check):  -e 'pydantic_extra_types.semantic_version'
+BuildOption(check):  -e 'pydantic_extra_types.ulid'
 
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
