@@ -19,13 +19,19 @@ BuildArch:      noarch
 BuildSystem:    pyproject
 
 BuildOption(install):  %{pypi_name}
-# semver is an optional dependency that is not packaged
-BuildOption(check):  -e 'pydantic_extra_types.semver'
+# Skip submodules whose optional dependencies are not packaged yet
+BuildOption(check):  -e 'pydantic_extra_types.cron' \
+                     -e 'pydantic_extra_types.mongo_object_id' \
+                     -e 'pydantic_extra_types.pendulum_dt' \
+                     -e 'pydantic_extra_types.phone_numbers' \
+                     -e 'pydantic_extra_types.semantic_version' \
+                     -e 'pydantic_extra_types.ulid'
 
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(hatchling)
 BuildRequires:  python3dist(pip)
+BuildRequires:  python3dist(pycountry)
 BuildRequires:  python3dist(setuptools)
 
 Provides:       python3-%{srcname} = %{version}-%{release}
