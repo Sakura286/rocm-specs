@@ -41,6 +41,8 @@ Mistral's models and tooling.
 
 %prep -a
 cp -p %{SOURCE1} LICENCE
+# Relax jsonschema lower bound to match the version available in the repo
+sed -i 's/jsonschema>=4.21.1/jsonschema>=4.17.3/' pyproject.toml
 
 %generate_buildrequires
 %pyproject_buildrequires
