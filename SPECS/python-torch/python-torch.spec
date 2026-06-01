@@ -295,8 +295,11 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --
 
 # Use parallel jobs for GPU offload compilation (LLVM 21 uses --offload-jobs, not -parallel-jobs)
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8@' cmake/Dependencies.cmake
-# Need to link with librocm_smi64
-sed -i -e 's@hipzrtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
+# Need to link with librocm_smi64 (intra_node_comm.cpp calls rsmi_init /
+# rsmi_is_P2P_accessible). The target string is "hiprtc::hiprtc" — the previous
+# pattern "hipzrtc::hiprtc" had a stray 'z' so the sed was a no-op and
+# libtorch_hip.so ended up with an undefined rsmi_init symbol.
+sed -i -e 's@hiprtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
 
 # No third_party fmt, use system
 sed -i -e 's@fmt::fmt-header-only@fmt@' CMakeLists.txt
