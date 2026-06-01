@@ -24,6 +24,7 @@ BuildOption(check):  -e 'pydantic_extra_types.cron'
 BuildOption(check):  -e 'pydantic_extra_types.mongo_object_id'
 BuildOption(check):  -e 'pydantic_extra_types.pendulum_dt'
 BuildOption(check):  -e 'pydantic_extra_types.phone_numbers'
+BuildOption(check):  -e 'pydantic_extra_types.semantic_version'
 BuildOption(check):  -e 'pydantic_extra_types.semver'
 BuildOption(check):  -e 'pydantic_extra_types.ulid'
 
