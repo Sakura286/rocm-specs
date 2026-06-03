@@ -1,0 +1,54 @@
+--- a/py-interface/amdsmi_wrapper.py
++++ b/py-interface/amdsmi_wrapper.py
+@@ -176,6 +176,42 @@
+ # 3. Relative to amdsmi_wrapper.py
+ #    - parent directory
+ #    - current directory
++class _AmdsmiMissingSymbol:
++    # Placeholder for a symbol absent from libamd_smi.so (e.g. the CPU/E-SMI
++    # API when the library is built with ENABLE_ESMI_LIB=OFF on non-x86_64).
++    # It accepts the restype/argtypes the wrapper assigns at import time and
++    # only raises if the symbol is ever actually called.
++    def __init__(self, name):
++        object.__setattr__(self, "_amdsmi_name", name)
++
++    def __setattr__(self, key, value):
++        object.__setattr__(self, key, value)
++
++    def __call__(self, *args, **kwargs):
++        name = object.__getattribute__(self, "_amdsmi_name")
++        raise NotImplementedError(
++            "amdsmi symbol " + repr(name) + " is unavailable: it is not "
++            "exported by this build of libamd_smi.so")
++
++
++class _AmdsmiTolerantLib:
++    # Proxy around the loaded CDLL so that binding a symbol the library does
++    # not export resolves to a stub instead of raising AttributeError at
++    # import time. We wrap the already-constructed library object rather than
++    # the ctypes.CDLL() call so that callers hooking ctypes.CDLL (e.g.
++    # PyTorch's libamd_smi.so loader) keep working.
++    def __init__(self, lib):
++        object.__setattr__(self, "_amdsmi_lib", lib)
++
++    def __getattr__(self, name):
++        try:
++            return getattr(object.__getattribute__(self, "_amdsmi_lib"), name)
++        except AttributeError:
++            if name.startswith("__"):
++                raise
++            return _AmdsmiMissingSymbol(name)
++
++
+ def find_smi_library():
+     err = OSError("Could not load libamd_smi.so")
+     possible_locations = []
+@@ -194,7 +230,7 @@
+     for location in possible_locations:
+         try:
+             lib = ctypes.CDLL(location)
+-            return lib, location
++            return _AmdsmiTolerantLib(lib), location
+         except OSError as e:
+             err = e
+             continue

@@ -51,6 +51,9 @@ BuildSystem:    cmake
 Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
 # The Go shim references CPU/ESMI-only APIs; only build it when ESMI is on
 Patch1:         0002-Disable-goamdsmi_shim-when-ESMI-is-off.patch
+# Without ESMI (non-x86_64) libamd_smi.so omits the CPU API; let the ctypesgen
+# wrapper tolerate the missing symbols so `import amdsmi` still works
+Patch2:         0003-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=%{build_test}
@@ -101,6 +104,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %autosetup -p1 -N -n %{upstreamname}
 %patch 0 -p1
 %patch 1 -p1
+%ifnarch x86_64
+%patch 2 -p1
+%endif
 
 %ifarch x86_64
 tar xf %{SOURCE1}
@@ -147,51 +153,6 @@ else
     mv %{buildroot}%{_datadir}/amdsmi %{buildroot}%{_libdir}/python%{python3_version}/site-packages
     mv %{buildroot}%{_datadir}/pyproject.toml %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/
 fi
-
-%ifnarch x86_64
-# On non-x86_64 we build with -DENABLE_ESMI_LIB=OFF, so libamd_smi.so does not
-# export the CPU/E-SMI API (amdsmi_get_cpu_handles, ...). The ctypesgen wrapper
-# eager-binds every symbol at import, so the absent CPU symbols make
-# `import amdsmi` (hence `import torch`) fail with AttributeError. Wrap the
-# loaded library object in a proxy that turns missing-symbol lookups into stubs
-# that only raise when actually called. We wrap the constructed library (not the
-# ctypes.CDLL call), so PyTorch's own CDLL hook keeps working.
-_wrap=%{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/amdsmi_wrapper.py
-_tmp=$(mktemp)
-cat > "$_tmp" <<'PYEOF'
-class _AmdsmiMissingSymbol:
-    def __init__(self, name):
-        object.__setattr__(self, "_amdsmi_name", name)
-
-    def __setattr__(self, key, value):
-        object.__setattr__(self, key, value)
-
-    def __call__(self, *args, **kwargs):
-        name = object.__getattribute__(self, "_amdsmi_name")
-        raise NotImplementedError(
-            "amdsmi symbol " + repr(name) + " is unavailable: CPU/E-SMI "
-            "support is disabled in this build (non-x86_64)")
-
-
-class _AmdsmiTolerantLib:
-    def __init__(self, lib):
-        object.__setattr__(self, "_amdsmi_lib", lib)
-
-    def __getattr__(self, name):
-        try:
-            return getattr(object.__getattribute__(self, "_amdsmi_lib"), name)
-        except AttributeError:
-            if name.startswith("__"):
-                raise
-            return _AmdsmiMissingSymbol(name)
-
-
-PYEOF
-cat "$_wrap" >> "$_tmp"
-mv "$_tmp" "$_wrap"
-chmod 644 "$_wrap"
-sed -i "/^_libraries\['libamd_smi.so'\] = /a _libraries['libamd_smi.so'] = _AmdsmiTolerantLib(_libraries['libamd_smi.so'])" "$_wrap"
-%endif
 
 # W: unstripped-binary-or-object .../amdsmi/libamd_smi.so
 # Does an explicit open, so can not just rm it; strip it instead
