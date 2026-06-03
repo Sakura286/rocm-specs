@@ -103,6 +103,11 @@ Source120:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSL
 # Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
 Source122:       pytorch-rocm-symbol-bridge.cpp
 
+# Don't let the advisory @overload body check abort `import torch` when
+# inspect cannot re-parse a multi-line signature (Python 3.13 truncates the
+# source before the body); warn and continue instead.
+Patch1:          0001-Make-overload-body-check-tolerant-of-unparseable-source.patch
+
 BuildRequires:  cmake
 BuildRequires:  concurrentqueue-devel
 BuildRequires:  cpuinfo
