@@ -16,7 +16,6 @@
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global upstreamname amdsmi
 # esmi_ib_library is not suitable for packaging
 # https://github.com/amd/esmi_ib_library/issues/13
 # This tag was chosen by the amdsmi project because 4.0+ introduced variables
@@ -39,7 +38,7 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
 # NSCA covers the bundled esmi_ib_library
 Url:            https://github.com/ROCm/rocm-systems
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
-Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
+Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
 BuildSystem:    cmake
@@ -95,7 +94,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep
-%autosetup -p1 -N -n %{upstreamname}
+%autosetup -p1 -N -n %{name}
 %patch 0 -p1
 %patch 1 -p1
 %ifnarch x86_64
@@ -120,31 +119,26 @@ sed -i -e 's@bdf_regex = "@bdf_regex = r"@' amdsmi_cli/BDF.py
 sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
 
 %install -a
-mkdir -p %{buildroot}%{_libdir}/python%{python3_version}/site-packages
-if [ -d %{buildroot}%{_datadir}/amd_smi/amdsmi ]; then
-    mv %{buildroot}%{_datadir}/amd_smi/amdsmi %{buildroot}%{_libdir}/python%{python3_version}/site-packages
-    mv %{buildroot}%{_datadir}/amd_smi/pyproject.toml %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/
-else
-    mv %{buildroot}%{_datadir}/amdsmi %{buildroot}%{_libdir}/python%{python3_version}/site-packages
-    mv %{buildroot}%{_datadir}/pyproject.toml %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/
-fi
+mkdir -p %{buildroot}%{python3_sitearch}
+mv %{buildroot}%{_datadir}/amdsmi %{buildroot}%{python3_sitearch}
+mv %{buildroot}%{_datadir}/pyproject.toml %{buildroot}%{python3_sitearch}/amdsmi/
 
 # W: unstripped-binary-or-object .../amdsmi/libamd_smi.so
 # Does an explicit open, so can not just rm it; strip it instead
-strip %{buildroot}%{_libdir}/python%{python3_version}/site-packages/amdsmi/*.so
+strip %{buildroot}%{python3_sitearch}/amdsmi/*.so
 # E: non-executable-script .../amdsmi_cli/amdsmi_cli_exceptions.py 644 /usr/bin/env python3
 chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
 
 rm -rf %{buildroot}%{_datadir}/example
 rm -rf %{buildroot}%{_datadir}/amd_smi/example
-rm -f %{buildroot}%{_datadir}/doc/amd_smi-asan/LICENSE.txt
-rm -f %{buildroot}%{_datadir}/doc/amd-smi-lib/LICENSE.txt
-rm -f %{buildroot}%{_datadir}/doc/amd-smi-lib/README.md
-rm -rf %{buildroot}%{_datadir}/doc/amd-smi-lib/copyright
 rm -f %{buildroot}%{_datadir}/_version.py
 rm -f %{buildroot}%{_datadir}/amd_smi/_version.py
 rm -f %{buildroot}%{_datadir}/setup.py
 rm -f %{buildroot}%{_datadir}/amd_smi/setup.py
+rm -f %{buildroot}%{_docdir}/amd_smi-asan/LICENSE.txt
+rm -f %{buildroot}%{_docdir}/amd-smi-lib/LICENSE.txt
+rm -f %{buildroot}%{_docdir}/amd-smi-lib/README.md
+rm -rf %{buildroot}%{_docdir}/amd-smi-lib/copyright
 
 if [ -e %{buildroot}%{_datadir}/amd_smi/tests ]; then
     mkdir -p %{buildroot}%{_datadir}/amdsmi
@@ -154,19 +148,21 @@ fi
 %files
 %doc README.md
 %license LICENSE
+%{_bindir}/amd-smi
+%{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
+%{_libexecdir}/amdsmi_cli
+%{python3_sitearch}/amdsmi
+
 %ifarch x86_64
 %license esmi_ib_library_License.txt
 %{_libdir}/libgoamdsmi_shim64.so.1{,.*}
 %endif
-%{_bindir}/amd-smi
-%{_libexecdir}/amdsmi_cli
-%{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
-%{_libdir}/python%{python3_version}/site-packages/amdsmi
 
 %files devel
 %{_includedir}/amd_smi/
 %{_libdir}/cmake/amd_smi/
 %{_libdir}/libamd_smi.so
+
 %ifarch x86_64
 %{_includedir}/*.h
 %{_libdir}/libgoamdsmi_shim64.so
