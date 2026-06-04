@@ -204,4 +204,3 @@ fi
 
 %changelog
 %autochangelog
-
