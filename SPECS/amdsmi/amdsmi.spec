@@ -28,7 +28,6 @@ Name:           amdsmi
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD System Management Interface
-
 License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
 # Main license is MIT
 #
@@ -38,17 +37,17 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
 # Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
 # NSCA covers the bundled esmi_ib_library
-
 Url:            https://github.com/ROCm/rocm-systems
-VCS:            git:https://github.com/ROCm/rocm-systems.git
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
 Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
 BuildSystem:    cmake
 
+# Support libdrm 2.4.130+
 # https://github.com/ROCm/amdsmi/pull/165
 Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
+# -DENABLE_ESMI_LIB=OFF is not enough. goamdsmi_shim_
 # The Go shim references CPU/ESMI-only APIs; only build it when ESMI is on
 Patch1:         0002-Disable-goamdsmi_shim-when-ESMI-is-off.patch
 # Without ESMI (non-x86_64) libamd_smi.so omits the CPU API; let the ctypesgen
@@ -63,40 +62,35 @@ BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
 %endif
 
 BuildRequires:  cmake
-BuildRequires:  gcc-c++
-BuildRequires:  linux-devel
-BuildRequires:  ninja
-BuildRequires:  pkgconfig(libdrm)
-BuildRequires:  pkgconfig(libdrm_amdgpu)
-BuildRequires:  python3-devel
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
+BuildRequires:  gcc-c++
+BuildRequires:  ninja
+BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(libdrm_amdgpu)
+BuildRequires:  pkgconfig(python3)
 
 Requires:       python3dist(pyyaml)
-
-%ifarch x86_64
-Provides:       bundled(esmi_ib_library) = %{esmi_ver}
-%endif
 
 %description
 The AMD System Management Interface Library, or AMD SMI library, is a C
 library for Linux that provides a user space interface for applications
 to monitor and control AMD devices.
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 %{summary}
 
 %if %{with test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
@@ -108,41 +102,22 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %patch 2 -p1
 %endif
 
+# ESMI - EPYC System Management Interface
+# esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
 %ifarch x86_64
 tar xf %{SOURCE1}
 mv esmi_ib_library-* esmi_ib_library
-# esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
-
-# So we can pick up this license
 mv esmi_ib_library/License.txt esmi_ib_library_License.txt
 # The esmi version check uses git tags, but we use tar's without git files.
 # Just inject in the tag that we've pulled into the version check:
 sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
 %endif
 
-# W: spurious-executable-perm /usr/share/doc/amdsmi/README.md
-chmod a-x README.md
-
 # /usr/libexec/amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
 sed -i -e 's@bdf_regex = "@bdf_regex = r"@' amdsmi_cli/BDF.py
 
 # Fix script shebang
 sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
-
-%if %{with test}
-# Install local gtests in same dir as tests
-sed -i -e 's@${CPACK_PACKAGING_INSTALL_PREFIX}/lib@${SHARE_INSTALL_PREFIX}/tests@' tests/amd_smi_test/CMakeLists.txt
-%endif
-
-# fix cstdint include
-# https://github.com/ROCm/amdsmi/issues/123
-sed -i '/#include <unordered_set.*/a#include <cstdint>' rocm_smi/include/rocm_smi/rocm_smi_common.h
-
-%if %{with test}
-# fix iomanip include
-# https://github.com/ROCm/amdsmi/issues/124
-sed -i '/#include <string.*/a#include <iomanip>' tests/amd_smi_test/test_common.h
-%endif
 
 %install -a
 mkdir -p %{buildroot}%{_libdir}/python%{python3_version}/site-packages
