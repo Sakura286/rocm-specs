@@ -83,6 +83,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's@SQLite3 3.50.2 @SQLite3 @' cmake/sqlite.cmake
 
 %install -a
+# we don't need the rocfft_rtc_helper binary and client-info file
+find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} /usr/bin/rm -rf "{}"
+rm -rf %{buildroot}/%{_prefix}/.info
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 
 %if %{with test}
