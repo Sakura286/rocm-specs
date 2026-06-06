@@ -15,6 +15,8 @@ License:        BSL-1.0
 Source:         %{url}/archive/v%{version}.tar.gz
 BuildSystem:    cmake
 
+BuildRequires:  cmake
+
 %description
 FunctionalPlus is a small header-only library supporting you in
 reducing code noise and in dealing with only one single level
