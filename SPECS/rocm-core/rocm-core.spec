@@ -18,18 +18,17 @@ BuildSystem:    cmake
 BuildOption(conf):  -DROCM_VERSION=%{rocm_version}
 
 BuildRequires:  cmake
-BuildRequires:  gcc-c++
 
 Provides:       rocm-core = %{version}-%{release}
 
 %description
 %{summary}
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 %{summary}
 
 %install -a
@@ -44,8 +43,6 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %{_libdir}/librocm-core.so.*
 
 %files devel
-%dir %{_includedir}/rocm-core
-%dir %{_libdir}/cmake/rocm-core
 %{_includedir}/rocm-core/*.h
 %{_libdir}/cmake/rocm-core/*.cmake
 %{_libdir}/librocm-core.so
