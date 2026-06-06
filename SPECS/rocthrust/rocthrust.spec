@@ -8,6 +8,11 @@
 # rocThrust needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond test 0
+%if %{with test}
+%global build_test ON
+%else
+%global build_test OFF
+%endif
 
 %global rocm_release 7.1
 %global rocm_patch 1
@@ -23,7 +28,7 @@ Summary:        ROCm Thrust library
 
 Url:            https://github.com/ROCm/rocThrust
 VCS:            git:https://github.com/ROCm/rocThrust.git
-License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT AND LicenseRef-Fedora-Public-Domain
+License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 # All files are Apache 2.0 with some exceptions:
 # ./cmake contains only files under MIT
 # ./internal/benchmark/*.py are dual licensed Apache 2.0 and Boost 1.0
@@ -32,54 +37,47 @@ License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 # ./thrust/cmake/FindTBB.cmake is public domain
 # ./thrust/detail/allocator/allocator_traits.h is dual Apache 2.0 and MIT
 # ./thrust/detail/complex contains BSD 2 clause licensed headers
-#!RemoteAsset:  sha256:TODO
+#!RemoteAsset
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-%if %{with test}
-BuildOption(conf):  -DBUILD_TEST=ON
-%else
-BuildOption(conf):  -DBUILD_TEST=OFF
-%endif
+BuildOption(conf):  -DBUILD_TEST=%{build_test}
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
-BuildRequires:  cmake(hip)
-BuildRequires:  cmake(rocprim)
 %if %{with test}
 BuildRequires:  cmake(GTest)
+%endif
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(rocprim)
 BuildRequires:  compiler-rt
 BuildRequires:  lld
 BuildRequires:  llvm
-BuildRequires:  rocm-device-libs
-%endif
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
+BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 
 %description
 Thrust is a parallel algorithm library. This library has been
 ported to HIP/ROCm platform, which uses the rocPRIM library.
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
-Provides:       cmake(rocthrust) = %{version}
 
-%description devel
+%description    devel
 %{summary}
 
 %if %{with test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
@@ -90,11 +88,6 @@ sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' cmake/ROCMExp
 
 %install -a
 rm -f %{buildroot}%{_docdir}/rocthrust/LICENSE
-
-%if %{with test}
-%check -p
-export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}:$LD_LIBRARY_PATH
-%endif
 
 %files
 %doc README.md

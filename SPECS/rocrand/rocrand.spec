@@ -75,11 +75,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 %endif
 
-%if %{with test}
-%check -p
-export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
-%endif
-
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 
