@@ -67,7 +67,7 @@ BuildRequires:  cmake(GTest)
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
-BuildRequires:  half-devel
+BuildRequires:  half
 BuildRequires:  hipcc
 BuildRequires:  lld
 BuildRequires:  llvm
