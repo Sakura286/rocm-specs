@@ -21,12 +21,13 @@ Name:           rocfft
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
-Url:            https://github.com/ROCm/rocFFT
 License:        MIT
+Url:            https://github.com/ROCm/rocFFT
 #!RemoteAsset:  sha256:047e4e93e0b12869bf42136b5eb683df3a1635b01a58bbb25c8861df291ab285
 Source:         %{url}/archive/rocm-%{version}.tar.gz
-Patch0:         0001-cmake-use-gnu-installdirs.patch
 BuildSystem:    cmake
+
+Patch0:         0001-cmake-use-gnu-installdirs.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -82,14 +83,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's@SQLite3 3.50.2 @SQLite3 @' cmake/sqlite.cmake
 
 %install -a
-# we don't need the rocfft_rtc_helper binary, don't package it
-find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} /usr/bin/rm -rf "{}"
-
-# we don't need or want the client-info file installed by rocfft
-rm -rf %{buildroot}/%{_prefix}/.info
-
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
-
 
 %if %{with test}
 %check
@@ -103,8 +97,8 @@ rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 
 %files devel
 %{_includedir}/rocfft/
-%{_libdir}/librocfft.so
 %{_libdir}/cmake/rocfft/
+%{_libdir}/librocfft.so
 
 %files test
 %{_bindir}/rocfft-test
