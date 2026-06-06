@@ -5,12 +5,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# Two reasons to disable test package:
-# 1. The tests are too big to take too much time to build
-# 2. The tests require a GPU environment to run
-# So keep this bcond for future use
-%bcond test 1
-
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -22,17 +16,15 @@ Name:           rccl
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Communication Collectives Library
-
-Url:            https://github.com/ROCm/rccl
-VCS:            git:https://github.com/ROCm/rccl.git
 License:        BSD-3-Clause AND MIT AND Apache-2.0
 # From License.txt the main license is BSD 3
 # Modifications from Microsoft is MIT
 # The NVIDIA based header files below are Apache-2.0
 #  src/include/nvtx3/nv*.h and similar
 # The URL for NVIDIA in the License.txt https://github.com/NVIDIA/NVTX is Apache-2.0
+Url:            https://github.com/ROCm/rccl
 #!RemoteAsset:  sha256:eaa60bcf62feb3198553f2bcf6dcbfdfcecd0fdfabda41f1dae7d3f15fadbd68
-Source:         %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
@@ -40,9 +32,7 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
-%if %{with test}
 BuildOption(conf):  -DBUILD_TESTS=ON
-%endif
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -83,29 +73,27 @@ algorithms and have been optimized for throughput and latency. For
 best performance, small operations can be either batched into
 larger operations or aggregated through the API.
 
-%package devel
+%package        devel
 Summary:        Headers and libraries for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Provides:       rccl-devel = %{version}-%{release}
 
-%description devel
+%description    devel
 Headers and libraries for %{name}
 
-%package data
+%package        data
 Summary:        Data for %{name}
 BuildArch:      noarch
 
-%description data
+%description    data
 Data for %{name}
 
-%if %{with test}
 %package test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description test
 %{summary}
-%endif
 
 %prep -a
 # Do not force install
@@ -138,10 +126,8 @@ rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
 %{_libdir}/cmake/rccl/
 %{_libdir}/librccl.so
 
-%if %{with test}
 %files test
 %{_bindir}/rccl-UnitTests
-%endif
 
 %changelog
 %autochangelog
