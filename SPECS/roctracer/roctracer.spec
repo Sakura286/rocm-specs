@@ -56,19 +56,19 @@ roctracer is a callback and activity tracing library for ROCm. It provides
 function call tracing for HIP and other ROCm runtimes, activity (asynchronous)
 tracing, and ROCTx user-defined event markers.
 
-%package devel
+%package        devel
 Summary:        The roctracer development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 The roctracer development package.
 
 %if %{with test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
