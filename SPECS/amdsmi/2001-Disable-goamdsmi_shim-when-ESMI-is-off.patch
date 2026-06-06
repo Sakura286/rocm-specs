@@ -1,7 +1,7 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Yifan Xu <xuyifan@iscas.ac.cn>
-Date: Mon, 25 May 2026 00:00:00 +0800
-Subject: [PATCH] Disable goamdsmi_shim when ESMI is off
+From 21afd2c2d58b8c7895df47f6a16a0781a7f0024a Mon Sep 17 00:00:00 2001
+From: Sakura286 <sakura286@outlook.com>
+Date: Sat, 6 Jun 2026 20:38:13 +0800
+Subject: [PATCH 1/2] Disable goamdsmi_shim when ESMI is off
 
 The Go shim in goamdsmi_shim/smiwrapper/amdsmi_go_shim.c calls CPU-only
 APIs such as amdsmi_get_cpu_core_energy, amdsmi_get_threads_per_core
@@ -10,16 +10,15 @@ these are all guarded by `#ifdef ENABLE_ESMI_LIB`, so when ESMI is
 disabled (e.g. on riscv64 / non-x86 architectures) the declarations
 disappear and the shim fails to build with implicit-function-declaration
 errors.
-
-Only build the Go shim when ESMI is enabled.
 ---
  CMakeLists.txt | 6 ++++--
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1b7375f..013c1ad 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -363,8 +363,10 @@
+@@ -363,8 +363,10 @@ install(
      PATTERN "build*" EXCLUDE
      PATTERN ".cache*" EXCLUDE)
  
@@ -33,5 +32,5 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
  #Debian package specific variables
  set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3-argcomplete, libdrm-dev, libdrm-amdgpu-dev")
 -- 
-2.51.1
+2.53.0
 
