@@ -12,6 +12,8 @@
 %global build_test OFF
 %endif
 
+%global toolchain clang
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -30,11 +32,16 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=%{build_test}
 
+BuildRequires:  clang
+BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
+BuildRequires:  compiler-rt
+BuildRequires:  lld
+BuildRequires:  llvm
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
