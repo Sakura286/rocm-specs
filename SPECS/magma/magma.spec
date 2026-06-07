@@ -71,6 +71,10 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep
 %autosetup -p1
 
+# Add newer gfx targets to Makefile's valid arch whitelist
+# https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
+sed -i -e 's@1032 1033@1032 1033 1100 1101 1102 1103 1150 1151 1152 1153 1200 1201@' Makefile
+
 # Change the bin,lib install locations
 sed -i -e 's@DESTINATION lib@DESTINATION ${CMAKE_INSTALL_LIBDIR}@' CMakeLists.txt
 sed -i -e 's@DESTINATION bin@DESTINATION ${CMAKE_INSTALL_BINDIR}@' CMakeLists.txt
