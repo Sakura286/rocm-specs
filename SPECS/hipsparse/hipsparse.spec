@@ -14,6 +14,8 @@
 %global build_test OFF
 %endif
 
+%global toolchain clang
+
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -42,6 +44,8 @@ BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{build_test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/hipsparse-test-matrices/
 
+BuildRequires:  clang
+BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 %if %{with test}
@@ -51,7 +55,10 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
+BuildRequires:  compiler-rt
 BuildRequires:  gcc-fortran
+BuildRequires:  lld
+BuildRequires:  llvm
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
