@@ -5,15 +5,20 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# hipSPARSE needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
-%if %{with test}
-%global build_test ON
+# hipSPARSE need to download about 19 testing matrix
+# It is verbose to add them to SOURCE and %%prep section
+%bcond build_test 0
+%if %{with build_test}
+%global cmake_test ON
 %else
-%global build_test OFF
+%global cmake_test OFF
 %endif
 
+# hipSPARSE needs a GPU to run tests, but we could still
+# keep the test cases for packagers who have a GPU.
+%bcond run_test 0
+
+# This ROCm package is built with clang by default
 %global toolchain clang
 
 %global rocm_release 7.1
@@ -24,9 +29,8 @@ Name:           hipsparse
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
-Url:            https://github.com/ROCm/hipSPARSE
-VCS:            git:https://github.com/ROCm/hipSPARSE.git
 License:        MIT
+Url:            https://github.com/ROCm/hipSPARSE
 #!RemoteAsset:  sha256:b001834d8e65c3878d1a69d08803d5b6ce4fe623e78099fe51cb146d0ffa10e7
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
@@ -40,15 +44,15 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{build_test}
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/hipsparse-test-matrices/
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with test}
+%if %{with build_test}
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  cmake(hip)
@@ -74,33 +78,24 @@ require the client to change, regardless of the chosen
 backend. Currently, hipSPARSE supports rocSPARSE and
 cuSPARSE backends.
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 %{summary}
 
-%if %{with test}
-%package test
+%if %{with build_test}
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
-%prep -a
-# A better default for the matrices dir
-sed -i -e 's@hipsparse_exepath() + "../matrices/"@"%{_datadir}/hipsparse/matrices/"@' clients/include/utility.hpp
-
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
-
-%if %{with test}
-mkdir -p %{buildroot}%{_datadir}/hipsparse/matrices
-install -pm 644 %{_builddir}/hipsparse-test-matrices/* %{buildroot}%{_datadir}/hipsparse/matrices
-%endif
 
 %check -p
 export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
@@ -119,7 +114,7 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/cmake/hipsparse/
 %{_libdir}/libhipsparse.so
 
-%if %{with test}
+%if %{with build_test}
 %files test
 %{_bindir}/hipsparse*
 %{_datadir}/hipsparse/
