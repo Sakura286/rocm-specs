@@ -7,7 +7,7 @@
 
 # hipSOLVER needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
+%bcond test 1
 %if %{with test}
 %global build_test ON
 %else
@@ -94,6 +94,13 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsolver/LICENSE.md
+
+%check -p
+export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+
+%if %{without test}
+%check
+%endif
 
 %files
 %doc README.md
