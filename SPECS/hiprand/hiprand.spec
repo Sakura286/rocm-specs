@@ -21,9 +21,8 @@ Name:           hiprand
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        HIP random number generator
-Url:            https://github.com/ROCm/rocm-libraries
-VCS:            git:https://github.com/ROCm/hipRAND.git
 License:        MIT AND BSD-3-Clause
+Url:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:41e4053a3c16ea4bdc6e94fff428d8ffe7279e9cfa7ec142afc50169aae2c1f8
 Source:         %{url}/releases/download/rocm-%{version}/hiprand.tar.gz
 BuildSystem:    cmake
