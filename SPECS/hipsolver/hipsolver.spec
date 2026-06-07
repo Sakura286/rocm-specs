@@ -5,14 +5,18 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# hipSOLVER needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
-%if %{with test}
-%global build_test ON
+# TODO: hipSOLVER need lapack-devel to build test/benchmark/sample
+# There is no lapack
+%bcond build_test 1
+%if %{with build_test}
+%global cmake_test ON
 %else
-%global build_test OFF
+%global cmake_test OFF
 %endif
+
+# hipSOLVER needs a GPU to run tests, but we could still
+# keep the test cases for packagers who have a GPU.
+%bcond run_test 0
 
 %global rocm_release 7.1
 %global rocm_patch 1
@@ -37,10 +41,8 @@ Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
-BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -59,11 +61,10 @@ BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-%if %{with test}
-BuildRequires:  blas-static
+%if %{with build_test}
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hipsparse)
-BuildRequires:  lapack-static
+BuildRequires:  pkgconfig(openblas)
 %endif
 
 %description
@@ -83,7 +84,7 @@ Requires:       cmake(rocsparse)
 %description devel
 The hipSOLVER development package.
 
-%if %{with test}
+%if %{with build_test}
 %package test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -114,7 +115,7 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/libhipsolver_fortran.so
 %{_libdir}/cmake/hipsolver/
 
-%if %{with test}
+%if %{with build_test}
 %files test
 %{_datadir}/hipsolver/
 %{_bindir}/hipsolver*
