@@ -78,6 +78,13 @@ require the client to change, regardless of the chosen
 backend. Currently, hipSPARSE supports rocSPARSE and
 cuSPARSE backends.
 
+%package        benchmark
+Summary:        Benchmark for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description    benchmark
+%{summary}
+
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -108,6 +115,9 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %doc README.md
 %license LICENSE.md
 %{_libdir}/libhipsparse.so.4{,.*}
+
+%files benchmark
+%{_bindir}/hipsparse-bench
 
 %files devel
 %{_includedir}/hipsparse/
