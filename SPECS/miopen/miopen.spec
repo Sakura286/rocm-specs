@@ -61,6 +61,7 @@ BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
 BuildRequires:  half
 BuildRequires:  hipcc
+BuildRequires:  hipblas-common-devel
 BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  ninja
