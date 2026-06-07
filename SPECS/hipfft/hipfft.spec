@@ -5,14 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# hipFFT needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
 %bcond test 1
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
 
 %global rocm_release 7.1
 %global rocm_patch 1
@@ -35,30 +28,28 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{build_test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
 
+BuildRequires:  boost-devel
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocfft)
+BuildRequires:  cmake(rocrand)
 BuildRequires:  compiler-rt
 BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  ninja
+BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-%if %{with test}
-BuildRequires:  boost-devel
-BuildRequires:  cmake(GTest)
-BuildRequires:  pkgconfig(fftw3)
-BuildRequires:  cmake(hiprand)
-BuildRequires:  cmake(rocrand)
-%endif
 
 %description
 hipFFT is a FFT marshalling library. Currently, hipFFT supports either
@@ -73,14 +64,12 @@ Requires:       cmake(rocfft)
 %description    devel
 The hipFFT development package.
 
-%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-%endif
 
 %prep -a
 # CMake Error at clients/tests/CMakeLists.txt:87 (find_package):
@@ -109,10 +98,8 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/libhipfft.so
 %{_libdir}/libhipfftw.so
 
-%if %{with test}
 %files test
 %{_bindir}/hipfft-test
-%endif
 
 %changelog
 %autochangelog
