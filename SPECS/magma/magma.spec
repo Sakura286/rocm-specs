@@ -75,6 +75,18 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
 sed -i -e 's@1032 1033@1032 1033 1100 1101 1102 1103 1150 1151 1152 1153 1200 1201@' Makefile
 
+%if %{with test}
+# Remove a test that fails to link (undefined magma_generate_matrix)
+sed -i -e '/testing_zgenerate.cpp/d' testing/Makefile.src
+%else
+# Disable building tests
+sed -i -e 's@include_directories( testing )@#include_directories( testing )@' CMakeLists.txt
+sed -i -e 's@foreach( filename ${testing_all} )@foreach( filename ${no_testing_all} )@' CMakeLists.txt
+sed -i -e 's@add_custom_target( testing DEPENDS ${testing} )@#add_custom_target( testing DEPENDS ${testing} )@' CMakeLists.txt
+sed -i -e 's@foreach( TEST ${sparse_testing_all} )@foreach( TEST ${no_sparse_testing_all} )@' CMakeLists.txt
+sed -i -e 's@add_custom_target( sparse-testing DEPENDS ${sparse-testing} )@#add_custom_target( sparse-testing DEPENDS ${sparse-testing} )@' CMakeLists.txt
+%endif
+
 # Change the bin,lib install locations
 sed -i -e 's@DESTINATION lib@DESTINATION ${CMAKE_INSTALL_LIBDIR}@' CMakeLists.txt
 sed -i -e 's@DESTINATION bin@DESTINATION ${CMAKE_INSTALL_BINDIR}@' CMakeLists.txt
