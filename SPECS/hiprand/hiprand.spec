@@ -8,7 +8,7 @@
 # HIP error 100: no ROCm-capable device is detected
 # hipRAND needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
+%bcond run_test 0
 
 %global rocm_release 7.1
 %global rocm_patch 1
@@ -30,9 +30,6 @@ BuildSystem:    cmake
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_TEST=ON
 
 BuildRequires:  clang
@@ -84,7 +81,7 @@ rm -f %{buildroot}%{_bindir}/hipRAND/CTestTestfile.cmake
 %check -p
 export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 
-%if %{without test}
+%if %{without run_test}
 %check
 %endif
 
