@@ -5,9 +5,9 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# TODO: hipSOLVER need lapack-devel to build test/benchmark/sample
-# There is no lapack
-%bcond build_test 1
+# TODO: hipSOLVER need lapack to build test/benchmark/sample
+# But openblas on openRuyi does not provide this
+%bcond build_test 0
 %if %{with build_test}
 %global cmake_test ON
 %else
