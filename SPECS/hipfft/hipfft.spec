@@ -65,20 +65,20 @@ hipFFT is a FFT marshalling library. Currently, hipFFT supports either
 rocFFT or cuFFT as backends. hipFFT exports an interface that does not
 require the client to change, regardless of the chosen backend.
 
-%package devel
+%package        devel
 Summary:        The hipFFT development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(rocfft)
 
-%description devel
+%description    devel
 The hipFFT development package.
 
 %if %{with test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
@@ -100,9 +100,9 @@ rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
 
 %files devel
 %{_includedir}/hipfft/
+%{_libdir}/cmake/hipfft/
 %{_libdir}/libhipfft.so
 %{_libdir}/libhipfftw.so
-%{_libdir}/cmake/hipfft/
 
 %if %{with test}
 %files test
