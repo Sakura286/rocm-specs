@@ -35,9 +35,6 @@ Url:            https://github.com/ROCm/hipSPARSE
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-# https://github.com/ROCm/hipSPARSE (upstream patch)
-Patch0:         0001-hipsparse-change-test-download-dir.patch
-
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -104,7 +101,7 @@ rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
 %check -p
 export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 
-%if %{without test}
+%if %{without run_test}
 %check
 %endif
 
