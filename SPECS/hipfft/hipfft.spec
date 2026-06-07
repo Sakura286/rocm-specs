@@ -92,6 +92,11 @@ sed -i -e 's@find_package( HIP MODULE REQUIRED )@find_package( HIP REQUIRED )@' 
 %install -a
 rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
 
+%if %{with test}
+%check -p
+export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+%endif
+
 %files
 %doc README.md
 %license LICENSE.md
