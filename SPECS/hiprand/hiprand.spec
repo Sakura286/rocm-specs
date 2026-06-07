@@ -90,6 +90,11 @@ sed -i '/INSTALL_RPATH/d' CMakeLists.txt
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
 rm -f %{buildroot}%{_bindir}/hipRAND/CTestTestfile.cmake
 
+%if %{with test}
+%check -p
+export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+%endif
+
 %files
 %doc README.md
 %license LICENSE.md
