@@ -44,7 +44,7 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/hipsparse-test-matrices/
 
