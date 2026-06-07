@@ -12,6 +12,7 @@
 
 Name:           magma
 Version:        2.10.0
+Release:        %autorelease
 Summary:        Matrix Algebra on GPU and Multi-core Architectures
 License:        BSD-3-Clause
 Url:            https://icl.utk.edu/magma/
