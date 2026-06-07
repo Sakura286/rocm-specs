@@ -7,7 +7,7 @@
 
 # hipSPARSE needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
+%bcond test 1
 %if %{with test}
 %global build_test ON
 %else
@@ -93,6 +93,13 @@ rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
 %if %{with test}
 mkdir -p %{buildroot}%{_datadir}/hipsparse/matrices
 install -pm 644 %{_builddir}/hipsparse-test-matrices/* %{buildroot}%{_datadir}/hipsparse/matrices
+%endif
+
+%check -p
+export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+
+%if %{without test}
+%check
 %endif
 
 %files
