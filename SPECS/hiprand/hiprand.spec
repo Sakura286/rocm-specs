@@ -7,7 +7,7 @@
 
 # hipRAND needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
+%bcond test 1
 %if %{with test}
 %global build_test ON
 %else
@@ -85,11 +85,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep -a
 # Remove RPATH
 sed -i '/INSTALL_RPATH/d' CMakeLists.txt
-
-# gtest requires C++14 or later
-# https://github.com/ROCm/hipRAND/issues/222
-sed -i -e 's@set(CMAKE_CXX_STANDARD 11)@set(CMAKE_CXX_STANDARD 14)@' \
-    {,test/package/}CMakeLists.txt
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
