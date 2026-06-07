@@ -21,8 +21,7 @@ Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
 Url:            https://github.com/ROCm/MIOpen
-VCS:            git:https://github.com/ROCm/MIOpen.git
-#!RemoteAsset:  sha256:FIXME
+#!RemoteAsset
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
@@ -31,15 +30,8 @@ BuildSystem:    cmake
 Patch0:         0001-miopen-add-link-and-compile-pools.patch
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
-BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
-BuildOption(conf):  -DHIP_PLATFORM=amd
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DBoost_USE_STATIC_LIBS=OFF
-BuildOption(conf):  -DMIOPEN_BACKEND=HIP
 BuildOption(conf):  -DMIOPEN_BUILD_DRIVER=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_KERNEL_TUNING=OFF
@@ -51,13 +43,13 @@ BuildOption(conf):  -DBUILD_TESTING=OFF
 %endif
 # Disable optional backends not yet packaged on openRuyi
 BuildOption(conf):  -DMIOPEN_USE_COMPOSABLEKERNEL=OFF
-BuildOption(conf):  -DMIOPEN_USE_HIPBLASLT=OFF
 BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
 
 BuildRequires:  boost-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hipblaslt)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocrand)
@@ -111,9 +103,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep -a
 # clang-tidy is brittle and not needed when rebuilding from a tarball
 sed -i -e 's@clang-tidy@true@' cmake/ClangTidy.cmake
-
-# Workaround: bunzip2 detection uses lbunzip2 which may not be present
-sed -i -e 's@lbunzip2 bunzip2@bunzip2@' CMakeLists.txt
 
 # half_float::detail::expr is not present in all half versions
 sed -i -e 's@std::is_same_v<T, half_float::detail::expr>@0@' test/verify.hpp
