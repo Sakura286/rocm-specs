@@ -5,14 +5,10 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# HIP error 100: no ROCm-capable device is detected
 # hipRAND needs a GPU to run tests, but we could still
 # keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 1
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
+%bcond test 0
 
 %global rocm_release 7.1
 %global rocm_patch 1
@@ -38,15 +34,13 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-BuildOption(conf):  -DBUILD_TEST=%{build_test}
+BuildOption(conf):  -DBUILD_TEST=ON
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with test}
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocrand)
@@ -65,22 +59,20 @@ into the backend and results back to the application. hipRAND exports an
 interface that does not require the client to change, regardless of the chosen
 backend. Currently, hipRAND supports either rocRAND or cuRAND.
 
-%package devel
+%package        devel
 Summary:        The hipRAND development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(rocrand)
 
-%description devel
+%description    devel
 The hipRAND development package.
 
-%if %{with test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
-%endif
 
 %prep -a
 # Remove RPATH
@@ -90,9 +82,11 @@ sed -i '/INSTALL_RPATH/d' CMakeLists.txt
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
 rm -f %{buildroot}%{_bindir}/hipRAND/CTestTestfile.cmake
 
-%if %{with test}
 %check -p
 export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
+
+%if %{without test}
+%check
 %endif
 
 %files
@@ -105,10 +99,8 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/cmake/hiprand/
 %{_libdir}/libhiprand.so
 
-%if %{with test}
 %files test
 %{_bindir}/test*
-%endif
 
 %changelog
 %autochangelog
