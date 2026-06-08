@@ -56,7 +56,6 @@ Summary:        PyTorch AI/ML framework
 # See license.txt for license details
 License:        BSD-3-Clause AND BSD-2-Clause AND 0BSD AND Apache-2.0 AND MIT AND BSL-1.0 AND GPL-3.0-or-later AND Zlib
 URL:            https://pytorch.org/
-VCS:            git:https://github.com/pytorch/pytorch.git
 #!RemoteAsset:  sha256:52872a6bbdc42334b00051d88a92f801cfd9be730abdd2b37a2d08996f53bb29
 Source0:        https://github.com/pytorch/pytorch/archive/refs/tags/v%{version}.tar.gz
 %if %{without system_flatbuffers}
@@ -84,33 +83,29 @@ Source4:       https://github.com/google/libnop/archive/%{nop_commit}/libnop-%{n
 %global hl_commit 4d7c9a788de136071ccf0dd4e96239151e2adadb
 %global hl_scommit 4d7c9a7
 #!RemoteAsset:  sha256:8ecb7bbe844f9b4a1418b8a015d0f815d021d2c0d53291387122cb510c8783ef
-Source6:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-httplib-%{hl_scommit}.tar.gz
+Source5:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-httplib-%{hl_scommit}.tar.gz
 %endif
 %if %{without system_kineto}
 %global ki_commit 23b5bb5764b3dec988e25c52098407e508d84bb4
 %global ki_scommit 23b5bb5
 #!RemoteAsset:  sha256:5b85352628319e22c48b589d2f423f3761479058f87a3ecc328818f16e4394c6
-Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
+Source6:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
 %endif
 
 %global mslk_commit 3d332d1c0c0ac7765852c97b3979c9ef913e037f
 %global mslk_scommit 3d332d1
 #!RemoteAsset:  sha256:1944e67d1baeffef3bb8f89793ea06e0f05b88aac4d5cd89b4558a21aca6754b
-Source120:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
+Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
 
 # pytorch upstream issue #173707: libtorch_hip.so references the
 # const_data_ptr / mutable_data_ptr / data_ptr template family with a
 # different (non-SFINAE) mangling than libtorch_cpu.so exports.
 # Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
-Source122:       pytorch-rocm-symbol-bridge.cpp
-
-# Don't let the advisory @overload body check abort `import torch` when
-# inspect cannot re-parse a multi-line signature (Python 3.13 truncates the
-# source before the body); warn and continue instead.
-Patch1:          0001-Make-overload-body-check-tolerant-of-unparseable-source.patch
+Source8:       pytorch-rocm-symbol-bridge.cpp
 
 BuildRequires:  cmake
-BuildRequires:  concurrentqueue-devel
+BuildRequires:  cmake(concurrentqueue)
+BuildRequires:  cmake(sleef)
 BuildRequires:  cpuinfo
 # Although eigen3 enabled on openruyi, it cannot be detected during conf
 # TODO: Fix this
@@ -119,7 +114,6 @@ BuildRequires:  foxi-devel
 BuildRequires:  libomp-devel
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fmt)
-#BuildRequires:  pkgconfig(libcpuinfo)
 BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(openblas64)
@@ -130,12 +124,9 @@ BuildRequires:  pthreadpool-devel
 BuildRequires:  fp16-devel
 BuildRequires:  fxdiv-devel
 BuildRequires:  psimd-devel
-BuildRequires:  sleef-devel
 BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(filelock)
-# TODO: enable on openRuyi
-# BuildRequires:  python3dist(fsspec)
 BuildRequires:  python3dist(jinja2)
 BuildRequires:  python3dist(networkx)
 BuildRequires:  python3dist(numpy)
@@ -144,19 +135,17 @@ BuildRequires:  python3dist(pybind11)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(sympy)
-# TODO: enable on openRuyi
-# BuildRequires:  python3dist(sphinx)
 BuildRequires:  python3dist(typing-extensions)
 
 %if %{with system_httplib}
-BuildRequires:  cpp-httplib-devel
+BuildRequires:  cmake(httplib)
 %endif
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  libstdc++-devel
 BuildRequires:  compiler-rt
-BuildRequires:  llvm-devel
+BuildRequires:  cmake(LLVM)
 BuildRequires:  lld
 
 BuildRequires:  cmake(ONNX)
@@ -171,31 +160,31 @@ BuildRequires:  pkgconfig(flatbuffers)
 %endif
 
 %if %{with rocm}
-BuildRequires:  hipblas-devel
-BuildRequires:  hipblaslt-devel
+BuildRequires:  cmake(hipblas)
+BuildRequires:  cmake(hipblaslt)
 BuildRequires:  cmake(hipcub)
-BuildRequires:  hipfft-devel
-BuildRequires:  hiprand-devel
-BuildRequires:  hipsparse-devel
-BuildRequires:  hipsparselt-devel
-BuildRequires:  hipsolver-devel
-BuildRequires:  magma-devel
-BuildRequires:  miopen-devel
-BuildRequires:  rocblas-devel
-BuildRequires:  rocrand-devel
-BuildRequires:  rocfft-devel
-BuildRequires:  rccl-devel
-BuildRequires:  rocprim-devel
-BuildRequires:  rocm-cmake
-BuildRequires:  rocm-comgr-devel
-BuildRequires:  rocm-llvm-macros
+BuildRequires:  cmake(hipfft)
+BuildRequires:  cmake(hiprand)
+BuildRequires:  cmake(hipsparse)
+BuildRequires:  cmake(hipsparselt)
+BuildRequires:  cmake(hipsolver)
+BuildRequires:  cmake(magma)
+BuildRequires:  cmake(miopen)
+BuildRequires:  cmake(rocblas)
+BuildRequires:  cmake(rocrand)
+BuildRequires:  cmake(rocfft)
+BuildRequires:  cmake(rccl)
+BuildRequires:  cmake(rocprim)
+BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(rocm-core)
-BuildRequires:  rocm-hip-devel
-BuildRequires:  rocr-runtime-devel
-BuildRequires:  rocsolver-devel
-BuildRequires:  rocm-smi-devel
-BuildRequires:  rocthrust-devel
-BuildRequires:  roctracer-devel
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hsaruntime64)
+BuildRequires:  cmake(rocsolver)
+BuildRequires:  cmake(rocm_smi)
+BuildRequires:  cmake(rocthrust)
+BuildRequires:  cmake(roctracer)
+BuildRequires:  rocm-cmake
+BuildRequires:  rocm-llvm-macros
 %endif
 
 Requires:       python3dist(dill)
@@ -205,7 +194,9 @@ Requires:       amdsmi
 %endif
 
 # As convention
-Provides:       pytorch
+Provides:       pytorch = %{version}-%{release}
+Provides:       python3-%{srcname} = %{version}-%{release}
+Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
 
 %description
@@ -249,18 +240,18 @@ sed -i '/#include <tensorpipe.*/a#include <cstdint>' third_party/tensorpipe/tens
 %endif
 
 %if %{without system_httplib}
-tar xf %{SOURCE6}
+tar xf %{SOURCE5}
 rm -rf third_party/cpp-httplib/*
 cp -r cpp-httplib-*/* third_party/cpp-httplib/
 %endif
 
 %if %{without system_kineto}
-tar xf %{SOURCE7}
+tar xf %{SOURCE6}
 rm -rf third_party/kineto/*
 cp -r kineto-*/* third_party/kineto/
 %endif
 
-tar xf %{SOURCE120}
+tar xf %{SOURCE7}
 rm -rf third_party/mslk/*
 cp -r MSLK-*/* third_party/mslk/
 
@@ -287,19 +278,11 @@ sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unus
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-result@' cmake/Dependencies.cmake
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
 # Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
-# Root cause: -O3 + 4 offload archs + AT_DISPATCH_*_TYPES_AND2 template
-# expansion produces functions whose s_cbranch displacements exceed simm16.
-# LLVM 21 removed -mlong-branches; fix with three orthogonal levers:
-# 1. -Os: shrink HIP device code (last -O* wins; CMake's -O3 comes earlier)
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Os@' cmake/Dependencies.cmake
-# 2. amdgpu-s-branch-bits=14: make BranchRelaxation relax at 15-bit range
-#    instead of 16, leaving 2x headroom against MIR/asm size estimation drift.
+# -amdgpu-s-branch-bits=15(default is 16) and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-s-branch-bits=15@' cmake/Dependencies.cmake
-# 3. amdgpu-long-branch-factor=2: always reserve an SGPR pair so
-#    BranchRelaxation can emit s_setpc_b64 without emergency SGPR0/1 spills.
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-long-branch-factor=2@' cmake/Dependencies.cmake
 
-# Use parallel jobs for GPU offload compilation (LLVM 21 uses --offload-jobs, not -parallel-jobs)
+# Use parallel jobs for GPU offload compilation
 sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8@' cmake/Dependencies.cmake
 # Need to link with librocm_smi64 (intra_node_comm.cpp calls rsmi_init /
 # rsmi_is_P2P_accessible). The target string is "hiprtc::hiprtc" — the previous
@@ -436,10 +419,10 @@ sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
 # silence an assert
 # sed -i -e '/qvalue = std::clamp(qvalue, qmin, qmax);/d' aten/src/ATen/native/cuda/IndexKernel.cu
 
-# Append ROCm symbol bridge — see Source122 header for full context.
+# Append ROCm symbol bridge — see Source8 header for full context.
 # Without this, libtorch_hip.so dlopen fails on:
 #   undefined symbol: _ZNK2at10TensorBase14const_data_ptrI*Li0EEEPK*v
-cat %{SOURCE122} >> aten/src/ATen/core/Tensor.cpp
+cat %{SOURCE8} >> aten/src/ATen/core/Tensor.cpp
 %endif
 
 # moodycamel include path needs adjusting to use the system's
@@ -548,19 +531,7 @@ export ROCM_PATH=`hipconfig -R`
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 
-#%%global build_cflags -isystem %{_libdir}/clang/21/include %{build_cflags}
-#%%global build_cxxflags -isystem %{_libdir}/clang/21/include %{build_cxxflags}
-
-#export CMAKE_C_FLAGS="-isystem /usr/lib64/clang/21/include"
-#export CMAKE_CXX_FLAGS="-isystem /usr/lib64/clang/21/include"
-
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
-
-
-
-# useless
-#export CMAKE_HIP_FLAGS_RELWITHDEBINFO="-O1 -g -DNDEBUG"
-#export CMAKE_ARGS="-DHIP_HIPCC_FLAGS_RELWITHDEBINFO=-O1"
 
 # export CMAKE_BUILD_TYPE=Debug
 %endif
