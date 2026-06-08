@@ -88,8 +88,8 @@ BuildRequires:  pkgconfig(libzstd)
 # compiled on the fly (triton/runtime/build.py) with a host C compiler against
 # the Python headers, and the HIP runtime is dlopen'd.
 Requires:       gcc
-Requires:       python3-devel
-Requires:       rocm-hip-devel
+Requires:       pkgconfig(python3)
+Requires:       cmake(hip)
 Requires:       rocm-device-libs
 
 Provides:       python3-%{srcname} = %{version}-%{release}
