@@ -168,7 +168,6 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(hipsparselt)
 BuildRequires:  cmake(hipsolver)
-BuildRequires:  cmake(magma)
 BuildRequires:  cmake(miopen)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocrand)
@@ -178,13 +177,14 @@ BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(hip)
-BuildRequires:  cmake(hsaruntime64)
+BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocsolver)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocthrust)
-BuildRequires:  cmake(roctracer)
+BuildRequires:  pkgconfig(magma)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
+BuildRequires:  roctracer-devel
 %endif
 
 Requires:       python3dist(dill)
