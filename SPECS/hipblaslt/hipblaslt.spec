@@ -39,11 +39,9 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):  -G Ninja
-BuildOption(conf):  -Dnanobind_ROOT=${NANOBIND_DIR}
-BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=%{cmake_test}
 BuildOption(conf):  -DHIPBLASLT_ENABLE_MARKER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
@@ -52,6 +50,8 @@ BuildOption(conf):  -DHIPBLASLT_ENABLE_SAMPLES=OFF
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
 BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
+BuildOption(conf):  -Dnanobind_ROOT=${NANOBIND_DIR}
+BuildOption(conf):  -G Ninja
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
 Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
