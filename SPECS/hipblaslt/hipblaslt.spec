@@ -50,7 +50,7 @@ BuildOption(conf):  -DHIPBLASLT_ENABLE_SAMPLES=OFF
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
 BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
-BuildOption(conf):  -Dnanobind_ROOT=${NANOBIND_DIR}
+BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
@@ -170,9 +170,6 @@ export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
 export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
-
-# Locate the distribution-provided nanobind cmake config for the rocisa module
-NANOBIND_DIR=`python3 -m nanobind --cmake_dir`
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
