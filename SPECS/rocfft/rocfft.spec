@@ -63,19 +63,19 @@ rocFFT is a software library for computing fast Fourier transforms (FFTs) writte
 in HIP. It is part of AMD's software ecosystem based on ROCm. In addition to
 AMD GPU hardware, rocFFT also works on CPU devices to facilitate testing.
 
-%package devel
+%package        devel
 Summary:        The rocFFT development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(hip)
 
-%description devel
+%description    devel
 The rocFFT development package.
 
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 
 %prep -a

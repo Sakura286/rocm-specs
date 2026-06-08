@@ -73,22 +73,22 @@ inputs into the backend library and results back to the application. hipSOLVER
 exports an interface that does not require the client to change, regardless of
 the chosen backend.
 
-%package devel
+%package        devel
 Summary:        The hipSOLVER development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(rocblas)
 Requires:       cmake(rocsolver)
 Requires:       cmake(rocsparse)
 
-%description devel
+%description    devel
 The hipSOLVER development package.
 
 %if %{with build_test}
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 

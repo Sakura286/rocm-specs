@@ -88,11 +88,11 @@ BuildArch:      noarch
 %description    data
 Data for %{name}
 
-%package test
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 
 %prep -a

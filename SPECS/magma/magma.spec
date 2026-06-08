@@ -20,26 +20,31 @@ VCS:            git:https://github.com/icl-utk-edu/magma.git
 #!RemoteAsset:  sha256:26347adbccbe7a6693d6b3f3c0ab5620037eb3a62b5ef69d05e40289472a82a4
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
 
-BuildRequires:  llvm
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DBLA_VENDOR=OpenBLAS
+BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DMAGMA_ENABLE_HIP=ON
+BuildOption(conf):  -DUSE_FORTRAN=OFF
+
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
-BuildRequires:  lld
-BuildRequires:  hipcc
-BuildRequires:  compiler-rt
-BuildRequires:  rocm-device-libs
-
 BuildRequires:  cmake
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hipblas)
+BuildRequires:  cmake(hipsparse)
+BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(openblas)
+BuildRequires:  compiler-rt
 BuildRequires:  gcc-c++
-BuildRequires:  openblas-devel
-BuildRequires:  hipblas-devel
-BuildRequires:  hipsparse-devel
+BuildRequires:  hipcc
+BuildRequires:  lld
+BuildRequires:  llvm
 BuildRequires:  ninja
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
+BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-BuildRequires:  rocm-comgr-devel
-BuildRequires:  rocm-hip-devel
-BuildRequires:  rocr-runtime-devel
 
 %description
 Matrix Algebra on GPU and Multi-core Architectures (MAGMA) is a collection
@@ -69,9 +74,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{summary}
 
-%prep
-%autosetup -p1
-
+%prep -a
 # Add newer gfx targets to Makefile's valid arch whitelist
 # https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
 sed -i -e 's@1032 1033@1032 1033 1100 1101 1102 1103 1150 1151 1152 1153 1200 1201@' Makefile
@@ -106,24 +109,12 @@ sed -i -e '/strlcpy/d' include/magma_auxiliary.h
 sed -i -e 's@magma_strlcpy@strlcpy@' control/trace.cpp
 rm control/strlcpy.cpp
 
-%build
+%build -p
 echo "BACKEND = hip"                          > make.inc
 echo "FORT = false"                          >> make.inc
 echo "GPU_TARGET = gfx1100;gfx1200;gfx1201"  >> make.inc
 
 make generate
-
-%cmake -G Ninja \
-       -DBLA_VENDOR=OpenBLAS \
-       -DAMDGPU_TARGETS=%{rocm_gpu_list_default} \
-       -DMAGMA_ENABLE_HIP=ON \
-       -DUSE_FORTRAN=OFF
-
-%cmake_build
-
-%install
-%cmake_install
-
 %if %{with test}
 %check
 %{_vpath_builddir}/testing/testing_sgemm
