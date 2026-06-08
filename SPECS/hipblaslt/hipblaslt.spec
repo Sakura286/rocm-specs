@@ -55,20 +55,12 @@ BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
 Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
-# change hard coded vendor paths to fedoras
-Patch1:         0001-hipblaslt-tensilelite-use-fedora-paths.patch
+# Patch from Fedora, change hard coded vendor paths
+Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch2:         0001-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
-Patch3:         0001-hipblaslt-tensilelite-use-system-nanobind.patch
-# compile and link jobpools
-Patch4:         0001-hipblaslt-cmake-compile-and-link-pools.patch
-
-BuildRequires:  llvm
-
-
-BuildRequires:  compiler-rt
-BuildRequires:  rocm-device-libs
+Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -81,9 +73,11 @@ BuildRequires:  cmake(msgpack)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocm_smi)
+BuildRequires:  compiler-rt
 BuildRequires:  gcc-fortran
 BuildRequires:  hipcc
 BuildRequires:  lld
+BuildRequires:  llvm
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(python3)
@@ -96,6 +90,7 @@ BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
 BuildRequires:  rocm-cmake
+BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 

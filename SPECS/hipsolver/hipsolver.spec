@@ -33,9 +33,8 @@ Name:           hipsolver
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SOLVER marshalling library (LAPACK)
-Url:            https://github.com/ROCm/hipSOLVER
-VCS:            git:https://github.com/ROCm/hipSOLVER.git
 License:        MIT
+Url:            https://github.com/ROCm/hipSOLVER
 #!RemoteAsset:  sha256:bd664e3cd43bfcc7e94d5a387c27262c4b218d6d2e71e086992b174349dd1c10
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
