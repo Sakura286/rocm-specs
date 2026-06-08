@@ -12,6 +12,7 @@ Release:        %autorelease
 Summary:        A utility to get the ROCm release version
 License:        MIT
 URL:            https://github.com/ROCm/rocm-core
+#!RemoteAsset:  sha256:0171b82a4d028d57035d0d57a01a058f50f1a23959d230cdeab14972dcd94da8
 Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 

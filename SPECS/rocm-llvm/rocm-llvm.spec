@@ -48,7 +48,7 @@ Summary:        Various AMD ROCm LLVM related services
 # hipcc is MIT, comgr and device-libs are NCSA:
 License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
-#!RemoteAsset
+#!RemoteAsset:  sha256:d76a16db4a56914383029e241823f7bc2a3d645f2967dd22230f11c11cfe189e
 Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
 Source1:        rocm-llvm.prep.in
 

@@ -57,7 +57,7 @@ Summary:        PyTorch AI/ML framework
 License:        BSD-3-Clause AND BSD-2-Clause AND 0BSD AND Apache-2.0 AND MIT AND BSL-1.0 AND GPL-3.0-or-later AND Zlib
 URL:            https://pytorch.org/
 VCS:            git:https://github.com/pytorch/pytorch.git
-#!RemoteAsset:  sha256:8019957be2cbdb08dae8d22ad43a51fa4a6f7bf491dbe385ac4c4a77e1b23001
+#!RemoteAsset:  sha256:52872a6bbdc42334b00051d88a92f801cfd9be730abdd2b37a2d08996f53bb29
 Source0:        https://github.com/pytorch/pytorch/archive/refs/tags/v%{version}.tar.gz
 %if %{without system_flatbuffers}
 %global flatbuffers_version 24.12.23
@@ -68,7 +68,7 @@ Source1:        https://github.com/google/flatbuffers/archive/refs/tags/v%{flatb
 # Developement on tensorpipe has stopped, repo made read only July 1, 2023, this is the last commit
 %global tp_commit 2b4cd91092d335a697416b2a3cb398283246849d
 %global tp_scommit 2b4cd91
-#!RemoteAsset:  sha256:7ff0b84c0623f3360ec7c34b8c4fe02e7f9a87f8fa559c303f9574e44be0bc56
+#!RemoteAsset:  sha256:0e85ca56bfe25ed7b3026d2784f716eb10ed1328ade346e3a252814752c57eeb
 Source2:       https://github.com/pytorch/tensorpipe/archive/%{tp_commit}/tensorpipe-%{tp_scommit}.tar.gz
 # The old libuv tensorpipe uses
 #!RemoteAsset:  sha256:6cfeb5f4bab271462b4a2cc77d4ecec847fdbdc26b72019c27ae21509e6f94fa
@@ -83,18 +83,19 @@ Source4:       https://github.com/google/libnop/archive/%{nop_commit}/libnop-%{n
 %if %{without system_httplib}
 %global hl_commit 4d7c9a788de136071ccf0dd4e96239151e2adadb
 %global hl_scommit 4d7c9a7
-#!RemoteAsset:  sha256:22ec970b3ecb60ef43293379a5cdc94b5fcdc34a888ebce2a3f6413c67262ab7
+#!RemoteAsset:  sha256:8ecb7bbe844f9b4a1418b8a015d0f815d021d2c0d53291387122cb510c8783ef
 Source6:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-httplib-%{hl_scommit}.tar.gz
 %endif
 %if %{without system_kineto}
 %global ki_commit 23b5bb5764b3dec988e25c52098407e508d84bb4
 %global ki_scommit 23b5bb5
-#!RemoteAsset:  sha256:c0edae39511cf3d91d66d6b383254ba3b3bee1af024a567566cfe39cbc84e674
+#!RemoteAsset:  sha256:5b85352628319e22c48b589d2f423f3761479058f87a3ecc328818f16e4394c6
 Source7:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
 %endif
 
 %global mslk_commit 3d332d1c0c0ac7765852c97b3979c9ef913e037f
 %global mslk_scommit 3d332d1
+#!RemoteAsset:  sha256:1944e67d1baeffef3bb8f89793ea06e0f05b88aac4d5cd89b4558a21aca6754b
 Source120:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
 
 # pytorch upstream issue #173707: libtorch_hip.so references the

@@ -17,6 +17,7 @@ Summary:        Matrix Algebra on GPU and Multi-core Architectures
 License:        BSD-3-Clause
 Url:            https://icl.utk.edu/magma/
 VCS:            git:https://github.com/icl-utk-edu/magma.git
+#!RemoteAsset:  sha256:26347adbccbe7a6693d6b3f3c0ab5620037eb3a62b5ef69d05e40289472a82a4
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
 
 BuildRequires:  llvm
