@@ -37,6 +37,21 @@ License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
+BuildSystem:    cmake
+
+BuildOption(conf):  -G Ninja
+BuildOption(conf):  -Dnanobind_ROOT=${NANOBIND_DIR}
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=%{cmake_test}
+BuildOption(conf):  -DHIPBLASLT_ENABLE_MARKER=OFF
+BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
+BuildOption(conf):  -DHIPBLASLT_ENABLE_ROCROLLER=OFF
+BuildOption(conf):  -DHIPBLASLT_ENABLE_SAMPLES=OFF
+BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
+BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
+BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
 Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
@@ -50,40 +65,39 @@ Patch3:         0001-hipblaslt-tensilelite-use-system-nanobind.patch
 Patch4:         0001-hipblaslt-cmake-compile-and-link-pools.patch
 
 BuildRequires:  llvm
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
-BuildRequires:  lld
+
+
 BuildRequires:  compiler-rt
 BuildRequires:  rocm-device-libs
 
+BuildRequires:  clang
+BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
-BuildRequires:  gcc-c++
-BuildRequires:  gcc-fortran
-BuildRequires:  cmake(hipblas)
-BuildRequires:  hipcc
-BuildRequires:  pkgconfig(libzstd)
-BuildRequires:  cmake(rocblas)
-BuildRequires:  rocminfo
-BuildRequires:  rocm-cmake
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  rocm-llvm-macros
 BuildRequires:  cmake(hip)
-BuildRequires:  cmake(origami)
+BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(msgpack)
+BuildRequires:  cmake(origami)
+BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocm_smi)
-BuildRequires:  pkgconfig(zlib)
+BuildRequires:  gcc-fortran
+BuildRequires:  hipcc
+BuildRequires:  lld
 BuildRequires:  ninja
-
-# For tensilelite
+BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(python3)
+BuildRequires:  pkgconfig(zlib)
+# https://github.com/ROCm/hipBLASLt/issues/1734
+BuildRequires:  python3dist(msgpack)
+# nanobind is used to build the rocisa native module (build-time only)
+BuildRequires:  python3dist(nanobind)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
-# https://github.com/ROCm/hipBLASLt/issues/1734
-BuildRequires:  python3dist(msgpack)
-BuildRequires:  cmake(msgpack)
-# nanobind is used to build the rocisa native module (build-time only)
-BuildRequires:  python3dist(nanobind)
+BuildRequires:  rocm-cmake
+BuildRequires:  rocm-llvm-macros
+BuildRequires:  rocminfo
 
 %if %{with build_test}
 BuildRequires:  cmake(openblas)
@@ -114,9 +128,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 %endif
 
-%prep
-%autosetup -p1 -n %{name}
-
+%prep -a
 # Use PATH to find where TensileGetPath and other tensile bins are
 sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g'            tensilelite/Tensile/cmake/TensileConfig.cmake
 
@@ -143,7 +155,7 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 # Forcefully replace all mentions of 'amdclang' with 'clang' in the Tensile Python files
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
-%build
+%build -p
 # Do a manual install instead of cmake's virtualenv
 cd tensilelite
 TL=$PWD
@@ -152,7 +164,6 @@ python3 setup.py install --root $TL
 cd ..
 
 # Should not have to do this
-export PATH=%{_prefix}/bin:$PATH
 CLANG_PATH=`hipconfig --hipclangpath`
 ROCM_CLANG=${CLANG_PATH}/clang
 RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
@@ -168,24 +179,7 @@ export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
 # Locate the distribution-provided nanobind cmake config for the rocisa module
 NANOBIND_DIR=`python3 -m nanobind --cmake_dir`
 
-%cmake -G Ninja \
-       -Dnanobind_ROOT=${NANOBIND_DIR} \
-       -DGPU_TARGETS=%{rocm_gpu_list_default} \
-       -DBUILD_CLIENTS_TESTS=%{cmake_test} \
-       -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DHIPBLASLT_ENABLE_CLIENT=%{cmake_test} \
-       -DHIPBLASLT_ENABLE_MARKER=OFF \
-       -DHIPBLASLT_ENABLE_OPENMP=OFF \
-       -DHIPBLASLT_ENABLE_ROCROLLER=OFF \
-       -DHIPBLASLT_ENABLE_SAMPLES=OFF \
-       -DTensile_LIBRARY_FORMAT=msgpack \
-       -DTensile_VERBOSE=%{tensile_verbose} \
-       -DVIRTUALENV_BIN_DIR=%{_bindir}
-
-%cmake_build
-
-%install
-%cmake_install
+%install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
 
 %files
