@@ -1,0 +1,27 @@
+diff --git a/setup.py b/setup.py
+index fe4a78d..1bdd332 100644
+--- a/setup.py
++++ b/setup.py
+@@ -534,6 +534,10 @@ class CMakeBuild(build_ext):
+ 
+ 
+ def download_and_copy_dependencies():
++    # openRuyi: this package ships only the AMD/ROCm backend, so the NVIDIA
++    # CUDA toolchain (ptxas, cuobjdump, ...) is neither needed nor downloaded.
++    # Skipping this also keeps the build fully offline for the OBS sandbox.
++    return
+     nvidia_version_path = os.path.join(get_base_dir(), "cmake", "nvidia-toolchain-version.json")
+     with open(nvidia_version_path, "r") as nvidia_version_file:
+         # parse this json file to get the version of the nvidia toolchain
+@@ -619,7 +623,10 @@ def download_and_copy_dependencies():
+     )
+ 
+ 
+-backends = [*BackendInstaller.copy(["nvidia", "amd"]), *BackendInstaller.copy_externals()]
++# openRuyi: build the AMD/ROCm backend only.  Triton's core still links the
++# in-tree LLVM NVPTX codegen, but the NVIDIA Python backend (which bundles
++# ptxas and friends) is intentionally left out.
++backends = [*BackendInstaller.copy(["amd"]), *BackendInstaller.copy_externals()]
+ 
+ 
+ def get_package_dirs():
