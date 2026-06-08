@@ -53,11 +53,8 @@ Patch0:         0001-Build-only-the-AMD-ROCm-backend-offline.patch
 # Link the X86 codegen libraries on the riscv64 host so that
 # llvm::InitializeAllTargets() resolves at import time.
 Patch1:         0002-Add-riscv64-host-codegen-libraries.patch
-
-# Triton only targets GPUs; on openRuyi that means the AMD ROCm stack.
-ExclusiveArch:  x86_64 riscv64
-
 BuildSystem:    pyproject
+
 BuildOption(install):  %{srcname}
 
 # --- Python build backend --------------------------------------------------
