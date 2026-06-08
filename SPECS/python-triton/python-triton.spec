@@ -44,8 +44,11 @@ URL:            https://github.com/triton-lang/triton
 # build, so the source is taken from the GitHub release tag instead.
 #!RemoteAsset:  sha256:be270ed11ca5a8fbd9d7941c5bbe9a23a9f6e2ffd372c8398346928bee464774
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{srcname}-%{version}.tar.gz
+# NOTE: codeload generates llvm-project's commit archive on the fly; the
+# github.com/.../archive redirect to it times out behind the build proxy, so
+# point straight at codeload (identical bytes, same sha256).
 #!RemoteAsset:  sha256:f63c624aa63eda73508b9df2be2a6945ea4fddbee58615fbe1cd747b6884dd5e
-Source1:        https://github.com/llvm/llvm-project/archive/%{llvm_commit}.tar.gz#/llvm-project-%{llvm_commit}.tar.gz
+Source1:        https://github.com/llvm/llvm-project/archive/%{llvm_commit}.tar.gz
 
 # Build only the AMD/ROCm backend and never reach out to the network for the
 # NVIDIA CUDA toolchain.
