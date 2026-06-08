@@ -50,44 +50,42 @@ BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 
-BuildRequires:  ninja
-BuildRequires:  llvm
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
-BuildRequires:  lld
-BuildRequires:  compiler-rt
-BuildRequires:  rocm-device-libs
 BuildRequires:  cmake
+BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipsparse)
-BuildRequires:  libzstd-devel
-BuildRequires:  rocminfo
-BuildRequires:  rocm-cmake
-BuildRequires:  rocm-llvm-macros
-BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  roctracer-devel
-BuildRequires:  zlib-devel
-BuildRequires:  python3-devel
-# nanobind is used to build the rocisa native module (build-time only)
-BuildRequires:  python3dist(nanobind)
-BuildRequires:  python3dist(setuptools)
-BuildRequires:  python3dist(pyyaml)
+BuildRequires:  compiler-rt
+BuildRequires:  gcc-fortran
+BuildRequires:  lld
+BuildRequires:  llvm
+BuildRequires:  ninja
+BuildRequires:  pkgconfig(libzstd)
+BuildRequires:  pkgconfig(msgpack)
+BuildRequires:  pkgconfig(python3)
+BuildRequires:  pkgconfig(zlib)
 BuildRequires:  python3dist(joblib)
 BuildRequires:  python3dist(msgpack)
-BuildRequires:  msgpack-devel
-
-BuildRequires:  gcc-fortran
+# nanobind is used to build the rocisa native module (build-time only)
+BuildRequires:  python3dist(nanobind)
+BuildRequires:  python3dist(pyyaml)
+BuildRequires:  python3dist(setuptools)
+BuildRequires:  rocm-cmake
+BuildRequires:  rocm-device-libs
+BuildRequires:  rocminfo
+BuildRequires:  rocm-llvm-macros
+BuildRequires:  roctracer-devel
 
 %if %{with build_test}
 BuildRequires:  chrpath
-BuildRequires:  flexiblas-devel
-BuildRequires:  rocm-omp-devel
-BuildRequires:  gtest-devel
-BuildRequires:  gmock-devel
+BuildRequires:  pkgconfig(openblas)
+BuildRequires:  pkgconfig(gtest)
+BuildRequires:  pkgconfig(gmock)
 %endif
 
 %description
