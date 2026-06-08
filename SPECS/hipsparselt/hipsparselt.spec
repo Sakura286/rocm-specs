@@ -36,7 +36,6 @@ Source3:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
 BuildSystem:    cmake
 
-# ${HIPBLASLT_PATH} and ${TL} are computed in %%conf below (same shell)
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
@@ -44,13 +43,10 @@ BuildOption(conf):  -DBUILD_VERBOSE=ON
 BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gcc-fortran
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DHIPSPARSELT_HIPBLASLT_PATH=${HIPBLASLT_PATH}
 BuildOption(conf):  -DTensile_COMPILER=clang++
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
-BuildOption(conf):  -DTensile_TEST_LOCAL_PATH=${TL}
 BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
-BuildOption(conf):  -DVIRTUALENV_SITE_PATH=${TL}%{python3_sitelib}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 
@@ -62,7 +58,6 @@ BuildRequires:  lld
 BuildRequires:  compiler-rt
 BuildRequires:  rocm-device-libs
 BuildRequires:  cmake
-BuildRequires:  gcc-c++
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  libzstd-devel
@@ -144,6 +139,9 @@ sed -i -e 's@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance."
 
 cd ..
 
+# Point hipBLASLt path at the bundled in-source copy (default looks in ../hipblaslt)
+sed -i -e 's@${CMAKE_CURRENT_SOURCE_DIR}/../hipblaslt@${CMAKE_CURRENT_SOURCE_DIR}/hipblaslt@' CMakeLists.txt
+
 # Prevent the virtualenv install from cmake
 sed -i -e 's@virtualenv_install@#virtualenv_install@' CMakeLists.txt
 
@@ -162,30 +160,13 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Depe
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
 find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
-# The cmake configure step (add_subdirectory(${VIRTUALENV_SITE_PATH}/rocisa) and the
-# Tensile/hipBLASLt path options) needs the tensilelite installed and the path vars set
-# in the same shell, so this runs in %%conf rather than %%build.
-%conf -p
-HIPBLASLT_PATH=$PWD/hipblaslt
-TL=$PWD/hipblaslt/tensilelite
-
-# Do a manual install instead of cmake's virtualenv
-( cd "$TL" && python3 setup.py install --root "$TL" )
-
-export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
-CLANG_PATH=`hipconfig --hipclangpath`
-ROCM_CLANG=${CLANG_PATH}/clang
-RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
-export DEVICE_LIB_PATH=${RESOURCE_DIR}/amdgcn/bitcode
-export TENSILE_ROCM_ASSEMBLER_PATH=${CLANG_PATH}/clang++
-export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
-export PATH=${TL}/%{_bindir}:$PATH
-export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
-export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
-
 %build -p
-# Re-export the environment for Tensile kernel generation (separate scriptlet from %%conf)
-TL=$PWD/hipblaslt/tensilelite
+# Do a manual install of tensilelite instead of cmake's virtualenv, then point
+# Tensile at it for build-time kernel generation (same approach as hipblaslt)
+cd hipblaslt/tensilelite
+TL=$PWD
+python3 setup.py install --root $TL
+cd ../..
 
 export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
 CLANG_PATH=`hipconfig --hipclangpath`
