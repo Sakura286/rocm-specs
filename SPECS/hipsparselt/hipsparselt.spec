@@ -5,42 +5,21 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%define python_exec python3
-%define python_expand python3
-
 %global rocm_release 7.1
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-# hipSPARSELt uses hipcc-based compilation via Tensile from hipBLASLt
-%global toolchain rocm
-# hipcc does not support some clang flags
-%global build_cxxflags %(echo %{optflags} | sed -e 's/-fstack-protector-strong/-Xarch_host -fstack-protector-strong/' -e 's/-fcf-protection/-Xarch_host -fcf-protection/' -e 's/-mtls-dialect=gnu2//')
-
-# The tensilelite that hipSPARSELt uses comes from hipBLASLt
-# This is the hipblaslt 7.1.1 repo tag commit
-%global hipblaslt_commit 7c0ea90bd75ec971502a9232373f8ae7484a5cfa
-%global hipblaslt_scommit %(c=%{hipblaslt_commit}; echo ${c:0:7})
+%global toolchain clang
 
 %global tensile_version 4.33.0
 %global tensile_verbose 1
-%global tensile_library_format msgpack
-%global nanobind_version 2.9.2
-%global nanobind_giturl https://github.com/wjakob/nanobind
-%global robinmap_version 1.3.0
-%global robinmap_giturl https://github.com/Tessil/robin-map
 
-# Use system nanobind (if available) or bundled
-%bcond nanobind 0
-
-%bcond test 0
-%if %{with test}
-%global build_test ON
+%bcond build_test 0
+%if %{with build_test}
+%global cmake_test ON
 %else
-%global build_test OFF
+%global cmake_test OFF
 %endif
-
-%global gpu_list %{rocm_gpu_list_default}
 
 Name:           hipsparselt
 Version:        %{rocm_version}
@@ -53,11 +32,27 @@ Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
-Source3:        0001-hipblaslt-tensilelite-use-fedora-paths.patch
+Source3:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
-Source5:        0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
-Source10:       %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
-Source11:       %{robinmap_giturl}/archive/v%{robinmap_version}/robin-map-%{robinmap_version}.tar.gz
+BuildSystem:    cmake
+
+# ${HIPBLASLT_PATH} and ${TL} are computed in %%conf below (same shell)
+BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
+BuildOption(conf):  -DBUILD_VERBOSE=ON
+BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gcc-fortran
+BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DHIPSPARSELT_HIPBLASLT_PATH=${HIPBLASLT_PATH}
+BuildOption(conf):  -DTensile_COMPILER=clang++
+BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
+BuildOption(conf):  -DTensile_TEST_LOCAL_PATH=${TL}
+BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
+BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
+BuildOption(conf):  -DVIRTUALENV_SITE_PATH=${TL}%{python3_sitelib}
+BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
+BuildOption(conf):  -G Ninja
 
 BuildRequires:  ninja
 BuildRequires:  llvm
@@ -82,6 +77,8 @@ BuildRequires:  cmake(rocsparse)
 BuildRequires:  roctracer-devel
 BuildRequires:  zlib-devel
 BuildRequires:  python3-devel
+# nanobind is used to build the rocisa native module (build-time only)
+BuildRequires:  python3dist(nanobind)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
@@ -90,7 +87,7 @@ BuildRequires:  msgpack-devel
 
 BuildRequires:  gcc-fortran
 
-%if %{with test}
+%if %{with build_test}
 BuildRequires:  chrpath
 BuildRequires:  flexiblas-devel
 BuildRequires:  rocm-omp-devel
@@ -98,39 +95,28 @@ BuildRequires:  gtest-devel
 BuildRequires:  gmock-devel
 %endif
 
-%if %{with nanobind}
-BuildRequires:  python3dist(nanobind)
-%endif
-
-Provides:       bundled(python-tensile) = %{tensile_version}
-%if %{without nanobind}
-Provides:       bundled(nanobind) = %{nanobind_version}
-Provides:       bundled(robin-map) = %{robinmap_version}
-%endif
-
 %description
 hipSPARSELt is a SPARSE marshaling library that provides general sparse
 matrix-matrix multiplication using structured sparsity. It offers a flexible
 API and supports multiple backends.
 
-%package devel
+%package        devel
 Summary:        The hipSPARSELt development package
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 The hipSPARSELt development package.
 
-%if %{with test}
-%package test
+%if %{with build_test}
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
 %prep
-
 %autosetup -p1 -n %{name}
 
 tar xf %{SOURCE1}
@@ -139,7 +125,6 @@ cd hipblaslt
 patch -p1 < %{SOURCE2}
 patch -p1 < %{SOURCE3}
 patch -p1 < %{SOURCE4}
-patch -p1 < %{SOURCE5}
 
 # Use PATH to find where TensileGetPath and other tensile bins are
 sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g' \
@@ -150,20 +135,12 @@ sed -i -e 's@-x hip @-I%{_includedir} -x hip @' device-library/matrix-transform/
 sed -i -e 's@"-D__HIP_HCC_COMPAT_MODE__=1"@"-D__HIP_HCC_COMPAT_MODE__=1","-I%{_includedir}"@' \
     tensilelite/Tensile/Toolchain/Component.py
 
-%if %{with nanobind}
-# Disable download of nanobind
-sed -i -e 's@FetchContent_MakeAvailable(nanobind)@find_package(nanobind)@' \
+# Use the distribution-provided nanobind instead of fetching/bundling it
+sed -i -e 's@FetchContent_MakeAvailable(nanobind)@find_package(nanobind CONFIG REQUIRED)@' \
     tensilelite/rocisa/CMakeLists.txt
-%else
-# Use bundled nanobind
-tar xf %{SOURCE10}
-mv nanobind-* nanobind
-cd nanobind
-tar xf %{SOURCE11}
-cp -r robin-map-*/* ext/robin_map/
-cd ..
-tar czf nanobind.tar.gz nanobind
-%endif
+
+# disable openmp in hipBLASLt
+sed -i -e 's@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." ON)@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." OFF)@' CMakeLists.txt
 
 cd ..
 
@@ -185,18 +162,15 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Depe
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
 find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
-%build
+# The cmake configure step (add_subdirectory(${VIRTUALENV_SITE_PATH}/rocisa) and the
+# Tensile/hipBLASLt path options) needs the tensilelite installed and the path vars set
+# in the same shell, so this runs in %%conf rather than %%build.
+%conf -p
 HIPBLASLT_PATH=$PWD/hipblaslt
-cd hipblaslt
-
-# disable openmp in hipBLASLt
-sed -i -e 's@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." ON)@option(HIPBLASLT_ENABLE_OPENMP "Use OpenMP to improve performance." OFF)@' CMakeLists.txt
+TL=$PWD/hipblaslt/tensilelite
 
 # Do a manual install instead of cmake's virtualenv
-cd tensilelite
-TL=$PWD
-python3 setup.py install --root $TL
-cd ../..
+( cd "$TL" && python3 setup.py install --root "$TL" )
 
 export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
 CLANG_PATH=`hipconfig --hipclangpath`
@@ -205,39 +179,26 @@ RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
 export DEVICE_LIB_PATH=${RESOURCE_DIR}/amdgcn/bitcode
 export TENSILE_ROCM_ASSEMBLER_PATH=${CLANG_PATH}/clang++
 export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
-
 export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
 
-%cmake -G Ninja \
-    -DGPU_TARGETS=%{gpu_list} \
-    -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas \
-    -DBUILD_CLIENTS_TESTS=%{build_test} \
-    -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF \
-    -DBUILD_VERBOSE=ON \
-    -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang \
-    -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++ \
-    -DCMAKE_Fortran_COMPILER=gfortran \
-    -DCMAKE_INSTALL_LIBDIR=%{_lib} \
-    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
-    -DCMAKE_PREFIX_PATH=%{python3_sitelib}/nanobind \
-    -DCMAKE_VERBOSE_MAKEFILE=ON \
-    -DHIP_PLATFORM=amd \
-    -DHIPSPARSELT_HIPBLASLT_PATH=${HIPBLASLT_PATH} \
-    -DROCM_SYMLINK_LIBS=OFF \
-    -DTensile_COMPILER=clang++ \
-    -DTensile_LIBRARY_FORMAT=%{tensile_library_format} \
-    -DTensile_TEST_LOCAL_PATH=${TL} \
-    -DTensile_VERBOSE=%{tensile_verbose} \
-    -DVIRTUALENV_BIN_DIR=%{_bindir} \
-    -DVIRTUALENV_SITE_PATH=${TL}%{python3_sitelib} \
-    %{nil}
+%build -p
+# Re-export the environment for Tensile kernel generation (separate scriptlet from %%conf)
+TL=$PWD/hipblaslt/tensilelite
 
-%cmake_build
+export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
+CLANG_PATH=`hipconfig --hipclangpath`
+ROCM_CLANG=${CLANG_PATH}/clang
+RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
+export DEVICE_LIB_PATH=${RESOURCE_DIR}/amdgcn/bitcode
+export TENSILE_ROCM_ASSEMBLER_PATH=${CLANG_PATH}/clang++
+export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
+export PATH=${TL}/%{_bindir}:$PATH
+export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
+export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
 
-%install
-%cmake_install
+%install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparselt/LICENSE.md
 
 # Strip and fix permissions on hsaco kernel files
@@ -255,7 +216,7 @@ chmod a+x %{buildroot}%{_libdir}/hipsparselt/library/Kernels*.hsaco
 %{_libdir}/cmake/hipsparselt/
 %{_libdir}/libhipsparselt.so
 
-%if %{with test}
+%if %{with build_test}
 %files test
 %{_bindir}/hipsparselt*
 %endif
