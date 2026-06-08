@@ -9,13 +9,13 @@
 %global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global toolchain rocm
+%global toolchain clang
 
-%bcond test 0
-%if %{with test}
-%global build_test ON
+%bcond build_test 0
+%if %{with build_test}
+%global cmake_test ON
 %else
-%global build_test OFF
+%global cmake_test OFF
 %endif
 
 %global tensile_version 4.33.0
@@ -29,22 +29,14 @@
 
 %global tensile_verbose 1
 
-%global nanobind_version 2.9.2
-%global nanobind_giturl https://github.com/wjakob/nanobind
-%global robinmap_version 1.3.0
-%global robinmap_giturl https://github.com/Tessil/robin-map
-
 Name:           hipblaslt
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm general matrix operations beyond BLAS
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
-VCS:            git:https://github.com/ROCm/hipBLASLt.git
 #!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
-Source0:         %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
-Source1:        %{nanobind_giturl}/archive/v%{nanobind_version}/nanobind-%{nanobind_version}.tar.gz
-Source2:        %{robinmap_giturl}/archive/v%{robinmap_version}/robin-map-%{robinmap_version}.tar.gz
+Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
 Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
@@ -52,8 +44,8 @@ Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
 Patch1:         0001-hipblaslt-tensilelite-use-fedora-paths.patch
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch2:         0001-hipblaslt-find-origami-package.patch
-# do not try to fetch, point to the nanobind tarball
-Patch3:         0001-hipblaslt-tensilelite-use-nanobind-tarball.patch
+# use the distribution-provided nanobind instead of fetching/bundling it
+Patch3:         0001-hipblaslt-tensilelite-use-system-nanobind.patch
 # compile and link jobpools
 Patch4:         0001-hipblaslt-cmake-compile-and-link-pools.patch
 
@@ -90,17 +82,14 @@ BuildRequires:  python3dist(joblib)
 # https://github.com/ROCm/hipBLASLt/issues/1734
 BuildRequires:  python3dist(msgpack)
 BuildRequires:  cmake(msgpack)
+# nanobind is used to build the rocisa native module (build-time only)
+BuildRequires:  python3dist(nanobind)
 
-%if %{with test}
-BuildRequires:  blis-devel
-BuildRequires:  lapack-devel
+%if %{with build_test}
+BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
 %endif
-
-Provides:       bundled(python-tensile) = %{tensile_version}
-Provides:       bundled(nanobind) = %{nanobind_version}
-Provides:       bundled(robin-map) = %{robinmap_version}
 
 %description
 hipBLASLt is a library that provides general matrix-matrix
@@ -109,19 +98,19 @@ beyond a traditional BLAS library, such as adding flexibility
 to matrix data layouts, input types, compute types, and
 algorithmic implementations and heuristics.
 
-%package devel
+%package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description devel
+%description    devel
 %{summary}
 
-%if %{with test}
-%package test
+%if %{with build_test}
+%package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
-%description test
+%description    test
 %{summary}
 %endif
 
@@ -140,35 +129,6 @@ sed -i -e 's@virtualenv_install@#virtualenv_install@'                          C
 # Disable trying to download rocm-cmake
 sed -i -e 's@if(NOT ROCmCMakeBuildTools_FOUND)@if(FALSE)@' cmake/dependencies.cmake
 
-# Use bundled nanobind
-tar xf %{SOURCE1}
-mv nanobind-* nanobind
-cd nanobind
-tar xf %{SOURCE2}
-cp -r robin-map-*/* ext/robin_map/
-cd ..
-tar czf nanobind.tar.gz nanobind
-
-# As of 6.4, there is a long poll
-# compile_code_object.sh gfx90a,gfx1100,gfx1101,gfx1151,gfx1200,gfx1201 RelWithDebInfo sha1 hipblasltTransform.hsaco
-# This compiles a large file with multiple gpus.
-GPUS=`echo %{rocm_gpu_list_default} | grep -o 'gfx' | wc -l`
-
-HIP_JOBS=`lscpu | grep 'Core(s)' | awk '{ print $4 }'`
-if [ ${HIP_JOBS}x = x ]; then
-    HIP_JOBS=1
-fi
-# Try again..
-if [ ${HIP_JOBS} = 1 ]; then
-    HIP_JOBS=`lscpu | grep '^CPU(s)' | awk '{ print $2 }'`
-    if [ ${HIP_JOBS}x = x ]; then
-        HIP_JOBS=4
-    fi
-fi
-if [ "$GPUS" -lt "$HIP_JOBS" ]; then
-    HIP_JOBS=$GPUS
-fi
-
 # HIPBLASLT_ENABLE_OPENMP is OFF yet it is still being used
 # https://github.com/ROCm/rocm-libraries/issues/3201
 sed -i -e '/OpenMP::OpenMP_CXX/d' clients/CMakeLists.txt
@@ -184,7 +144,6 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
 %build
-
 # Do a manual install instead of cmake's virtualenv
 cd tensilelite
 TL=$PWD
@@ -206,71 +165,28 @@ export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
 
-cat /proc/cpuinfo
-cat /proc/meminfo
-lscpu
-
-# Real cores, No hyperthreading
-COMPILE_JOBS=`lscpu | grep 'Core(s)' | awk '{ print $4 }'`
-if [ ${COMPILE_JOBS}x = x ]; then
-    COMPILE_JOBS=1
-fi
-# Try again..
-if [ ${COMPILE_JOBS} = 1 ]; then
-    COMPILE_JOBS=`lscpu | grep '^CPU(s)' | awk '{ print $2 }'`
-    if [ ${COMPILE_JOBS}x = x ]; then
-        COMPILE_JOBS=4
-    fi
-fi
-
-# Take into account memmory usage per core, do not thrash real memory
-BUILD_MEM=8
-MEM_KB=0
-MEM_KB=`cat /proc/meminfo | grep MemTotal | awk '{ print $2 }'`
-MEM_MB=`eval "expr ${MEM_KB} / 1024"`
-MEM_GB=`eval "expr ${MEM_MB} / 1024"`
-COMPILE_JOBS_MEM=`eval "expr 1 + ${MEM_GB} / ${BUILD_MEM}"`
-if [ "$COMPILE_JOBS_MEM" -lt "$COMPILE_JOBS" ]; then
-    COMPILE_JOBS=$COMPILE_JOBS_MEM
-fi
-LINK_MEM=32
-LINK_JOBS=`eval "expr 1 + ${MEM_GB} / ${LINK_MEM}"`
-JOBS=${COMPILE_JOBS}
-if [ "$LINK_JOBS" -lt "$JOBS" ]; then
-    JOBS=$LINK_JOBS
-fi
+# Locate the distribution-provided nanobind cmake config for the rocisa module
+NANOBIND_DIR=`python3 -m nanobind --cmake_dir`
 
 %cmake -G Ninja \
+       -Dnanobind_ROOT=${NANOBIND_DIR} \
        -DGPU_TARGETS=%{rocm_gpu_list_default} \
-       -DBUILD_CLIENTS_TESTS=%{build_test} \
-       -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang \
-       -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++ \
-       -DCMAKE_INSTALL_LIBDIR=%{_lib} \
-       -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+       -DBUILD_CLIENTS_TESTS=%{cmake_test} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DHIPBLASLT_ENABLE_CLIENT=%{build_test} \
+       -DHIPBLASLT_ENABLE_CLIENT=%{cmake_test} \
        -DHIPBLASLT_ENABLE_MARKER=OFF \
        -DHIPBLASLT_ENABLE_OPENMP=OFF \
        -DHIPBLASLT_ENABLE_ROCROLLER=OFF \
        -DHIPBLASLT_ENABLE_SAMPLES=OFF \
        -DTensile_LIBRARY_FORMAT=msgpack \
        -DTensile_VERBOSE=%{tensile_verbose} \
-       -DVIRTUALENV_BIN_DIR=%{_bindir} \
-       -DHIPBLASLT_PARALLEL_COMPILE_JOBS=${COMPILE_JOBS} \
-       -DHIPBLASLT_PARALLEL_LINK_JOBS=${LINK_JOBS} \
-       %{nil}
+       -DVIRTUALENV_BIN_DIR=%{_bindir}
 
 %cmake_build
 
 %install
-
 %cmake_install
-
-# Extra license
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
-
-%post  -p /sbin/ldconfig
-%postun -p /sbin/ldconfig
 
 %files
 %doc README.md
@@ -285,7 +201,7 @@ rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
 %{_libdir}/cmake/hipblaslt/
 %{_libdir}/libhipblaslt.so
 
-%if %{with test}
+%if %{with build_test}
 %files test
 %{_bindir}/hipblaslt*
 %{_bindir}/sequence.yaml
