@@ -74,7 +74,7 @@ BuildRequires:  python3dist(wheel)
 BuildRequires:  python3dist(pybind11)
 # Supplies %%{_includedir}/pybind11 and %%{_datadir}/cmake/pybind11, which
 # PYBIND11_SYSPATH points the build at (see Patch2).
-BuildRequires:  pybind11-devel
+BuildRequires:  pkgconfig(pybind11)
 
 # --- Toolchain for the bundled LLVM and the Triton extension ---------------
 BuildRequires:  clang
