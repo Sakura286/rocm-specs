@@ -103,6 +103,10 @@ Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-
 # Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
 Source8:       pytorch-rocm-symbol-bridge.cpp
 
+# Fix magma version encoding
+# https://github.com/pytorch/pytorch/pull/180388
+Patch0:        0001-pytorch-magma-2.10.0-version-encoding.patch
+
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)
