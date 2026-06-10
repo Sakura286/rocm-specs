@@ -34,13 +34,13 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(openblas)
 BuildRequires:  compiler-rt
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
 BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  ninja
+BuildRequires:  pkgconfig(openblas)
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
