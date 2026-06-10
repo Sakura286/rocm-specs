@@ -56,6 +56,11 @@ Patch0:         0001-Build-only-the-AMD-ROCm-backend-offline.patch
 # Link the X86 codegen libraries on the riscv64 host so that
 # llvm::InitializeAllTargets() resolves at import time.
 Patch1:         0002-Add-riscv64-host-codegen-libraries.patch
+# pybind11.get_cmake_dir() only knows the pip-wheel layout and raises
+# ImportError with a distro python3-pybind11, so let PYBIND11_SYSPATH (set in
+# %%build) supply the CMake dir as well.  The unconditional call came in with
+# https://github.com/triton-lang/triton/pull/4450
+Patch2:         0003-Use-PYBIND11_SYSPATH-for-the-pybind11-CMake-dir-too.patch
 BuildSystem:    pyproject
 
 BuildOption(install):  %{srcname}
@@ -67,6 +72,9 @@ BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)
 BuildRequires:  python3dist(pybind11)
+# Supplies %%{_includedir}/pybind11 and %%{_datadir}/cmake/pybind11, which
+# PYBIND11_SYSPATH points the build at (see Patch2).
+BuildRequires:  pybind11-devel
 
 # --- Toolchain for the bundled LLVM and the Triton extension ---------------
 BuildRequires:  clang
@@ -176,6 +184,9 @@ cmake --build "$llvm_src/build" --target install -- -j$compile_jobs
 # Point Triton at the freshly built LLVM and keep the build offline + ROCm-only.
 export LLVM_SYSPATH="$llvm_install"
 export PATH="$llvm_install/bin:$PATH"
+# System pybind11 from pybind11-devel: headers and CMake config under
+# %%{_prefix} (see Patch2).
+export PYBIND11_SYSPATH=%{_prefix}
 export CC=clang
 export CXX=clang++
 export MAX_JOBS=$compile_jobs

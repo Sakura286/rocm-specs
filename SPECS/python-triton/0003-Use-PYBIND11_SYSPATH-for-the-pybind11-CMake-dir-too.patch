@@ -1,0 +1,25 @@
+diff --git a/setup.py b/setup.py
+index fe4a78d..400c34f 100644
+--- a/setup.py
++++ b/setup.py
+@@ -424,10 +424,19 @@ class CMakeBuild(build_ext):
+     def get_pybind11_cmake_args(self):
+         pybind11_sys_path = get_env_with_keys(["PYBIND11_SYSPATH"])
+         if pybind11_sys_path:
++            # openRuyi: distro pybind11 packages install the headers and the
++            # CMake config under a filesystem prefix (include/pybind11 and
++            # share/cmake/pybind11 below /usr), not inside the Python package
++            # the way pip wheels do, so pybind11.get_cmake_dir() raises
++            # ImportError ("pybind11 not installed").  When PYBIND11_SYSPATH
++            # is given, derive the CMake dir from it as well instead of only
++            # the include dir.
+             pybind11_include_dir = os.path.join(pybind11_sys_path, "include")
++            pybind11_cmake_dir = os.path.join(pybind11_sys_path, "share", "cmake", "pybind11")
+         else:
+             pybind11_include_dir = pybind11.get_include()
+-        return [f"-Dpybind11_INCLUDE_DIR='{pybind11_include_dir}'", f"-Dpybind11_DIR='{pybind11.get_cmake_dir()}'"]
++            pybind11_cmake_dir = pybind11.get_cmake_dir()
++        return [f"-Dpybind11_INCLUDE_DIR='{pybind11_include_dir}'", f"-Dpybind11_DIR='{pybind11_cmake_dir}'"]
+ 
+     def get_proton_cmake_args(self):
+         cmake_args = get_thirdparty_packages([get_json_package_info()])
