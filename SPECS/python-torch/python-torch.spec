@@ -107,6 +107,14 @@ Source8:       pytorch-rocm-symbol-bridge.cpp
 # https://github.com/pytorch/pytorch/pull/180388
 Patch0:        0001-pytorch-magma-2.10.0-version-encoding.patch
 
+# CPython 3.13.8 inspect.getsourcelines() truncates a decorated function's
+# source when a comment line sits between the last decorator and the def
+# (fixed in later 3.13.x).  TorchScript parses the RNN/LSTM/GRU forward
+# overload stubs at import time, so "import torch" dies with an
+# IndentationError.  Drop the offending pyrefly comment lines.
+# https://github.com/python/cpython/issues/139783
+Patch1:        0002-remove-pyrefly-comments-between-overload-decorator-and-def.patch
+
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)

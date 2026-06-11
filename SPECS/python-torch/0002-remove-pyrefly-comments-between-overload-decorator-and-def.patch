@@ -1,0 +1,46 @@
+Remove pyrefly suppression comments between @_overload_method and def
+
+openRuyi ships CPython 3.13.8, whose inspect.getsourcelines() truncates
+the extracted source of a decorated function when a comment-only line
+sits between the last decorator and the def (inspect.BlockFinder handles
+tokenize.NEWLINE too strictly; fixed upstream in later 3.13.x):
+  https://github.com/python/cpython/issues/139783
+
+TorchScript parses the source of every @torch._jit_internal._overload_method
+stub at import time (_check_overload_body -> torch._sources.parse_def), so
+the three RNN/LSTM/GRU forward stubs in torch/nn/modules/rnn.py that carry a
+"# pyrefly: ignore [bad-override]" line in that position make any
+"import torch" fail with:
+  IndentationError: expected an indented block after function definition
+
+Dropping the three comment lines is behavior-neutral: pyrefly is a static
+type checker never run in the distro build.
+
+diff --git a/torch/nn/modules/rnn.py b/torch/nn/modules/rnn.py
+index 76bfa4e..7bdbe4d 100644
+--- a/torch/nn/modules/rnn.py
++++ b/torch/nn/modules/rnn.py
+@@ -655,7 +655,6 @@ class RNN(RNNBase):
+ 
+     @overload
+     @torch._jit_internal._overload_method  # noqa: F811
+-    # pyrefly: ignore [bad-override]
+     def forward(
+         self,
+         input: Tensor,
+@@ -1063,7 +1062,6 @@ class LSTM(RNNBase):
+     # Same as above, see torch/nn/modules/module.py::_forward_unimplemented
+     @overload  # type: ignore[override]
+     @torch._jit_internal._overload_method  # noqa: F811
+-    # pyrefly: ignore [bad-override]
+     def forward(
+         self,
+         input: Tensor,
+@@ -1365,7 +1363,6 @@ class GRU(RNNBase):
+ 
+     @overload  # type: ignore[override]
+     @torch._jit_internal._overload_method  # noqa: F811
+-    # pyrefly: ignore [bad-override]
+     def forward(
+         self,
+         input: Tensor,
