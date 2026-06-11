@@ -21,11 +21,17 @@ VCS:            git:https://github.com/icl-utk-edu/magma.git
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
 BuildSystem:    cmake
 
+# Upstream installs the shared libraries unversioned; version them so the
+# runtime library and the -devel .so symlink can live in separate packages.
+# https://bitbucket.org/icl/magma/issues/77/versioning-so
+Patch2000:      2000-version-shared-libraries.patch
+
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBLA_VENDOR=OpenBLAS
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DMAGMA_ENABLE_HIP=ON
 BuildOption(conf):  -DUSE_FORTRAN=OFF
+BuildOption(conf):  -DMAGMA_SO_VERSION=%{version}
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -122,16 +128,16 @@ make generate
 %{_vpath_builddir}/testing/testing_sgemm
 %endif
 
-# magma builds unversioned shared libraries (no SOVERSION upstream),
-# so the bare .so files are the runtime libraries and live in the main package.
 %files
 %license COPYRIGHT
-%{_libdir}/libmagma.so
-%{_libdir}/libmagma_sparse.so
+%{_libdir}/libmagma.so.*
+%{_libdir}/libmagma_sparse.so.*
 
 %files devel
 %{_includedir}/*.h
 %{_libdir}/pkgconfig/%{name}.pc
+%{_libdir}/libmagma.so
+%{_libdir}/libmagma_sparse.so
 
 %changelog
 %autochangelog
