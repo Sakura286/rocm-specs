@@ -64,6 +64,10 @@ Patch2:         0003-Use-PYBIND11_SYSPATH-for-the-pybind11-CMake-dir-too.patch
 BuildSystem:    pyproject
 
 BuildOption(install):  %{srcname}
+# triton.instrumentation.lib*.so are MLIR helper libraries, not Python extension
+# modules; triton.runtime.interpreter needs numpy; triton.tools.mxfp needs torch.
+# All three are optional at import time; skip them in the smoke-import check.
+BuildOption(check):  -e 'triton.instrumentation.*' -e triton.runtime.interpreter -e triton.tools.mxfp
 
 # --- Python build backend --------------------------------------------------
 BuildRequires:  pyproject-rpm-macros
