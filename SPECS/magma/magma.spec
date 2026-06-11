@@ -122,16 +122,16 @@ make generate
 %{_vpath_builddir}/testing/testing_sgemm
 %endif
 
+# magma builds unversioned shared libraries (no SOVERSION upstream),
+# so the bare .so files are the runtime libraries and live in the main package.
 %files
 %license COPYRIGHT
-%{_libdir}/libmagma.so.*
-%{_libdir}/libmagma_sparse.so.*
+%{_libdir}/libmagma.so
+%{_libdir}/libmagma_sparse.so
 
 %files devel
 %{_includedir}/*.h
 %{_libdir}/pkgconfig/%{name}.pc
-%{_libdir}/libmagma.so
-%{_libdir}/libmagma_sparse.so
 
 %changelog
 %autochangelog
