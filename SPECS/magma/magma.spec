@@ -124,8 +124,8 @@ make generate
 
 %files
 %license COPYRIGHT
-%{_libdir}/libmagma.so{,.*}
-%{_libdir}/libmagma_sparse.so{,.*}
+%{_libdir}/libmagma.so.*
+%{_libdir}/libmagma_sparse.so.*
 
 %files devel
 %{_includedir}/*.h
