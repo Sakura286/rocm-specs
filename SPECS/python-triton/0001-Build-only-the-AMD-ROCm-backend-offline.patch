@@ -1,8 +1,20 @@
 diff --git a/setup.py b/setup.py
-index fe4a78d..1bdd332 100644
+index fe4a78d..bdb8f16 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -534,6 +534,10 @@ class CMakeBuild(build_ext):
+@@ -463,7 +463,10 @@ class CMakeBuild(build_ext):
+             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", "-DLLVM_ENABLE_WERROR=ON",
+             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + extdir, "-DTRITON_BUILD_PYTHON_MODULE=ON",
+             "-DPython3_EXECUTABLE:FILEPATH=" + sys.executable, "-DPython3_INCLUDE_DIR=" + python_include_dir,
+-            "-DTRITON_CODEGEN_BACKENDS=" + ';'.join([b.name for b in backends if not b.is_external]),
++            # openRuyi: always compile the nvidia C++ backend so that its
++            # tablegen-generated headers (.h.inc) exist for the core Triton libs,
++            # even though the nvidia Python backend is not installed.
++            "-DTRITON_CODEGEN_BACKENDS=" + ';'.join(sorted(set(["nvidia"] + [b.name for b in backends if not b.is_external]))),
+             "-DTRITON_PLUGIN_DIRS=" + ';'.join([b.src_dir for b in backends if b.is_external]),
+             "-DTRITON_WHEEL_DIR=" + wheeldir
+         ]
+@@ -534,6 +537,10 @@ class CMakeBuild(build_ext):
  
  
  def download_and_copy_dependencies():
@@ -13,7 +25,7 @@ index fe4a78d..1bdd332 100644
      nvidia_version_path = os.path.join(get_base_dir(), "cmake", "nvidia-toolchain-version.json")
      with open(nvidia_version_path, "r") as nvidia_version_file:
          # parse this json file to get the version of the nvidia toolchain
-@@ -619,7 +623,10 @@ def download_and_copy_dependencies():
+@@ -619,7 +626,10 @@ def download_and_copy_dependencies():
      )
  
  
