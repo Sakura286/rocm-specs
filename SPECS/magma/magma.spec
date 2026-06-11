@@ -110,7 +110,7 @@ sed -i -e '/strlcpy/d' include/magma_auxiliary.h
 sed -i -e 's@magma_strlcpy@strlcpy@' control/trace.cpp
 rm control/strlcpy.cpp
 
-%build -p
+%conf -p
 echo "BACKEND = hip"                          > make.inc
 echo "FORT = false"                          >> make.inc
 echo "GPU_TARGET = gfx1100;gfx1200;gfx1201"  >> make.inc
