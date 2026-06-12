@@ -276,6 +276,9 @@ sed -i -e 's@"gfx950", "gfx1150", "gfx1151"@@' aten/src/ATen/native/cuda/Blas.cp
 # Need to pip this
 sed -i -e '/fsspec/d' setup.py
 
+# Relax setuptools upper bound (<82) — the distro ships 82.0.1
+sed -i -e 's/,"<82//' pyproject.toml
+
 # Use system sympy
 sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
 
