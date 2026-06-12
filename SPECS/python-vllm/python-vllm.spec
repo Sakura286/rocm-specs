@@ -109,7 +109,7 @@ This build targets the AMD ROCm (HIP) backend for gfx1100.
 %prep -a
 # cmake and ninja are supplied as system BuildRequires and the wheel is built
 # with --no-build-isolation, so drop them from build-system.requires; otherwise
-# %pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
+# %%pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
 sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
 
 %generate_buildrequires
