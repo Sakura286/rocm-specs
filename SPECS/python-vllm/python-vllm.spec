@@ -49,6 +49,10 @@ BuildRequires:  python3dist(setuptools-rust)
 BuildRequires:  python3dist(packaging)
 BuildRequires:  python3dist(jinja2)
 BuildRequires:  python3dist(torch)
+# find_package(Torch) loads Caffe2Config, which find_package(Protobuf)s the
+# system protobuf torch was built against; torch's import also wants numpy.
+BuildRequires:  pkgconfig(protobuf)
+BuildRequires:  python3dist(numpy)
 
 # --- Toolchain --------------------------------------------------------------
 BuildRequires:  clang
