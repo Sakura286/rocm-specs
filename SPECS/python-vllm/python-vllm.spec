@@ -140,7 +140,12 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 # CMAKE_HIP_ARCHITECTURES must be set explicitly: enable_language(HIP) tries to
 # auto-detect a default arch via rocm_agent_enumerator, which finds nothing on a
 # GPU-less builder ("Failed to find a default HIP architecture").
-export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch}"
+#
+# --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
+# in its own resource dir, but rocm-device-libs installs it under
+# %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
+# (a single flag — no ';' — to avoid CMake's list-separator splitting).
+export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
 export CMAKE_BUILD_TYPE=Release
 
