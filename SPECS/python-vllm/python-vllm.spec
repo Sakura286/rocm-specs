@@ -44,6 +44,7 @@ BuildOption(install):  vllm
 # setup.py imports torch, setuptools_scm and setuptools_rust at module load, so
 # these must be present before %%pyproject_buildrequires can run the backend.
 BuildRequires:  pyproject-rpm-macros
+BuildRequires:  python-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(wheel)
@@ -84,6 +85,9 @@ BuildRequires:  cmake(hipcub)
 BuildRequires:  cmake(hipfft)
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hipsparse)
+# torch's exported Caffe2Targets links roc::hipsparselt into torch_hip, so its
+# cmake config (hipsparselt-devel) must be present for find_package(Torch).
+BuildRequires:  cmake(hipsparselt)
 BuildRequires:  cmake(hipsolver)
 BuildRequires:  cmake(miopen)
 BuildRequires:  cmake(rocblas)
@@ -120,11 +124,18 @@ This build targets the AMD ROCm (HIP) backend for gfx1100.
 # cmake and ninja are supplied as system BuildRequires and the wheel is built
 # with --no-build-isolation, so drop them from build-system.requires; otherwise
 # %%pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
+# Also relax the setuptools upper bound (<81.0.0) — the distro ships >=81.
 sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
+sed -i -e 's/,<81.0.0//' pyproject.toml
 
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
+
+# torch's Caffe2Targets.cmake references roc::hipsparselt in the torch_hip link
+# interface, but LoadHIP.cmake treats hipsparselt as optional.  Ensure
+# find_package(hipsparselt) runs before find_package(Torch) so the target exists.
+sed -i '/^find_package(Torch REQUIRED)$/i find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)' CMakeLists.txt
 
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
