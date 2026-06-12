@@ -103,6 +103,11 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 This build targets the AMD ROCm (HIP) backend for gfx1100.
 
 %prep -a
+# cmake and ninja are supplied as system BuildRequires and the wheel is built
+# with --no-build-isolation, so drop them from build-system.requires; otherwise
+# %pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
+sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
+
 # Issue 9 (from the openRuyi vLLM-ROCm build notes): cumem_allocator is a
 # LANGUAGE CXX target, so it never receives the -DUSE_ROCM that
 # get_torch_gpu_compiler_flags() only adds to VLLM_GPU_FLAGS (applied to HIP
