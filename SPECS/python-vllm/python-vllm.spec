@@ -59,6 +59,8 @@ BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
 BuildRequires:  lld
+# clang-offload-bundler invokes llvm-objcopy during HIP offload linking.
+BuildRequires:  llvm
 BuildRequires:  libstdc++-devel
 BuildRequires:  cmake
 BuildRequires:  ninja
