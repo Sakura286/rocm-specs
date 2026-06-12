@@ -137,7 +137,10 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_arch}
 export ROCM_PATH=%{_prefix}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
-export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++"
+# CMAKE_HIP_ARCHITECTURES must be set explicitly: enable_language(HIP) tries to
+# auto-detect a default arch via rocm_agent_enumerator, which finds nothing on a
+# GPU-less builder ("Failed to find a default HIP architecture").
+export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch}"
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
 export CMAKE_BUILD_TYPE=Release
 
