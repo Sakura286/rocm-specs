@@ -276,8 +276,11 @@ sed -i -e 's@"gfx950", "gfx1150", "gfx1151"@@' aten/src/ATen/native/cuda/Blas.cp
 # Need to pip this
 sed -i -e '/fsspec/d' setup.py
 
-# Relax setuptools upper bound (<82) — the distro ships 82.0.1
-sed -i -e 's/,"<82//' pyproject.toml
+# Relax the setuptools<82 runtime pin — the distro ships 82.0.1.  The bound is
+# in setup.py's install_requires, which becomes the wheel's Requires-Dist and
+# thus the RPM Requires; editing pyproject.toml (build-system) does not affect
+# it, so torch's dependents (python-triton, python-vllm) were left unresolvable.
+sed -i -e 's@"setuptools<82"@"setuptools"@' setup.py
 
 # Use system sympy
 sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
