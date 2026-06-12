@@ -1,0 +1,20 @@
+cumem_allocator: define USE_ROCM for the CXX-language target
+
+cumem_allocator is built with LANGUAGE CXX, so it never receives the
+-DUSE_ROCM that get_torch_gpu_compiler_flags() adds only to VLLM_GPU_FLAGS
+(applied to HIP-language sources). Without it, cumem_allocator_compat.h takes
+the CUDA path and fails on `#include <cuda_runtime_api.h>`. The sibling
+_C_stable_libtorch CXX target already gets the define explicitly upstream;
+cumem_allocator was missed.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1299,3 +1299,8 @@
+     # vllm-flash-attn should be last as it overwrites some CMake functions
+     include(cmake/external_projects/vllm_flash_attn.cmake)
+ endif ()
++
++# openRuyi: define USE_ROCM for the CXX-language cumem_allocator target.
++if(VLLM_GPU_LANG STREQUAL "HIP" AND TARGET cumem_allocator)
++  target_compile_definitions(cumem_allocator PRIVATE USE_ROCM)
++endif()

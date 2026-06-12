@@ -28,6 +28,10 @@ URL:            https://github.com/vllm-project/vllm
 #!RemoteAsset:  sha256:4666b4052880d29c4a2c3d5b14cbb37b0457de1ea495dafc07ee128e7f3c4ad8
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{srcname}-%{version}.tar.gz
 
+# cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
+# cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
+Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
+
 BuildSystem:    pyproject
 # %%pyproject_save_files needs the importable module name.
 BuildOption(install):  vllm
@@ -107,20 +111,6 @@ This build targets the AMD ROCm (HIP) backend for gfx1100.
 # with --no-build-isolation, so drop them from build-system.requires; otherwise
 # %pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
 sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
-
-# Issue 9 (from the openRuyi vLLM-ROCm build notes): cumem_allocator is a
-# LANGUAGE CXX target, so it never receives the -DUSE_ROCM that
-# get_torch_gpu_compiler_flags() only adds to VLLM_GPU_FLAGS (applied to HIP
-# sources). Without it, cumem_allocator_compat.h takes the CUDA path and fails
-# on `#include <cuda_runtime_api.h>`. _C_stable_libtorch already gets the
-# define explicitly upstream; cumem_allocator was missed.
-cat >> CMakeLists.txt <<'EOF'
-
-# openRuyi: define USE_ROCM for the CXX-language cumem_allocator target.
-if(VLLM_GPU_LANG STREQUAL "HIP" AND TARGET cumem_allocator)
-  target_compile_definitions(cumem_allocator PRIVATE USE_ROCM)
-endif()
-EOF
 
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
