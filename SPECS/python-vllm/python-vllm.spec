@@ -32,6 +32,10 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{srcname}-%{versio
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
 Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
 
+# Offline replacement for cmake/external_projects/triton_kernels.cmake, which
+# otherwise git-clones the triton repo at configure time (no network on OBS).
+Source1:        triton_kernels-stub.cmake
+
 BuildSystem:    pyproject
 # %%pyproject_save_files needs the importable module name.
 BuildOption(install):  vllm
@@ -117,6 +121,10 @@ This build targets the AMD ROCm (HIP) backend for gfx1100.
 # with --no-build-isolation, so drop them from build-system.requires; otherwise
 # %%pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
 sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
+
+# Replace the network-fetching triton_kernels external project with the offline
+# stub (see Source1).
+cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
