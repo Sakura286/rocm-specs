@@ -137,6 +137,11 @@ cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 # find_package(hipsparselt) runs before find_package(Torch) so the target exists.
 sed -i '/^find_package(Torch REQUIRED)$/i find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)' CMakeLists.txt
 
+# clang (unlike gcc) forbids including <mwaitxintrin.h> directly and errors out;
+# it must come via <x86intrin.h>. This monitorx/mwaitx path is x86-only and
+# guarded by #if defined(__x86_64__), so the substitution no-ops on riscv64.
+sed -i -e 's@#include <mwaitxintrin.h>@#include <x86intrin.h>@' csrc/spinloop.cpp
+
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
 # VLLM_VERSION_OVERRIDE sets SETUPTOOLS_SCM_PRETEND_VERSION and also bypasses
@@ -187,6 +192,8 @@ export MAX_JOBS=$compile_jobs
 %files -f %{pyproject_files}
 %license LICENSE
 %doc README.md
+# %%pyproject_save_files does not capture the console-script entry point.
+%{_bindir}/vllm
 
 %changelog
 %autochangelog
