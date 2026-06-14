@@ -12,6 +12,16 @@
 # rocm stack builds with clang
 %global toolchain clang
 
+# riscv64 build workers OOM in the AMDGPU device-side LTO link (amdgcn-link) when
+# it runs one codegen partition per core: even on an 84 GB worker with 4 cores,
+# --lto-partitions=4 is killed by systemd-oomd. Cap the partition count there to
+# bound peak link memory; other arches keep one partition per core for speed.
+%ifarch riscv64
+%global lto_partitions 2
+%else
+%global lto_partitions %(nproc)
+%endif
+
 Name:           rccl
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -99,13 +109,17 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # Do not force install
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # -amdgpu-s-branch-bits and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
-# --lto-partitions to accelerate linking time
-sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%(nproc)" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
+# --lto-partitions parallelizes the GPU LTO codegen (capped on riscv64, see lto_partitions above)
+sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%{lto_partitions}" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
 %build
-# AMDGPU device linker runs as a process that produces no stdout for about 8~12 hours on riscv64
-timeout 12h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
+# AMDGPU device linker runs as a process that produces no stdout for many hours
+# on riscv64; with fewer LTO partitions the link is slower, so keep the heartbeat
+# alive long enough to cover it and avoid an OBS inactivity timeout.
+timeout 20h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
+
 %cmake_build
+
 kill $TIME_OUT 2>/dev/null || true
 
 %install -a
