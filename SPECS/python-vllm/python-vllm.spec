@@ -116,6 +116,28 @@ sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
 # runtime, which the system "ninja" package (Requires: above) provides.
 sed -i '/^ninja /d' requirements/common.txt
 
+# Relax vLLM's runtime pins to the newer, compatible versions openRuyi ships.
+# protobuf: drop only the !=6.33.2.* band so base's 6.33.2 resolves.  That band
+# is the CVE-2026-0994 mitigation (fixed upstream in 6.33.5), so this relies on
+# openRuyi's protobuf carrying the backport -- revisit if base lags behind.
+sed -i 's/, !=6\.33\.2\.\*//' requirements/common.txt
+# Exact "==" pins -> unpinned; base ships newer, compatible releases.
+sed -i 's/^lark == 1.2.2/lark/' requirements/common.txt
+sed -i 's/^grpcio==1.78.0/grpcio/' requirements/rocm.txt
+sed -i 's/^grpcio-reflection==1.78.0/grpcio-reflection/' requirements/rocm.txt
+sed -i 's/^tensorizer==2.10.1/tensorizer/' requirements/rocm.txt
+# setuptools: base is 82.x; drop the <81 (common) / <80 (rocm) upper bounds.
+sed -i 's/setuptools>=77.0.3,<81.0.0/setuptools>=77.0.3/' requirements/common.txt
+sed -i 's/setuptools>=77.0.3,<80.0.0/setuptools>=77.0.3/' requirements/rocm.txt
+# Extra subpackages base does not build: [standard] only adds the
+# uvicorn/multipart/httpx stack (base has uvicorn); [image] only adds opencv,
+# which vLLM already requires directly (the opencv-python line below).
+sed -i 's/fastapi\[standard\]/fastapi/' requirements/common.txt
+sed -i 's/mistral_common\[image\]/mistral_common/' requirements/common.txt
+# base ships the cv2 module as the "opencv-python" dist (4.13.0), not upstream's
+# "opencv-python-headless" dist name.
+sed -i 's/opencv-python-headless/opencv-python/' requirements/common.txt
+
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
