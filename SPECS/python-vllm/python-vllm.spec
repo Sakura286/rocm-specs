@@ -111,8 +111,8 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 %prep -a
 sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
 # cmake and ninja in pyproject.toml's build-system.requires resolve to system
-# packages on openRuyi (BuildRequires above), not python3dist(...), so
-# %pyproject_buildrequires would mark the build unresolvable -- strip them.
+# packages on openRuyi (BuildRequires above), not python3dist(...); without this
+# the buildrequires generator emits unresolvable python3dist(cmake)/(ninja).
 sed -i -e '/"cmake>=3.26.1",/d' -e '/"ninja",/d' pyproject.toml
 
 # --- Runtime dependency adjustments (vLLM requirements/*.txt -> openRuyi) ------
