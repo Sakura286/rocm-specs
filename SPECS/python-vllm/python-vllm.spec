@@ -91,6 +91,11 @@ BuildRequires:  cmake(rocm_smi)
 Requires:       python3dist(torch)
 Requires:       python3dist(triton)
 Requires:       amdsmi
+# vLLM's "ninja" dependency is the PyPI wheel that bundles a ninja binary for
+# pip/venv users; at runtime vLLM/torch only invoke the ninja executable on
+# PATH, which the system package provides.  Require that and drop the PyPI wheel
+# requirement in %prep (openRuyi does not package the wheel).
+Requires:       ninja
 
 # For convention
 Provides:       vllm = %{version}-%{release}
@@ -105,6 +110,11 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
 sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
+
+# --- Runtime dependency adjustments (vLLM requirements/*.txt -> openRuyi) ------
+# Drop the PyPI "ninja" wheel dep: vLLM/torch only need a ninja binary on PATH at
+# runtime, which the system "ninja" package (Requires: above) provides.
+sed -i '/^ninja /d' requirements/common.txt
 
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
