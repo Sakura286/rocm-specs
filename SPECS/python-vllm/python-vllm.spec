@@ -138,6 +138,20 @@ sed -i 's/mistral_common\[image\]/mistral_common/' requirements/common.txt
 # "opencv-python-headless" dist name.
 sed -i 's/opencv-python-headless/opencv-python/' requirements/common.txt
 
+# Drop runtime deps openRuyi does not package yet.  Tracked for later packaging:
+#   numba                       - N-gram speculative decoding (needs llvmlite)
+#   opentelemetry-exporter-otlp - OTLP trace export
+# Optional vLLM features skipped for the riscv64 preview:
+#   openai-harmony (gpt-oss), amd-quark (Quark quant), conch-triton-kernels,
+#   tilelang, runai-model-streamer (cloud model streaming).
+sed -i '/^numba /d' requirements/rocm.txt
+sed -i '/^opentelemetry-exporter-otlp/d' requirements/common.txt
+sed -i '/^openai-harmony/d' requirements/common.txt
+sed -i '/^amd-quark/d' requirements/rocm.txt
+sed -i '/^conch-triton-kernels/d' requirements/rocm.txt
+sed -i '/^tilelang/d' requirements/rocm.txt
+sed -i '/^runai-model-streamer/d' requirements/rocm.txt
+
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
