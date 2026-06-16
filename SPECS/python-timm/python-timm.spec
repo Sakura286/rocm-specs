@@ -18,6 +18,13 @@ BuildArch:      noarch
 BuildSystem:    pyproject
 
 BuildOption(install):  %{pypi_name}
+# Optional dataset readers pull backends openRuyi does not package (HF datasets
+# is optional; tensorflow / tensorflow-datasets are absent), so they fail the
+# default import check -- exclude them.
+BuildOption(check):  -e 'timm.data.readers.reader_hfds'
+BuildOption(check):  -e 'timm.data.readers.reader_hfids'
+BuildOption(check):  -e 'timm.data.readers.reader_tfds'
+BuildOption(check):  -e 'timm.data.tf_preprocessing'
 
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
