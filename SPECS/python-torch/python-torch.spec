@@ -130,6 +130,10 @@ BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(openblas64)
 BuildRequires:  pkgconfig(protobuf)
+# The system protobuf's cmake config does find_package(ZLIB), which imports the
+# ZLIB::ZLIBSTATIC target referencing /usr/lib64/libz.a; cmake configure aborts
+# if that static lib is absent. Pull it in (provided by zlib-ng-compat-static).
+BuildRequires:  zlib-ng-compat-static
 BuildRequires:  pkgconfig(valgrind)
 BuildRequires:  pocketfft-devel
 BuildRequires:  pthreadpool-devel
