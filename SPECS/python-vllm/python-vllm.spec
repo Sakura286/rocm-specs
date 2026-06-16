@@ -6,17 +6,9 @@
 
 %global srcname vllm
 
-# The whole ROCm stack builds with clang.
 %global toolchain clang
 
-# vLLM v0.22.1 pins torch == 2.11.0 for both CUDA and ROCm, matching the
-# python-torch / python-triton already in this stack.  The CMake extensions
-# (_C, _moe_C, _rocm_C, cumem_allocator) are large AMDGPU device-code links, so
-# drop LTO and the dwz pass to keep memory in check (same as python-torch).
-%global _lto_cflags %{nil}
-%define _find_debuginfo_dwz_opts %{nil}
-
-# Only gfx1100 is supported on openRuyi (see python-torch).
+# TODO: gfx1100 for test build
 %global rocm_gpu_arch gfx1100
 
 Name:           python-%{srcname}
@@ -26,19 +18,18 @@ Summary:        A high-throughput and memory-efficient inference and serving eng
 License:        Apache-2.0
 URL:            https://github.com/vllm-project/vllm
 #!RemoteAsset:  sha256:4666b4052880d29c4a2c3d5b14cbb37b0457de1ea495dafc07ee128e7f3c4ad8
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{srcname}-%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+# TODO: add triton-conch deps
+# Offline replacement for cmake/external_projects/triton_kernels.cmake, which
+# otherwise git-clones the triton repo at configure time (no network on OBS).
+Source1:        triton_kernels-stub.cmake
+BuildSystem:    pyproject
 
 # cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
 Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
 
-# Offline replacement for cmake/external_projects/triton_kernels.cmake, which
-# otherwise git-clones the triton repo at configure time (no network on OBS).
-Source1:        triton_kernels-stub.cmake
-
-BuildSystem:    pyproject
-# %%pyproject_save_files needs the importable module name.
-BuildOption(install):  vllm
+BuildOption(install):  %{srcname}
 
 # --- Python build backend (build-system.requires from pyproject.toml) -------
 # setup.py imports torch, setuptools_scm and setuptools_rust at module load, so
@@ -64,7 +55,6 @@ BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
 BuildRequires:  lld
-# clang-offload-bundler invokes llvm-objcopy during HIP offload linking.
 BuildRequires:  llvm
 BuildRequires:  libstdc++-devel
 BuildRequires:  cmake
@@ -75,9 +65,7 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocm-device-libs
 BuildRequires:  roctracer-devel
 
-# --- ROCm libraries vLLM's HIP extensions link against ----------------------
-# torch ${TORCH_LIBRARIES} drags in the ROCm runtime libs, so the same set that
-# python-torch builds against has to be available here too.
+# --- ROCm libraries ---------------------------------------------------------
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hipblaslt)
@@ -85,8 +73,6 @@ BuildRequires:  cmake(hipcub)
 BuildRequires:  cmake(hipfft)
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hipsparse)
-# torch's exported Caffe2Targets links roc::hipsparselt into torch_hip, so its
-# cmake config (hipsparselt-devel) must be present for find_package(Torch).
 BuildRequires:  cmake(hipsparselt)
 BuildRequires:  cmake(hipsolver)
 BuildRequires:  cmake(miopen)
@@ -102,15 +88,14 @@ BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
 
-# Core runtime deps that are actually packaged on openRuyi. The full vLLM
-# runtime stack (transformers, fastapi, ...) is large and mostly unpackaged;
-# those install_requires are emitted automatically from the wheel metadata.
 Requires:       python3dist(torch)
-Requires:       python3-triton
+Requires:       python3dist(triton)
 Requires:       amdsmi
 
+# For convention
 Provides:       vllm = %{version}-%{release}
 Provides:       python3-%{srcname} = %{version}-%{release}
+Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
 
 %description
@@ -118,15 +103,8 @@ vLLM is a fast and easy-to-use library for LLM inference and serving, featuring
 PagedAttention for efficient management of attention key/value memory,
 continuous batching of incoming requests, and an OpenAI-compatible API server.
 
-This build targets the AMD ROCm (HIP) backend for gfx1100.
-
 %prep -a
-# cmake and ninja are supplied as system BuildRequires and the wheel is built
-# with --no-build-isolation, so drop them from build-system.requires; otherwise
-# %%pyproject_buildrequires emits unsatisfiable python3dist(cmake)/python3dist(ninja).
-# Also relax the setuptools upper bound (<81.0.0) — the distro ships >=81.
-sed -i -e '/^[[:space:]]*"cmake>=3.26.1",$/d' -e '/^[[:space:]]*"ninja",$/d' pyproject.toml
-sed -i -e 's/,<81.0.0//' pyproject.toml
+sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
 
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
@@ -192,7 +170,6 @@ export MAX_JOBS=$compile_jobs
 %files -f %{pyproject_files}
 %license LICENSE
 %doc README.md
-# %%pyproject_save_files does not capture the console-script entry point.
 %{_bindir}/vllm
 
 %changelog
