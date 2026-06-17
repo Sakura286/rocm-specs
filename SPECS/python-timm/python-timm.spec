@@ -6,6 +6,10 @@
 
 %global pypi_name timm
 
+# timm is backend-agnostic (pure Python); accept any torch flavor via the shared
+# python-torch-backend virtual instead of the exact python3dist(torch).
+%global __requires_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
+
 Name:           python-%{pypi_name}
 Version:        1.0.27
 Release:        %autorelease
@@ -30,6 +34,8 @@ BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(pdm-backend)
+
+Requires:       python-torch-backend
 
 %description
 timm (PyTorch Image Models) is a collection of image models, layers, utilities,
