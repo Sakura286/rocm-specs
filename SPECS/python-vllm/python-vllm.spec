@@ -126,7 +126,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  numactl-devel
 # CPU torch (built --without rocm) keeps the CPU flavor free of any HIP/ROCm
 # build- or run-time dependency.
-BuildRequires:  python-torch-cpu
+BuildRequires:  python-torch
 %endif
 
 # vLLM's "ninja" dependency is the PyPI wheel that bundles a ninja binary for
@@ -139,7 +139,7 @@ Requires:       python-torch-rocm
 Requires:       python3dist(triton)
 Requires:       amdsmi
 %else
-Requires:       python-torch-cpu
+Requires:       python-torch
 %endif
 
 # The unsuffixed names resolve to the ROCm build; the CPU and ROCm packages are

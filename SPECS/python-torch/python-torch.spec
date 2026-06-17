@@ -59,7 +59,7 @@
 %if %{with rocm}
 Name:           python-%{srcname}-rocm
 %else
-Name:           python-%{srcname}-cpu
+Name:           python-%{srcname}
 %endif
 Version:        %{pypi_version}
 Release:        %autorelease
@@ -228,7 +228,8 @@ Requires:       amdsmi
 Provides:       python-torch-backend = %{version}-%{release}
 %if %{with rocm}
 %global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
-Conflicts:      python-%{srcname}-cpu
+# CPU flavor now carries the bare python-torch name (masks base's python-torch).
+Conflicts:      python-%{srcname}
 %else
 Provides:       python-%{srcname} = %{version}-%{release}
 Provides:       pytorch = %{version}-%{release}
