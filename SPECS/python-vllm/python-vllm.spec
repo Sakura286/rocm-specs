@@ -200,6 +200,10 @@ export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir
 export VLLM_TARGET_DEVICE=cpu
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
+# sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.
+%ifarch riscv64
+export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
+%endif
 %endif
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
 export CMAKE_BUILD_TYPE=Release
