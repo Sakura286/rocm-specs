@@ -4,14 +4,30 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+%global flavor @BUILD_FLAVOR@%{nil}
+
 %global srcname vllm
 
+# The "cpu" multibuild flavor builds the CPU backend; the default flavor builds
+# the ROCm/HIP backend.  Local builds can also force CPU with --without rocm.
+%if "%{flavor}" == "cpu"
+%bcond rocm 0
+%else
+%bcond rocm 1
+%endif
+
+%if %{with rocm}
 %global toolchain clang
 
 # TODO: gfx1100 for test build
 %global rocm_gpu_arch gfx1100
+%endif
 
-Name:           python-%{srcname}
+%if %{with rocm}
+Name:           python-%{srcname}-rocm
+%else
+Name:           python-%{srcname}-cpu
+%endif
 Version:        0.22.1
 Release:        %autorelease
 Summary:        A high-throughput and memory-efficient inference and serving engine for LLMs
@@ -25,9 +41,11 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 Source1:        triton_kernels-stub.cmake
 BuildSystem:    pyproject
 
+%if %{with rocm}
 # cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
 Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
+%endif
 
 BuildOption(install):  %{srcname}
 
@@ -49,16 +67,17 @@ BuildRequires:  python3dist(torch)
 # system protobuf torch was built against; torch's import also wants numpy.
 BuildRequires:  pkgconfig(protobuf)
 BuildRequires:  python3dist(numpy)
+BuildRequires:  cmake
+BuildRequires:  ninja
 
-# --- Toolchain --------------------------------------------------------------
+%if %{with rocm}
+# --- ROCm toolchain ---------------------------------------------------------
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
 BuildRequires:  compiler-rt
 BuildRequires:  lld
 BuildRequires:  llvm
 BuildRequires:  libstdc++-devel
-BuildRequires:  cmake
-BuildRequires:  ninja
 BuildRequires:  hipcc
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
@@ -87,21 +106,37 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
+%else
+# --- CPU backend ------------------------------------------------------------
+# vLLM's CPU extension compiles with gcc (the x86 path requires gcc >= 12.3) and
+# links libnuma for NUMA-aware allocation.  RISC-V uses the RVV path.
+BuildRequires:  gcc-c++
+BuildRequires:  numactl-devel
+%endif
 
 Requires:       python3dist(torch)
-Requires:       python3dist(triton)
-Requires:       amdsmi
 # vLLM's "ninja" dependency is the PyPI wheel that bundles a ninja binary for
 # pip/venv users; at runtime vLLM/torch only invoke the ninja executable on
 # PATH, which the system package provides.  Require that and drop the PyPI wheel
-# requirement in %prep (openRuyi does not package the wheel).
+# requirement in %%prep (openRuyi does not package the wheel).
 Requires:       ninja
+%if %{with rocm}
+Requires:       python3dist(triton)
+Requires:       amdsmi
+%endif
 
-# For convention
+# The unsuffixed names resolve to the ROCm build; the CPU and ROCm packages are
+# mutually exclusive (both ship the same /usr/bin/vllm and vllm module).
+%if %{with rocm}
+Provides:       python-%{srcname} = %{version}-%{release}
 Provides:       vllm = %{version}-%{release}
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
+Conflicts:      python-%{srcname}-cpu
+%else
+Conflicts:      python-%{srcname}-rocm
+%endif
 
 %description
 vLLM is a fast and easy-to-use library for LLM inference and serving, featuring
@@ -115,42 +150,47 @@ sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
 # the buildrequires generator emits unresolvable python3dist(cmake)/(ninja).
 sed -i -e '/"cmake>=3.26.1",/d' -e '/"ninja",/d' pyproject.toml
 
-# --- Runtime dependency adjustments (vLLM requirements/*.txt -> openRuyi) ------
+# --- Runtime dependency adjustments shared by both backends (common.txt) ------
 # Drop the PyPI "ninja" wheel dep: vLLM/torch only need a ninja binary on PATH at
 # runtime, which the system "ninja" package (Requires: above) provides.
 sed -i '/^ninja /d' requirements/common.txt
-
-# Relax vLLM's runtime pins to the newer, compatible versions openRuyi ships.
 # protobuf: drop only the !=6.33.2.* band so base's 6.33.2 resolves.  That band
 # is the CVE-2026-0994 mitigation (fixed upstream in 6.33.5), so this relies on
 # openRuyi's protobuf carrying the backport -- revisit if base lags behind.
 sed -i 's/, !=6\.33\.2\.\*//' requirements/common.txt
 # Exact "==" pins -> unpinned; base ships newer, compatible releases.
 sed -i 's/^lark == 1.2.2/lark/' requirements/common.txt
-sed -i 's/^grpcio==1.78.0/grpcio/' requirements/rocm.txt
-sed -i 's/^grpcio-reflection==1.78.0/grpcio-reflection/' requirements/rocm.txt
-sed -i 's/^tensorizer==2.10.1/tensorizer/' requirements/rocm.txt
-# setuptools: base is 82.x; drop the <81 (common) / <80 (rocm) upper bounds.
+# setuptools: base is 82.x; drop the <81 upper bound.
 sed -i 's/setuptools>=77.0.3,<81.0.0/setuptools>=77.0.3/' requirements/common.txt
-sed -i 's/setuptools>=77.0.3,<80.0.0/setuptools>=77.0.3/' requirements/rocm.txt
 # Extra subpackages base does not build: [standard] only adds the
 # uvicorn/multipart/httpx stack (base has uvicorn); [image] only adds opencv,
-# which vLLM already requires directly (the opencv-python line below).
+# which vLLM already requires directly (the opencv line below).
 sed -i 's/fastapi\[standard\]/fastapi/' requirements/common.txt
 sed -i 's/mistral_common\[image\]/mistral_common/' requirements/common.txt
 # base ships the cv2 module as the "opencv" dist (4.13.0), not upstream's
 # "opencv-python-headless" dist name.
 sed -i 's/opencv-python-headless/opencv/' requirements/common.txt
-
-# Drop runtime deps openRuyi does not package yet.  Tracked for later packaging:
-#   numba                       - N-gram speculative decoding (needs llvmlite)
+# Drop common.txt runtime deps openRuyi does not package yet:
 #   opentelemetry-exporter-otlp - OTLP trace export
-# Optional vLLM features skipped for the riscv64 preview:
-#   openai-harmony (gpt-oss), amd-quark (Quark quant), conch-triton-kernels,
-#   tilelang, runai-model-streamer (cloud model streaming).
-sed -i '/^numba /d' requirements/rocm.txt
+#   openai-harmony              - gpt-oss models
 sed -i '/^opentelemetry-exporter-otlp/d' requirements/common.txt
 sed -i '/^openai-harmony/d' requirements/common.txt
+
+# clang (unlike gcc) forbids including <mwaitxintrin.h> directly and errors out;
+# it must come via <x86intrin.h>. This monitorx/mwaitx path is x86-only and
+# guarded by #if defined(__x86_64__), so the substitution no-ops on riscv64.
+sed -i -e 's@#include <mwaitxintrin.h>@#include <x86intrin.h>@' csrc/spinloop.cpp
+
+%if %{with rocm}
+# --- ROCm-only adjustments (rocm.txt) ---------------------------------------
+# Relax exact pins; drop deps openRuyi does not package (numba needs llvmlite and
+# only powers n-gram spec-decoding) or optional features (amd-quark, tilelang,
+# conch-triton-kernels, runai-model-streamer).
+sed -i 's/^grpcio==1.78.0/grpcio/' requirements/rocm.txt
+sed -i 's/^grpcio-reflection==1.78.0/grpcio-reflection/' requirements/rocm.txt
+sed -i 's/^tensorizer==2.10.1/tensorizer/' requirements/rocm.txt
+sed -i 's/setuptools>=77.0.3,<80.0.0/setuptools>=77.0.3/' requirements/rocm.txt
+sed -i '/^numba /d' requirements/rocm.txt
 sed -i '/^amd-quark/d' requirements/rocm.txt
 sed -i '/^conch-triton-kernels/d' requirements/rocm.txt
 sed -i '/^tilelang/d' requirements/rocm.txt
@@ -164,26 +204,37 @@ cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 # interface, but LoadHIP.cmake treats hipsparselt as optional.  Ensure
 # find_package(hipsparselt) runs before find_package(Torch) so the target exists.
 sed -i '/^find_package(Torch REQUIRED)$/i find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)' CMakeLists.txt
-
-# clang (unlike gcc) forbids including <mwaitxintrin.h> directly and errors out;
-# it must come via <x86intrin.h>. This monitorx/mwaitx path is x86-only and
-# guarded by #if defined(__x86_64__), so the substitution no-ops on riscv64.
-sed -i -e 's@#include <mwaitxintrin.h>@#include <x86intrin.h>@' csrc/spinloop.cpp
+%else
+# --- CPU-only adjustments (cpu.txt) -----------------------------------------
+# Reuse openRuyi's existing torch (drop the +cpu / ==2.11.0 pins); drop numba
+# (llvmlite, n-gram spec-decoding only), intel-openmp and torchaudio (unpackaged).
+sed -i 's/^setuptools==77.0.3/setuptools/' requirements/cpu.txt
+sed -i 's/^torch==2.11.0+cpu/torch/' requirements/cpu.txt
+sed -i 's/^torch==2.11.0;/torch;/' requirements/cpu.txt
+sed -i '/^numba /d' requirements/cpu.txt
+sed -i '/^intel-openmp/d' requirements/cpu.txt
+sed -i '/^torchaudio/d' requirements/cpu.txt
+%endif
 
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
 # VLLM_VERSION_OVERRIDE sets SETUPTOOLS_SCM_PRETEND_VERSION and also bypasses
 # the "+rocmXYZ" local-version suffix in setup.py:get_vllm_version().
-export VLLM_TARGET_DEVICE=rocm
 export VLLM_VERSION_OVERRIDE=%{version}
+%if %{with rocm}
+export VLLM_TARGET_DEVICE=rocm
 export ROCM_PATH=%{_prefix}
+%else
+export VLLM_TARGET_DEVICE=cpu
+%endif
 # -R: skip vLLM's huge runtime requirement set as build dependencies; only the
 # build backend deps are needed to produce the wheel.
 %pyproject_buildrequires -R
 
 %build -p
-export VLLM_TARGET_DEVICE=rocm
 export VLLM_VERSION_OVERRIDE=%{version}
+%if %{with rocm}
+export VLLM_TARGET_DEVICE=rocm
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_arch}
 # ROCm lives under %%{_prefix} on openRuyi, not /opt/rocm; make torch's
 # ROCM_HOME (and thus setup.py's -DROCM_PATH) resolve there, and build HIP with
@@ -200,11 +251,16 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 # %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
 # (a single flag — no ';' — to avoid CMake's list-separator splitting).
 export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
+%else
+export VLLM_TARGET_DEVICE=cpu
+# RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
+# /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
+%endif
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
 export CMAKE_BUILD_TYPE=Release
 
-# Cap parallelism by available memory: the HIP kernel translation units are
-# memory hungry and will thrash or OOM otherwise.
+# Cap parallelism by available memory: the kernel translation units are memory
+# hungry and will thrash or OOM otherwise.
 mem_gb=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
 compile_jobs=$(nproc)
 mem_jobs=$(( 1 + mem_gb / 3 ))
