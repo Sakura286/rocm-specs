@@ -138,9 +138,9 @@ sed -i 's/setuptools>=77.0.3,<80.0.0/setuptools>=77.0.3/' requirements/rocm.txt
 # which vLLM already requires directly (the opencv-python line below).
 sed -i 's/fastapi\[standard\]/fastapi/' requirements/common.txt
 sed -i 's/mistral_common\[image\]/mistral_common/' requirements/common.txt
-# base ships the cv2 module as the "opencv-python" dist (4.13.0), not upstream's
+# base ships the cv2 module as the "opencv" dist (4.13.0), not upstream's
 # "opencv-python-headless" dist name.
-sed -i 's/opencv-python-headless/opencv-python/' requirements/common.txt
+sed -i 's/opencv-python-headless/opencv/' requirements/common.txt
 
 # Drop runtime deps openRuyi does not package yet.  Tracked for later packaging:
 #   numba                       - N-gram speculative decoding (needs llvmlite)
