@@ -21,7 +21,14 @@
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
 %bcond test 0
 
+# The "cpu" multibuild flavor builds a CPU-only torch; the default flavor builds
+# the ROCm backend.  Local builds can also force CPU with --without rocm.
+%global flavor @BUILD_FLAVOR@%{nil}
+%if "%{flavor}" == "cpu"
+%bcond rocm 0
+%else
 %bcond rocm 1
+%endif
 
 # For testing distributed+rccl etc.
 # TODO: openmpi not included in openRuyi
@@ -49,7 +56,11 @@
 # TODO: tensorpipe not included in openRuyi
 %bcond system_tensorpipe 0
 
-Name:           python-%{srcname}
+%if %{with rocm}
+Name:           python-%{srcname}-rocm
+%else
+Name:           python-%{srcname}-cpu
+%endif
 Version:        %{pypi_version}
 Release:        %autorelease
 Summary:        PyTorch AI/ML framework
@@ -209,11 +220,21 @@ Requires:       python3dist(pyyaml)
 Requires:       amdsmi
 %endif
 
-# As convention
+# The canonical torch names resolve to the ROCm build; CPU and ROCm are mutually
+# exclusive.  The CPU flavor drops the auto-generated python3dist(torch) provide
+# so the generic torch identity stays unambiguously ROCm -- CPU consumers ask for
+# python-torch-cpu by name.
+%if %{with rocm}
+Provides:       python-%{srcname} = %{version}-%{release}
 Provides:       pytorch = %{version}-%{release}
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
+Conflicts:      python-%{srcname}-cpu
+%else
+%global __provides_exclude ^python3\.1[0-9]dist\(torch\)
+Conflicts:      python-%{srcname}-rocm
+%endif
 
 %description
 PyTorch is a Python package that provides two high-level features:
