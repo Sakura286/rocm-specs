@@ -125,6 +125,51 @@ BuildRequires:  cmake(rocm_smi)
 # links libnuma for NUMA-aware allocation.  RISC-V uses the RVV path.
 BuildRequires:  gcc-c++
 BuildRequires:  numactl-devel
+# When python-torch is built with ROCm support, it links ROCm libraries even on
+# CPU-only builds, so vLLM's CPU flavor needs the ROCm libraries at build time
+# (for linking against torch) and at runtime (for loading torch).
+BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hipblas)
+BuildRequires:  cmake(hipblaslt)
+BuildRequires:  cmake(hipcub)
+BuildRequires:  cmake(hipfft)
+BuildRequires:  cmake(hiprand)
+BuildRequires:  cmake(hipsparse)
+BuildRequires:  cmake(hipsparselt)
+BuildRequires:  cmake(hipsolver)
+BuildRequires:  cmake(miopen)
+BuildRequires:  cmake(rocblas)
+BuildRequires:  cmake(rocrand)
+BuildRequires:  cmake(rocfft)
+BuildRequires:  cmake(rccl)
+BuildRequires:  cmake(rocprim)
+BuildRequires:  cmake(rocsolver)
+BuildRequires:  cmake(rocthrust)
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(rocm-core)
+BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  cmake(rocm_smi)
+Requires:       miopen
+Requires:       hipblas
+Requires:       hipblaslt
+Requires:       hipcub
+Requires:       hipfft
+Requires:       hiprand
+Requires:       hipsparse
+Requires:       hipsparselt
+Requires:       hipsolver
+Requires:       rocblas
+Requires:       rocrand
+Requires:       rocfft
+Requires:       rccl
+Requires:       rocprim
+Requires:       amd-comgr
+Requires:       rocm-core
+Requires:       hsa-runtime
+Requires:       rocsolver
+Requires:       rocthrust
+Requires:       amdsmi
+Requires:       abseil-cpp
 %endif
 
 Requires:       python3dist(torch)
