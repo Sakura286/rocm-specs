@@ -244,8 +244,11 @@ export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir
 %else
 export VLLM_TARGET_DEVICE=cpu
 # torch was built with ROCm support, so its Caffe2Targets.cmake references
-# hip::amdhip64; set ROCM_PATH so cmake can resolve the HIP package.
+# hip::amdhip64 and LoadHIP.cmake requires PYTORCH_ROCM_ARCH.  Set ROCM_PATH
+# so cmake can resolve the HIP package, and a dummy PYTORCH_ROCM_ARCH to
+# satisfy the guard (no HIP code is actually compiled for the CPU backend).
 export ROCM_PATH=%{_prefix}
+export PYTORCH_ROCM_ARCH=gfx1100
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.
