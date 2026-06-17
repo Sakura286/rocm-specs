@@ -8,8 +8,6 @@
 
 %global srcname vllm
 
-# The "cpu" multibuild flavor builds the CPU backend; the default flavor builds
-# the ROCm/HIP backend.  Local builds can also force CPU with --without rocm.
 %if "%{flavor}" == "cpu"
 %bcond rocm 0
 %else
@@ -83,7 +81,7 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 
 %if %{with rocm}
-# ROCm torch (the canonical python3dist(torch) provider).
+# ROCm torch by name -- the generic python3dist(torch) now resolves to CPU torch.
 BuildRequires:  python-torch-rocm
 # --- ROCm toolchain ---------------------------------------------------------
 BuildRequires:  clang
