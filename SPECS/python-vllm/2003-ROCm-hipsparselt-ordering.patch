@@ -1,0 +1,12 @@
+# ROCm: run find_package(hipsparselt) before find_package(Torch) so torch_hip's roc::hipsparselt link target exists (LoadHIP treats it as optional).
+#
+--- a/CMakeLists.txt	2026-06-04 08:11:47.000000000 +0800
++++ b/CMakeLists.txt	2026-06-17 11:13:40.083527987 +0800
+@@ -92,6 +92,7 @@
+ # so there is no need to do this explicitly with check_language/enable_language,
+ # etc.
+ #
++find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)
+ find_package(Torch REQUIRED)
+ 
+ # Supported NVIDIA architectures.

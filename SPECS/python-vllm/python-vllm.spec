@@ -47,6 +47,19 @@ BuildSystem:    pyproject
 Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
 %endif
 
+# Adjust dependencies and build configurations for openRuyi
+Patch1:         2002-Adjust-dependencies-for-openRuyi.patch
+# Fix spinloop x86intrin header include (x86-guarded, no-op on riscv64)
+Patch2:         2004-Fix-spinloop-x86intrin-header.patch
+
+%if %{with rocm}
+# Run find_package(hipsparselt) before find_package(Torch) for proper link target
+Patch3:         2003-ROCm-hipsparselt-ordering.patch
+%else
+# Adjust CPU backend for openRuyi's OpenMP path
+Patch4:         2001-CPU-backend-OpenMP-path.patch
+%endif
+
 BuildOption(install):  %{srcname}
 
 # --- Python build backend (build-system.requires from pyproject.toml) -------
@@ -144,77 +157,9 @@ PagedAttention for efficient management of attention key/value memory,
 continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
-sed -i -e 's/setuptools>=77.0.3,<81.0.0/setuptools/' pyproject.toml
-# cmake and ninja in pyproject.toml's build-system.requires resolve to system
-# packages on openRuyi (BuildRequires above), not python3dist(...); without this
-# the buildrequires generator emits unresolvable python3dist(cmake)/(ninja).
-sed -i -e '/"cmake>=3.26.1",/d' -e '/"ninja",/d' pyproject.toml
-
-# --- Runtime dependency adjustments shared by both backends (common.txt) ------
-# Drop the PyPI "ninja" wheel dep: vLLM/torch only need a ninja binary on PATH at
-# runtime, which the system "ninja" package (Requires: above) provides.
-sed -i '/^ninja /d' requirements/common.txt
-# protobuf: drop only the !=6.33.2.* band so base's 6.33.2 resolves.  That band
-# is the CVE-2026-0994 mitigation (fixed upstream in 6.33.5), so this relies on
-# openRuyi's protobuf carrying the backport -- revisit if base lags behind.
-sed -i 's/, !=6\.33\.2\.\*//' requirements/common.txt
-# Exact "==" pins -> unpinned; base ships newer, compatible releases.
-sed -i 's/^lark == 1.2.2/lark/' requirements/common.txt
-# setuptools: base is 82.x; drop the <81 upper bound.
-sed -i 's/setuptools>=77.0.3,<81.0.0/setuptools>=77.0.3/' requirements/common.txt
-# Extra subpackages base does not build: [standard] only adds the
-# uvicorn/multipart/httpx stack (base has uvicorn); [image] only adds opencv,
-# which vLLM already requires directly (the opencv line below).
-sed -i 's/fastapi\[standard\]/fastapi/' requirements/common.txt
-sed -i 's/mistral_common\[image\]/mistral_common/' requirements/common.txt
-# base ships the cv2 module as the "opencv" dist (4.13.0), not upstream's
-# "opencv-python-headless" dist name.
-sed -i 's/opencv-python-headless/opencv/' requirements/common.txt
-# Drop common.txt runtime deps openRuyi does not package yet:
-#   opentelemetry-exporter-otlp - OTLP trace export
-#   openai-harmony              - gpt-oss models
-sed -i '/^opentelemetry-exporter-otlp/d' requirements/common.txt
-sed -i '/^openai-harmony/d' requirements/common.txt
-
-# clang (unlike gcc) forbids including <mwaitxintrin.h> directly and errors out;
-# it must come via <x86intrin.h>. This monitorx/mwaitx path is x86-only and
-# guarded by #if defined(__x86_64__), so the substitution no-ops on riscv64.
-sed -i -e 's@#include <mwaitxintrin.h>@#include <x86intrin.h>@' csrc/spinloop.cpp
-
-%if %{with rocm}
-# --- ROCm-only adjustments (rocm.txt) ---------------------------------------
-# Relax exact pins; drop deps openRuyi does not package (numba needs llvmlite and
-# only powers n-gram spec-decoding) or optional features (amd-quark, tilelang,
-# conch-triton-kernels, runai-model-streamer).
-sed -i 's/^grpcio==1.78.0/grpcio/' requirements/rocm.txt
-sed -i 's/^grpcio-reflection==1.78.0/grpcio-reflection/' requirements/rocm.txt
-sed -i 's/^tensorizer==2.10.1/tensorizer/' requirements/rocm.txt
-sed -i 's/setuptools>=77.0.3,<80.0.0/setuptools>=77.0.3/' requirements/rocm.txt
-sed -i '/^numba /d' requirements/rocm.txt
-sed -i '/^amd-quark/d' requirements/rocm.txt
-sed -i '/^conch-triton-kernels/d' requirements/rocm.txt
-sed -i '/^tilelang/d' requirements/rocm.txt
-sed -i '/^runai-model-streamer/d' requirements/rocm.txt
-
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
-
-# torch's Caffe2Targets.cmake references roc::hipsparselt in the torch_hip link
-# interface, but LoadHIP.cmake treats hipsparselt as optional.  Ensure
-# find_package(hipsparselt) runs before find_package(Torch) so the target exists.
-sed -i '/^find_package(Torch REQUIRED)$/i find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)' CMakeLists.txt
-%else
-# --- CPU-only adjustments (cpu.txt) -----------------------------------------
-# Reuse openRuyi's existing torch (drop the +cpu / ==2.11.0 pins); drop numba
-# (llvmlite, n-gram spec-decoding only), intel-openmp and torchaudio (unpackaged).
-sed -i 's/^setuptools==77.0.3/setuptools/' requirements/cpu.txt
-sed -i 's/^torch==2.11.0+cpu/torch/' requirements/cpu.txt
-sed -i 's/^torch==2.11.0;/torch;/' requirements/cpu.txt
-sed -i '/^numba /d' requirements/cpu.txt
-sed -i '/^intel-openmp/d' requirements/cpu.txt
-sed -i '/^torchaudio/d' requirements/cpu.txt
-%endif
 
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
