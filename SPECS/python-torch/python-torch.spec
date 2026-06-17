@@ -220,19 +220,19 @@ Requires:       python3dist(pyyaml)
 Requires:       amdsmi
 %endif
 
-# The canonical torch names resolve to the ROCm build; CPU and ROCm are mutually
-# exclusive.  The CPU flavor drops the auto-generated python3dist(torch) provide
-# so the generic torch identity stays unambiguously ROCm -- CPU consumers ask for
-# python-torch-cpu by name.
+# The canonical torch names resolve to the CPU build; CPU and ROCm are mutually
+# exclusive.  The ROCm flavor drops the auto-generated python3dist(torch) provide
+# so the generic torch identity stays unambiguously CPU -- ROCm consumers ask for
+# python-torch-rocm by name.
 %if %{with rocm}
+%global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
+Conflicts:      python-%{srcname}-cpu
+%else
 Provides:       python-%{srcname} = %{version}-%{release}
 Provides:       pytorch = %{version}-%{release}
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
-Conflicts:      python-%{srcname}-cpu
-%else
-%global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
 Conflicts:      python-%{srcname}-rocm
 %endif
 
