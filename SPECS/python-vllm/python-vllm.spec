@@ -253,6 +253,11 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_TARGET_DEVICE=cpu
+# cpu_extension.cmake's find_library(gomp) only searches standard lib dirs, but
+# openRuyi's gcc ships libgomp.so (the linker symlink) in its private dir
+# (/usr/lib/gcc/...); point cmake straight at it.  (/usr/lib64 only has the
+# libgomp.so.1 runtime, which the wheel picks up as an automatic Requires.)
+export CMAKE_ARGS="-DOPEN_MP=$(gcc -print-file-name=libgomp.so)"
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 %endif
