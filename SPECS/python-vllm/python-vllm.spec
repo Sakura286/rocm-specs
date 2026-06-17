@@ -75,7 +75,6 @@ BuildRequires:  python3dist(setuptools-scm)
 BuildRequires:  python3dist(setuptools-rust)
 BuildRequires:  python3dist(packaging)
 BuildRequires:  python3dist(jinja2)
-BuildRequires:  python3dist(torch)
 # find_package(Torch) loads Caffe2Config, which find_package(Protobuf)s the
 # system protobuf torch was built against; torch's import also wants numpy.
 BuildRequires:  pkgconfig(protobuf)
@@ -84,6 +83,8 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 
 %if %{with rocm}
+# ROCm torch (the canonical python3dist(torch) provider).
+BuildRequires:  python-torch-rocm
 # --- ROCm toolchain ---------------------------------------------------------
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -125,62 +126,22 @@ BuildRequires:  cmake(rocm_smi)
 # links libnuma for NUMA-aware allocation.  RISC-V uses the RVV path.
 BuildRequires:  gcc-c++
 BuildRequires:  numactl-devel
-# When python-torch is built with ROCm support, it links ROCm libraries even on
-# CPU-only builds, so vLLM's CPU flavor needs the ROCm libraries at build time
-# (for linking against torch) and at runtime (for loading torch).
-BuildRequires:  cmake(hip)
-BuildRequires:  cmake(hipblas)
-BuildRequires:  cmake(hipblaslt)
-BuildRequires:  cmake(hipcub)
-BuildRequires:  cmake(hipfft)
-BuildRequires:  cmake(hiprand)
-BuildRequires:  cmake(hipsparse)
-BuildRequires:  cmake(hipsparselt)
-BuildRequires:  cmake(hipsolver)
-BuildRequires:  cmake(miopen)
-BuildRequires:  cmake(rocblas)
-BuildRequires:  cmake(rocrand)
-BuildRequires:  cmake(rocfft)
-BuildRequires:  cmake(rccl)
-BuildRequires:  cmake(rocprim)
-BuildRequires:  cmake(rocsolver)
-BuildRequires:  cmake(rocthrust)
-BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(rocm-core)
-BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(rocm_smi)
-Requires:       miopen
-Requires:       hipblas
-Requires:       hipblaslt
-Requires:       hipcub
-Requires:       hipfft
-Requires:       hiprand
-Requires:       hipsparse
-Requires:       hipsparselt
-Requires:       hipsolver
-Requires:       rocblas
-Requires:       rocrand
-Requires:       rocfft
-Requires:       rccl
-Requires:       rocprim
-Requires:       amd-comgr
-Requires:       rocm-core
-Requires:       hsa-runtime
-Requires:       rocsolver
-Requires:       rocthrust
-Requires:       amdsmi
-Requires:       abseil-cpp
+# CPU torch (built --without rocm) keeps the CPU flavor free of any HIP/ROCm
+# build- or run-time dependency.
+BuildRequires:  python-torch-cpu
 %endif
 
-Requires:       python3dist(torch)
 # vLLM's "ninja" dependency is the PyPI wheel that bundles a ninja binary for
 # pip/venv users; at runtime vLLM/torch only invoke the ninja executable on
 # PATH, which the system package provides.  Require that and drop the PyPI wheel
 # requirement in %%prep (openRuyi does not package the wheel).
 Requires:       ninja
 %if %{with rocm}
+Requires:       python-torch-rocm
 Requires:       python3dist(triton)
 Requires:       amdsmi
+%else
+Requires:       python-torch-cpu
 %endif
 
 # The unsuffixed names resolve to the ROCm build; the CPU and ROCm packages are
@@ -243,17 +204,11 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_TARGET_DEVICE=cpu
-# torch was built with ROCm support, so its Caffe2Targets.cmake references
-# hip::amdhip64 and LoadHIP.cmake requires PYTORCH_ROCM_ARCH.  Set ROCM_PATH
-# so cmake can resolve the HIP package, and a dummy PYTORCH_ROCM_ARCH to
-# satisfy the guard (no HIP code is actually compiled for the CPU backend).
-export ROCM_PATH=%{_prefix}
-export PYTORCH_ROCM_ARCH=gfx1100
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.
 %ifarch riscv64
-export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DVLLM_RVV_VLEN=128"
+export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
 %endif
 %endif
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
