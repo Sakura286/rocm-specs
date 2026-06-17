@@ -224,6 +224,8 @@ Requires:       amdsmi
 # exclusive.  The ROCm flavor drops the auto-generated python3dist(torch) provide
 # so the generic torch identity stays unambiguously CPU -- ROCm consumers ask for
 # python-torch-rocm by name.
+# Both flavors satisfy "any torch backend" for backend-agnostic consumers.
+Provides:       python-torch-backend = %{version}-%{release}
 %if %{with rocm}
 %global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
 Conflicts:      python-%{srcname}-cpu
