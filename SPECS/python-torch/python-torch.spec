@@ -232,7 +232,7 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
 Conflicts:      python-%{srcname}-cpu
 %else
-%global __provides_exclude ^python3\.1[0-9]dist\(torch\)
+%global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
 Conflicts:      python-%{srcname}-rocm
 %endif
 
