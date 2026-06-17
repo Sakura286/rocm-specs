@@ -243,11 +243,14 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_TARGET_DEVICE=cpu
+# torch was built with ROCm support, so its Caffe2Targets.cmake references
+# hip::amdhip64; set ROCM_PATH so cmake can resolve the HIP package.
+export ROCM_PATH=%{_prefix}
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.
 %ifarch riscv64
-export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
+export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DVLLM_RVV_VLEN=128"
 %endif
 %endif
 # Release (not RelWithDebInfo) trims compile time and memory on the big kernels.
