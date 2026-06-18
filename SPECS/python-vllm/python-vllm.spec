@@ -162,7 +162,7 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
 # torch is supplied explicitly (python-torch / python-torch-rocm); drop it from
-# build-system.requires so %pyproject_buildrequires does not emit a generic
+# build-system.requires so the buildrequires generator does not emit a generic
 # python3dist(torch) build dep -- the rocm flavor filters that provide, and the
 # project's "Prefer: python-torch" would otherwise pull the cpu torch into the
 # rocm buildroot and conflict with python-torch-rocm.
