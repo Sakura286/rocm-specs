@@ -161,6 +161,13 @@ PagedAttention for efficient management of attention key/value memory,
 continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
+# torch is supplied explicitly (python-torch / python-torch-rocm); drop it from
+# build-system.requires so %pyproject_buildrequires does not emit a generic
+# python3dist(torch) build dep -- the rocm flavor filters that provide, and the
+# project's "Prefer: python-torch" would otherwise pull the cpu torch into the
+# rocm buildroot and conflict with python-torch-rocm.
+sed -i '/"torch == 2.11.0",/d' pyproject.toml
+
 # Replace the network-fetching triton_kernels external project with the offline
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
