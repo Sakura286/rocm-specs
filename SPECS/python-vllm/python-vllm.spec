@@ -95,6 +95,7 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocm-device-libs
 BuildRequires:  roctracer-devel
+BuildRequires:  rocminfo
 
 # --- ROCm libraries ---------------------------------------------------------
 BuildRequires:  cmake(hip)
