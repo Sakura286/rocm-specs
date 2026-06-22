@@ -153,12 +153,16 @@ grep -v '%%{' prep.sh
 CLANG_VERSION=%llvm_maj_ver
 
 # Workaround: remove LLVMTestingAnnotations target from LLVMExports.cmake (llvm22 bug)
-# Copy cmake files to writable location, remove the broken target, then use that prefix
+# Copy cmake files to writable location, remove the broken target, symlink .a files
 mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
-# Remove the entire LLVMTestingAnnotations target block (target + properties + check)
+# Remove the entire LLVMTestingAnnotations target block
 sed -i '/set_target_properties(LLVMTestingAnnotations/,/^)/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
 sed -i '/if(EXISTS.*LLVMTestingAnnotations/,/endif/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
+# Symlink all .a files from system lib so cmake IMPORTED_LOCATION resolves
+for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
+    ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
+done
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
