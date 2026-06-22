@@ -160,9 +160,13 @@ cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/clang/*.cmake %{_builddir}/llvm-pref
 # Remove references to missing static libs from exports
 sed -i '/libLLVMTestingAnnotations/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
 sed -i '/libLLVMTestingSupport/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-# Create empty .a file so cmake IMPORTED_LOCATION resolves
+# Create empty .a files for missing libs
 ar rcs %{_builddir}/llvm-prefix/lib/libLLVMTestingAnnotations.a
 ar rcs %{_builddir}/llvm-prefix/lib/libLLVMTestingSupport.a
+# Symlink all other .a files from system lib so cmake IMPORTED_LOCATION resolves
+for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
+    ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
+done
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
