@@ -152,7 +152,8 @@ CLANG_VERSION=%llvm_maj_ver
 
 # Workaround: create empty libLLVMTestingAnnotations.a if missing (llvm22 bug)
 if [ ! -f %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a ]; then
-    ar rcs %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a
+    echo "" | ar rcs %{_builddir}/libLLVMTestingAnnotations.a
+    install -m 644 %{_builddir}/libLLVMTestingAnnotations.a %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a
 fi
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
