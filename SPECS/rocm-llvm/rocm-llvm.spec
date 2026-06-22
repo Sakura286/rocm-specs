@@ -150,8 +150,9 @@ grep -v '%%{' prep.sh
 %build
 CLANG_VERSION=%llvm_maj_ver
 
-# Workaround: remove libLLVMTestingAnnotations from LLVMExports.cmake (llvm22 bug)
-sed -i '/libLLVMTestingAnnotations/d' %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/LLVMExports*.cmake || true
+# Workaround: copy LLVM cmake files to writable location and remove TestingAnnotations ref
+cp -r %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm %{_builddir}/llvm-cmake
+sed -i '/libLLVMTestingAnnotations/d' %{_builddir}/llvm-cmake/LLVMExports*.cmake
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
@@ -176,6 +177,7 @@ ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 %cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD="" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
+    -DLLVM_DIR=%{_builddir}/llvm-cmake \
     %{?__cmake_build_type:-DCMAKE_BUILD_TYPE="%{__cmake_build_type}"}
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -185,7 +187,8 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
 %cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH \
-    -DCMAKE_MODULE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib \
+    -DCMAKE_MODULE_PATH=%{_builddir}/llvm-cmake \
+    -DLLVM_DIR=%{_builddir}/llvm-cmake \
     -DCMAKE_BUILD_TYPE="RELEASE" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
