@@ -152,6 +152,16 @@ grep -v '%%{' prep.sh
 %build
 CLANG_VERSION=%llvm_maj_ver
 
+# Workaround: copy LLVM/Clang cmake files to writable location and fix broken exports
+cp -r %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm %{_builddir}/llvm-cmake
+cp -r %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/clang %{_builddir}/clang-cmake
+# Remove references to missing static libs
+sed -i '/libLLVMTestingAnnotations/d' %{_builddir}/llvm-cmake/LLVMExports*.cmake
+sed -i '/libLLVMTestingSupport/d' %{_builddir}/llvm-cmake/LLVMExports*.cmake
+sed -i '/libclang_rt\.asan/d' %{_builddir}/clang-cmake/ClangTargets*.cmake 2>/dev/null || true
+# Fix PACKAGE_PREFIX_DIR in copied cmake configs
+sed -i 's|/usr/lib64/llvm%{llvm_maj_ver}|%{_builddir}|g' %{_builddir}/llvm-cmake/*.cmake %{_builddir}/clang-cmake/*.cmake
+
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
 LLVM_CMAKEDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --cmakedir`
@@ -175,6 +185,8 @@ ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 %cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD="" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
+    -DLLVM_DIR=%{_builddir}/llvm-cmake \
+    -DClang_DIR=%{_builddir}/clang-cmake \
     %{?__cmake_build_type:-DCMAKE_BUILD_TYPE="%{__cmake_build_type}"}
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -184,7 +196,9 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
 %cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH \
-    -DCMAKE_MODULE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib \
+    -DCMAKE_MODULE_PATH=%{_builddir}/llvm-cmake \
+    -DLLVM_DIR=%{_builddir}/llvm-cmake \
+    -DClang_DIR=%{_builddir}/clang-cmake \
     -DCMAKE_BUILD_TYPE="RELEASE" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
