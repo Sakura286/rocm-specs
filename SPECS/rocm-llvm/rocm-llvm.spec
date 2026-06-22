@@ -11,13 +11,12 @@
 %global comgr_full_api_ver %{comgr_maj_api_ver}.0
 
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
-%global llvm_maj_ver 21
-# Sakura286: ROCm 7.1.1 uses LLVM 20, but only LLVM 21 is on openRuyi.
-#            Backport is needed.
-%global rocm_llvm_maj_ver 20
+%global llvm_maj_ver 22
+# ROCm 7.2.4 uses LLVM 22, which is available on openRuyi.
+%global rocm_llvm_maj_ver 22
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
@@ -48,15 +47,13 @@ Summary:        Various AMD ROCm LLVM related services
 # hipcc is MIT, comgr and device-libs are NCSA:
 License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
-#!RemoteAsset:  sha256:d76a16db4a56914383029e241823f7bc2a3d645f2967dd22230f11c11cfe189e
+#!RemoteAsset:  sha256:526b5fe23417c41acbeb2273e470887b4593f48a297a8d9c1a1aa730d556f9fb
 Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 # RISC-V support patches
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 Patch0:         0002-Use-signed-char-in-comgr-building.patch
-# Backport mainline comgr patches since 7.1.1 is build on llvm-20
-Patch1:         0003-adapt-comgr-api-to-llvm-21.patch
 
 BuildRequires:  clang >= %{llvm_maj_ver}
 BuildRequires:  clang-devel >= %{llvm_maj_ver}
@@ -134,9 +131,7 @@ must ensure the compiler options are appropriate for the target compiler.
 # llvm_maj_ver sanity check (we should be matching the bundled llvm major ver):
 if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion.cmake; then
     echo "ERROR llvm_maj_ver macro is not correctly set"
-    # Sakura286: ROCm 7.1.1 uses LLVM 20, but only 21 is on openRuyi. Sad.
-    # TODO: Need to re-enable this 'if' when rocm upstream bump to llvm-21
-    # exit 1
+    exit 1
 fi
 
 # Make sure we only build the AMD bits by discarding the bundled llvm code:
