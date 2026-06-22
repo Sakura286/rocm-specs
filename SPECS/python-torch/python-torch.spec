@@ -108,6 +108,14 @@ Source6:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{k
 #!RemoteAsset:  sha256:1944e67d1baeffef3bb8f89793ea06e0f05b88aac4d5cd89b4558a21aca6754b
 Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
 
+# gloo: pinned submodule providing the torch.distributed Gloo backend.
+# Required by USE_GLOO=ON; the v%{version} GitHub archive ships
+# third_party/gloo empty (submodules excluded), so vendor it explicitly.
+%global gloo_commit 3135b0b41b67dde590eef0938a0bf3d6238df5f7
+%global gloo_scommit 3135b0b
+#!RemoteAsset:  sha256:6a8c7ea8e3048762aaf3472f969ee42c2163e7ffcbb195eea4f245c1f7bd8cc3
+Source9:       https://github.com/pytorch/gloo/archive/%{gloo_commit}/gloo-%{gloo_scommit}.tar.gz
+
 # pytorch upstream issue #173707: libtorch_hip.so references the
 # const_data_ptr / mutable_data_ptr / data_ptr template family with a
 # different (non-SFINAE) mangling than libtorch_cpu.so exports.
@@ -418,6 +426,14 @@ mv kineto third_party
 
 mv mslk third_party
 
+# gloo: vendored submodule for the torch.distributed Gloo backend (USE_GLOO=ON).
+# The pytorch archive ships third_party/gloo empty and the scrub above
+# (rm -rf third_party/*) drops it, so unpack and reinstate it here.
+tar xf %{SOURCE9}
+rm -rf third_party/gloo
+mkdir -p third_party/gloo
+cp -r gloo-*/* third_party/gloo/
+
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
 cp /usr/include/pocketfft_hdronly.h third_party/pocketfft/
@@ -522,7 +538,7 @@ export USE_CUDA=OFF
 export USE_FAKELOWP=OFF
 export USE_FBGEMM=OFF
 export USE_FLASH_ATTENTION=OFF
-export USE_GLOO=OFF
+export USE_GLOO=ON
 export USE_ITT=OFF
 export USE_KINETO=OFF
 export USE_KLEIDIAI=OFF
