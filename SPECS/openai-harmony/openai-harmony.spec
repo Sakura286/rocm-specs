@@ -56,6 +56,12 @@ replace-with = "vendored-sources"
 directory = "vendor/"
 EOF
 
+# target-lexicon 0.13.2 does not recognise the riscv64a23 target triple used on
+# openRuyi riscv64 builders (-march=rva23u64).  Map it to Riscv64gc which is a
+# close superset of the RVA23 profile.
+sed -i 's/"riscv64gc" => Riscv64gc,/"riscv64a23" => Riscv64gc,\n            "riscv64gc" => Riscv64gc,/' \
+    vendor/target-lexicon-0.13.2/src/targets.rs
+
 %generate_buildrequires
 %pyproject_buildrequires
 
