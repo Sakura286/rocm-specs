@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+# SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+#
+# SPDX-License-Identifier: MulanPSL-2.0
+
+%global srcname openai-harmony
+%global pypi_name openai_harmony
+
+Name:           python-%{srcname}
+Version:        0.0.8
+Release:        %autorelease
+Summary:        OpenAI's response format for its open-weight model series gpt-oss
+License:        Apache-2.0
+URL:            https://github.com/openai/harmony
+#!RemoteAsset:  sha256:6e43f98e6c242fa2de6f8ea12eab24af63fa2ed3e89c06341fb9d92632c5cbdf
+Source0:        https://files.pythonhosted.org/packages/source/o/%{srcname}/%{pypi_name}-%{version}.tar.gz
+BuildSystem:    pyproject
+
+BuildOption(install):  -l %{pypi_name} -L
+
+BuildRequires:  cargo
+BuildRequires:  pkgconfig(python3)
+BuildRequires:  pyproject-rpm-macros
+BuildRequires:  python3dist(maturin)
+BuildRequires:  python3dist(pip)
+BuildRequires:  rust
+BuildRequires:  rust-rpm-macros
+
+BuildRequires:  crate(pyo3-0.25/default) >= 0.25.0
+BuildRequires:  crate(pyo3-0.25/extension-module) >= 0.25.0
+BuildRequires:  crate(pyo3-0.25/abi3-py38) >= 0.25.0
+
+Requires:       python3dist(pydantic) >= 2.11.7
+
+Provides:       python3-%{srcname} = %{version}-%{release}
+Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
+%python_provide python3-%{srcname}
+
+%description
+OpenAI's response format for its open-weight model series gpt-oss. The harmony
+format enables the model to output to multiple different channels for chain of
+thought, and tool calling preambles along with regular responses. The majority
+of the rendering and parsing is built in Rust for performance and exposed to
+Python through thin pyo3 bindings.
+
+%prep -a
+mkdir -p .cargo
+cat > .cargo/config.toml <<'EOF'
+[source.crates-io]
+replace-with = "system-registry"
+
+[source.system-registry]
+directory = "/usr/share/cargo/registry"
+EOF
+rm -f Cargo.lock
+
+%generate_buildrequires
+%pyproject_buildrequires
+
+%files -f %{pyproject_files}
+%doc README.md
+%license LICENSE
+
+%changelog
+%autochangelog
