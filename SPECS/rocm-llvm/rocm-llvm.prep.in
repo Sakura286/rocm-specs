@@ -27,7 +27,7 @@ sed -i -e 's@sys::path::append(HIPPath, "hip");@//sys::path::append(HIPPath, "hi
 # Default rocm path is _prefix
 sed -i -e 's@/opt/rocm@%{_prefix}@' amd/hipcc/src/hipBin_base.h
 
-LLVM_BINDIR=`llvm-config --bindir`
+LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
 if [ ! -x ${LLVM_BINDIR}/clang++ ]; then
     echo "Something wrong with llvm-config"
     false
