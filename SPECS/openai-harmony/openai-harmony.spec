@@ -61,6 +61,8 @@ EOF
 # close superset of the RVA23 profile.
 sed -i 's/"riscv64gc" => Riscv64gc,/"riscv64a23" => Riscv64gc,\n            "riscv64gc" => Riscv64gc,/' \
     vendor/target-lexicon-0.13.2/src/targets.rs
+sed -i 's/aaa555ea46aaace1aff99f919faac40b8b7387751d7fa888b7ce21707a8f8d3b/1f799d6035e6b292a0dc1cf2bd91e41e7e4a870e79e102719e8deda054e1145e/' \
+    vendor/target-lexicon-0.13.2/.cargo-checksum.json
 
 %generate_buildrequires
 %pyproject_buildrequires
