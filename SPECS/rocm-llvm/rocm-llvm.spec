@@ -152,22 +152,13 @@ grep -v '%%{' prep.sh
 %build
 CLANG_VERSION=%llvm_maj_ver
 
-# Workaround: remove LLVMTestingAnnotations target from LLVMExports.cmake (llvm22 bug)
-# Copy cmake files to writable location, remove the broken target, symlink .a files
+# Workaround: fix LLVMExports.cmake for missing libLLVMTestingAnnotations.a (llvm22 bug)
+# Copy cmake files to writable location and remove broken target
 mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
-# Remove the entire LLVMTestingAnnotations target block
-sed -i '/set_target_properties(LLVMTestingAnnotations/,/^)/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-sed -i '/if(EXISTS.*LLVMTestingAnnotations/,/endif/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-# Symlink all .a files from system lib so cmake IMPORTED_LOCATION resolves
-for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
-    ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
-done
-# Symlink binaries that cmake exports reference
-mkdir -p %{_builddir}/llvm-prefix/bin
-for f in %{_libdir}/llvm%{llvm_maj_ver}/bin/*; do
-    ln -sf "$f" %{_builddir}/llvm-prefix/bin/$(basename "$f")
-done
+# Remove only the LLVMTestingAnnotations target from both exports files
+sed -i '/LLVMTestingAnnotations/{N;/set_target_properties/d}' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
+sed -i '/LLVMTestingAnnotations/{N;/if(EXISTS/d}' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
