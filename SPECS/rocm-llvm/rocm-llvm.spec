@@ -166,6 +166,11 @@ for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.so* %{_libdir}/llvm%{llvm_maj_v
 done
 # Symlink lib64 to lib for cmake path resolution
 ln -snf lib %{_builddir}/llvm-prefix/lib64
+# Symlink binaries so cmake IMPORTED_LOCATION resolves for executables
+mkdir -p %{_builddir}/llvm-prefix/bin
+for f in %{_libdir}/llvm%{llvm_maj_ver}/bin/*; do
+    [ -e "$f" ] && ln -sf "$f" %{_builddir}/llvm-prefix/bin/$(basename "$f")
+done
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
