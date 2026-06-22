@@ -142,6 +142,7 @@ sed -i -e 's@%%{_lib}@%{_lib}@' prep.sh
 sed -i -e 's@%%{amd_device_libs_prefix}@%{amd_device_libs_prefix}@' prep.sh
 sed -i -e 's@%%{bundle_prefix}@%{bundle_prefix}@' prep.sh
 sed -i -e 's@%%{llvm_maj_ver}@%{llvm_maj_ver}@' prep.sh
+sed -i -e 's@%%{_libdir}@%{_libdir}@' prep.sh
 grep -v '%%{' prep.sh
 
 . ./prep.sh
