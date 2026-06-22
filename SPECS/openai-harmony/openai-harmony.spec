@@ -7,6 +7,10 @@
 %global srcname openai-harmony
 %global pypi_name openai_harmony
 
+# Vendored crate sources generated from Cargo.lock:
+#   cd <source> && cargo vendor --versioned-dirs vendor/ && tar czf ... vendor/
+%global vendor_tarball %{srcname}-%{version}-vendor.tar.gz
+
 Name:           python-%{srcname}
 Version:        0.0.8
 Release:        %autorelease
@@ -15,6 +19,7 @@ License:        Apache-2.0
 URL:            https://github.com/openai/harmony
 #!RemoteAsset:  sha256:6e43f98e6c242fa2de6f8ea12eab24af63fa2ed3e89c06341fb9d92632c5cbdf
 Source0:        https://files.pythonhosted.org/packages/source/o/%{srcname}/%{pypi_name}-%{version}.tar.gz
+Source1:        %{vendor_tarball}
 BuildSystem:    pyproject
 
 BuildOption(install):  -l %{pypi_name} -L
@@ -26,10 +31,6 @@ BuildRequires:  python3dist(maturin)
 BuildRequires:  python3dist(pip)
 BuildRequires:  rust
 BuildRequires:  rust-rpm-macros
-
-BuildRequires:  crate(pyo3-0.25/default) >= 0.25.0
-BuildRequires:  crate(pyo3-0.25/extension-module) >= 0.25.0
-BuildRequires:  crate(pyo3-0.25/abi3-py38) >= 0.25.0
 
 Requires:       python3dist(pydantic) >= 2.11.7
 
@@ -45,15 +46,15 @@ of the rendering and parsing is built in Rust for performance and exposed to
 Python through thin pyo3 bindings.
 
 %prep -a
+tar -xf %{SOURCE1}
 mkdir -p .cargo
 cat > .cargo/config.toml <<'EOF'
 [source.crates-io]
-replace-with = "system-registry"
+replace-with = "vendored-sources"
 
-[source.system-registry]
-directory = "/usr/share/cargo/registry"
+[source.vendored-sources]
+directory = "vendor/"
 EOF
-rm -f Cargo.lock
 
 %generate_buildrequires
 %pyproject_buildrequires
