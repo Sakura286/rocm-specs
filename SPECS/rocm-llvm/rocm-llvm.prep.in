@@ -53,8 +53,3 @@ sed -i -e 's@amdgcnBitcode = roccmPath@amdgcnBitcode = "%{_prefix}/%{amd_device_
 
 # Fix up the location AMD_DEVICE_LIBS_PREFIX
 sed -i 's|@AMD_DEVICE_LIBS_PREFIX_CODE@|set(AMD_DEVICE_LIBS_PREFIX "%{_prefix}/%{amd_device_libs_prefix}")|' amd/device-libs/AMDDeviceLibsConfig.cmake.in
-
-# Workaround: create empty libLLVMTestingAnnotations.a if missing (llvm22 bug)
-if [ ! -f %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a ]; then
-    ar rcs %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a
-fi

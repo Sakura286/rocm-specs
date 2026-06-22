@@ -150,6 +150,11 @@ grep -v '%%{' prep.sh
 %build
 CLANG_VERSION=%llvm_maj_ver
 
+# Workaround: create empty libLLVMTestingAnnotations.a if missing (llvm22 bug)
+if [ ! -f %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a ]; then
+    ar rcs %{_libdir}/llvm%{llvm_maj_ver}/lib/libLLVMTestingAnnotations.a
+fi
+
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
 LLVM_CMAKEDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --cmakedir`
