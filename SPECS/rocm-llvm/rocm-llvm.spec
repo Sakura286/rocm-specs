@@ -55,15 +55,14 @@ Source1:        rocm-llvm.prep.in
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 Patch0:         0002-Use-signed-char-in-comgr-building.patch
 
-BuildRequires:  clang >= %{llvm_maj_ver}
-BuildRequires:  clang-devel >= %{llvm_maj_ver}
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang%{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-devel
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  fdupes
-BuildRequires:  lld >= %{llvm_maj_ver}
-BuildRequires:  lld-devel >= %{llvm_maj_ver}
-BuildRequires:  llvm-devel >= %{llvm_maj_ver}
-BuildRequires:  llvm-test >= %{llvm_maj_ver}
+BuildRequires:  lld%{llvm_maj_ver}
+BuildRequires:  lld%{llvm_maj_ver}-devel
+BuildRequires:  llvm%{llvm_maj_ver}-devel
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzstd)
