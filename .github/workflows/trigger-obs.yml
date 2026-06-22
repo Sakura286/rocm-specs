@@ -41,7 +41,7 @@ jobs:
             [ -n "$pkg" ] || continue
             code=$(curl -sS -o /tmp/resp -w "%{http_code}" -X POST \
               -H "Authorization: Token $OBS_TOKEN" \
-              "https://pickaxe.oerv.ac.cn/trigger/runservice?project=home:Sakura286:ROCm_PyTorch_Submit&package=$pkg")
+              "https://pickaxe.oerv.ac.cn/trigger/runservice?project=home:Sakura286:ROCm_724&package=$pkg")
             echo "== $pkg -> HTTP $code"; cat /tmp/resp; echo
             [ "$code" = "200" ] || rc=1
           done < /tmp/pkgs
