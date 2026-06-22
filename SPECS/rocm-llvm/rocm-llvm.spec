@@ -153,11 +153,14 @@ grep -v '%%{' prep.sh
 CLANG_VERSION=%llvm_maj_ver
 
 # Workaround: fix LLVMExports.cmake for missing libLLVMTestingAnnotations.a (llvm22 bug)
-# Copy cmake files to writable location and downgrade FATAL_ERROR to STATUS
+# Copy cmake files to writable location and downgrade FATAL_ERROR to WARNING
 mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
 # Downgrade the missing-file error to a warning so build continues
 sed -i 's|message(FATAL_ERROR "The imported target|message(WARNING "The imported target|' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
+# Symlink include and lib dirs so LLVMConfig.cmake resolves paths correctly
+ln -sf %{_libdir}/llvm%{llvm_maj_ver}/include %{_builddir}/llvm-prefix/include
+ln -sf %{_libdir}/llvm%{llvm_maj_ver}/lib %{_builddir}/llvm-prefix/lib64
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
