@@ -152,21 +152,13 @@ grep -v '%%{' prep.sh
 %build
 CLANG_VERSION=%llvm_maj_ver
 
-# Workaround: create a prefix with modified cmake files to work around missing libLLVMTestingAnnotations.a
+# Workaround: remove LLVMTestingAnnotations target from LLVMExports.cmake (llvm22 bug)
+# Copy cmake files to writable location, remove the broken target, then use that prefix
 mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
-mkdir -p %{_builddir}/llvm-prefix/lib/cmake/clang
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
-cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/clang/*.cmake %{_builddir}/llvm-prefix/lib/cmake/clang/
-# Remove references to missing static libs from exports
-sed -i '/libLLVMTestingAnnotations/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-sed -i '/libLLVMTestingSupport/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-# Create empty .a files for missing libs
-ar rcs %{_builddir}/llvm-prefix/lib/libLLVMTestingAnnotations.a
-ar rcs %{_builddir}/llvm-prefix/lib/libLLVMTestingSupport.a
-# Symlink all other .a files from system lib so cmake IMPORTED_LOCATION resolves
-for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
-    ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
-done
+# Remove the entire LLVMTestingAnnotations target block (target + properties + check)
+sed -i '/set_target_properties(LLVMTestingAnnotations/,/^)/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
+sed -i '/if(EXISTS.*LLVMTestingAnnotations/,/endif/d' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
@@ -191,7 +183,7 @@ ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 %cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD="" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
-    -DCMAKE_PREFIX_PATH=%{_builddir}/llvm-prefix \
+    -DLLVM_DIR=%{_builddir}/llvm-prefix/lib/cmake/llvm \
     %{?__cmake_build_type:-DCMAKE_BUILD_TYPE="%{__cmake_build_type}"}
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -200,8 +192,9 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 # Build comgr
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
-%cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH;%{_builddir}/llvm-prefix \
-    -DCMAKE_MODULE_PATH=%{_builddir}/llvm-prefix/lib \
+%cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH \
+    -DCMAKE_MODULE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib \
+    -DLLVM_DIR=%{_builddir}/llvm-prefix/lib/cmake/llvm \
     -DCMAKE_BUILD_TYPE="RELEASE" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
