@@ -177,11 +177,12 @@ cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
 # VLLM_VERSION_OVERRIDE sets SETUPTOOLS_SCM_PRETEND_VERSION and also bypasses
 # the "+rocmXYZ" local-version suffix in setup.py:get_vllm_version().
-export VLLM_VERSION_OVERRIDE=%{version}
 %if %{with rocm}
+export VLLM_VERSION_OVERRIDE=%{version}
 export VLLM_TARGET_DEVICE=rocm
 export ROCM_PATH=%{_prefix}
 %else
+export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
 %endif
 # -R: skip vLLM's huge runtime requirement set as build dependencies; only the
@@ -189,8 +190,8 @@ export VLLM_TARGET_DEVICE=cpu
 %pyproject_buildrequires -R
 
 %build -p
-export VLLM_VERSION_OVERRIDE=%{version}
 %if %{with rocm}
+export VLLM_VERSION_OVERRIDE=%{version}
 export VLLM_TARGET_DEVICE=rocm
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_arch}
 # ROCm lives under %%{_prefix} on openRuyi, not /opt/rocm; make torch's
@@ -209,6 +210,7 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 # (a single flag — no ';' — to avoid CMake's list-separator splitting).
 export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
+export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
