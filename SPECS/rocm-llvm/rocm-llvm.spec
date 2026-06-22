@@ -163,6 +163,11 @@ sed -i '/if(EXISTS.*LLVMTestingAnnotations/,/endif/d' %{_builddir}/llvm-prefix/l
 for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
     ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
 done
+# Symlink binaries that cmake exports reference
+mkdir -p %{_builddir}/llvm-prefix/bin
+for f in %{_libdir}/llvm%{llvm_maj_ver}/bin/*; do
+    ln -sf "$f" %{_builddir}/llvm-prefix/bin/$(basename "$f")
+done
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
