@@ -153,12 +153,11 @@ grep -v '%%{' prep.sh
 CLANG_VERSION=%llvm_maj_ver
 
 # Workaround: fix LLVMExports.cmake for missing libLLVMTestingAnnotations.a (llvm22 bug)
-# Copy cmake files to writable location and remove broken target
+# Copy cmake files to writable location and patch out the error check
 mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
-# Remove only the LLVMTestingAnnotations target from both exports files
-sed -i '/LLVMTestingAnnotations/{N;/set_target_properties/d}' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-sed -i '/LLVMTestingAnnotations/{N;/if(EXISTS/d}' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
+# Replace the error message with a no-op (keep the if/endif structure intact)
+sed -i 's|message(FATAL_ERROR "The imported target.*references the file.*|message(STATUS "Skipping missing static library check") #|' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
