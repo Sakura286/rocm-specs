@@ -158,9 +158,14 @@ mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
 cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
 # Downgrade the missing-file error to a warning so build continues
 sed -i 's|message(FATAL_ERROR "The imported target|message(WARNING "The imported target|' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-# Symlink include and lib dirs so LLVMConfig.cmake resolves paths correctly
+# Symlink include dir so LLVMConfig.cmake resolves paths correctly
 ln -sf %{_libdir}/llvm%{llvm_maj_ver}/include %{_builddir}/llvm-prefix/include
-ln -sf %{_libdir}/llvm%{llvm_maj_ver}/lib %{_builddir}/llvm-prefix/lib64
+# Symlink .so and .a files from system lib so cmake IMPORTED_LOCATION resolves
+for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.so* %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
+    [ -e "$f" ] && ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
+done
+# Symlink lib64 to lib for cmake path resolution
+ln -snf lib %{_builddir}/llvm-prefix/lib64
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
