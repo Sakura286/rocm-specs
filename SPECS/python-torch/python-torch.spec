@@ -434,6 +434,14 @@ rm -rf third_party/gloo
 mkdir -p third_party/gloo
 cp -r gloo-*/* third_party/gloo/
 
+# pytorch gates gloo behind `if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)`, but on riscv64
+# clang's cmake ABI detection fails (hence the manual *_IMPLICIT_INCLUDE_DIRECTORIES
+# passed in %build), leaving CMAKE_SIZEOF_VOID_P unset -> the guard misfires and
+# disables USE_GLOO ("Gloo can only be used on 64-bit systems").  openRuyi is
+# all-64-bit; neutralize the guard for the gloo block only (the identical line in
+# the USE_MKLDNN block is left untouched).
+sed -i -e '/^if(USE_GLOO)/,/else()/ s@if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)@if(FALSE)@' cmake/Dependencies.cmake
+
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
 cp /usr/include/pocketfft_hdronly.h third_party/pocketfft/
