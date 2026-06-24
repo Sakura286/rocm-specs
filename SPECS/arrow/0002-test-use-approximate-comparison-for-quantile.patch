@@ -1,0 +1,20 @@
+--- a/cpp/src/arrow/compute/kernels/aggregate_test.cc	2026-03-17 19:18:07
++++ b/cpp/src/arrow/compute/kernels/aggregate_test.cc	2026-03-17 19:19:58
+@@ -3809,8 +3809,15 @@
+         for (int64_t j = 0; j < out_array->length(); ++j) {
+           const auto& numeric_scalar =
+               checked_pointer_cast<DoubleScalar>(expected[j][i].scalar());
+-          ASSERT_TRUE((quantiles[j] == numeric_scalar->value) ||
+-                      (std::isnan(quantiles[j]) && std::isnan(numeric_scalar->value)))
++          // Use approximate comparison to allow for minor floating-point
++          // differences across architectures (e.g. RISC-V vs x86).
++          const double rel_tol = 1e-15;
++          ASSERT_TRUE(
++              (quantiles[j] == numeric_scalar->value) ||
++              (std::fabs(quantiles[j] - numeric_scalar->value) <=
++               rel_tol * std::fmax(std::fabs(quantiles[j]),
++                                   std::fabs(numeric_scalar->value))) ||
++              (std::isnan(quantiles[j]) && std::isnan(numeric_scalar->value)))
+               << "  Actual Value: " << quantiles[j] << "\n"
+               << "Expected Value: " << numeric_scalar->value;
+         }
