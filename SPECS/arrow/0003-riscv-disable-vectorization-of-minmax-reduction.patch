@@ -1,0 +1,45 @@
+On RISC-V with RVV and GCC auto-vectorization (-O2 -ftree-vectorize
+-march=rva23u64), the min/max reduction loop in MinMaxImpl::ConsumeArray is
+vectorized into a vfredmin/vfredmax whose identity element is +/-inf. That
+defeats the scalar NaN-propagation that the upstream all-NaN MinMax fix relies
+on (running min/max initialized to NaN; std::fmin/fmax treat NaN as missing, so
+fmin/fmax over an all-NaN range stays NaN). Vectorized, an all-NaN array reduces
+back to +/-inf, so MinMax([NaN, NaN]) returns inf/-inf and
+TestFloatingMinMaxKernel.Floats fails on riscv64.
+
+Pin these reductions to scalar codegen so the upstream fix holds on riscv64. The
+guard is a no-op off RISC-V and under non-GCC compilers.
+
+Upstream issue: https://github.com/apache/arrow/issues/46063
+Upstream fix:   https://github.com/apache/arrow/pull/48459
+diff --git a/cpp/src/arrow/compute/kernels/aggregate_basic.inc.cc b/cpp/src/arrow/compute/kernels/aggregate_basic.inc.cc
+index 3733f41..b70084d 100644
+--- a/cpp/src/arrow/compute/kernels/aggregate_basic.inc.cc
++++ b/cpp/src/arrow/compute/kernels/aggregate_basic.inc.cc
+@@ -772,6 +772,15 @@ struct MinMaxState<ArrowType, SimdLevel,
+   bool seen = false;
+ };
+ 
++#if defined(__riscv) && defined(__GNUC__) && !defined(__clang__)
++// Keep the all-NaN MinMax fix (GH-46063 / #48459) working under GCC RVV
++// auto-vectorization: the reduction loop in MinMaxImpl::ConsumeArray otherwise
++// becomes a vfredmin/vfredmax with a +/-inf identity element, so an all-NaN
++// array reduces to +/-inf instead of NaN. Force scalar reduction codegen here.
++#pragma GCC push_options
++#pragma GCC optimize("no-tree-vectorize")
++#endif
++
+ template <typename ArrowType, SimdLevel::type SimdLevel>
+ struct MinMaxImpl : public ScalarAggregator {
+   using ArrayType = typename TypeTraits<ArrowType>::ArrayType;
+@@ -916,6 +925,10 @@ struct MinMaxImpl : public ScalarAggregator {
+   }
+ };
+ 
++#if defined(__riscv) && defined(__GNUC__) && !defined(__clang__)
++#pragma GCC pop_options
++#endif
++
+ template <SimdLevel::type SimdLevel>
+ struct BooleanMinMaxImpl : public MinMaxImpl<BooleanType, SimdLevel> {
+   using StateType = MinMaxState<BooleanType, SimdLevel>;

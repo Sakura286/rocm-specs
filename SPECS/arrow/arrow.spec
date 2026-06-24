@@ -30,6 +30,9 @@ Patch0:         0001-use-system-mimalloc-shared-library.patch
 %ifarch riscv64
 Patch1:         0002-test-use-approximate-comparison-for-quantile.patch
 %endif
+# riscv64: keep all-NaN MinMax (GH-46063) correct under GCC RVV auto-vectorization
+# (source-guarded by __riscv, so it is a no-op on other arches)
+Patch2:         0003-riscv-disable-vectorization-of-minmax-reduction.patch
 
 BuildOption(conf):  -DARROW_BUILD_STATIC:BOOL=OFF
 BuildOption(conf):  -DARROW_BUILD_SHARED:BOOL=ON
