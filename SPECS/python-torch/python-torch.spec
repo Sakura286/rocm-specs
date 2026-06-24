@@ -441,6 +441,8 @@ cp -r gloo-*/* third_party/gloo/
 # all-64-bit; neutralize the guard for the gloo block only (the identical line in
 # the USE_MKLDNN block is left untouched).
 sed -i -e '/^if(USE_GLOO)/,/else()/ s@if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)@if(FALSE)@' cmake/Dependencies.cmake
+# gloo's own CMakeLists.txt has an identical 64-bit guard at line 12; neutralize it too.
+sed -i -e 's@if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)@if(FALSE)@' third_party/gloo/CMakeLists.txt
 
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
