@@ -1,0 +1,37 @@
+Default to hipBLASLt as the BLAS backend on gfx1100
+
+On gfx1100 (Radeon RX 7900 XTX) torch defaults to rocBLAS for GEMM, and the
+rocBLAS shipped in openRuyi has no fp16 GEMM Tensile solution for some problem
+shapes (e.g. an N=10 addmm from a small nn.Linear under AMP), failing with:
+
+  RuntimeError: CUDA error: HIPBLAS_STATUS_INTERNAL_ERROR when calling
+  rocblas_gemm_ex(..., rocblas_datatype_f16_r, ...)
+
+fp32/bf16 GEMM and fp16 square matmul are fine; only fp16 GEMM at those shapes
+breaks.  hipBLASLt handles every shape, and forcing it
+(TORCH_BLAS_PREFER_HIPBLASLT=1) makes the failure disappear.
+
+The default backend is chosen in Context::blasPreferredBackend(), which prefers
+hipBLASLt only for archs in CUDAHooks::getHipblasltPreferredArchs().  Upstream
+lists gfx1100/gfx1101 only as *supported* (getHipblasltSupportedArchs), never as
+*preferred*, so consumer RDNA3 defaults to the broken rocBLAS path.  Add
+gfx1100/gfx1101 to the preferred list so hipBLASLt becomes the default; the
+existing supported-arch check still passes (gfx1100 is already supported), so the
+backend is not overridden back to rocBLAS.
+
+diff --git a/aten/src/ATen/cuda/detail/CUDAHooks.cpp b/aten/src/ATen/cuda/detail/CUDAHooks.cpp
+index 03a3a97..d01ca21 100644
+--- a/aten/src/ATen/cuda/detail/CUDAHooks.cpp
++++ b/aten/src/ATen/cuda/detail/CUDAHooks.cpp
+@@ -554,6 +554,11 @@ bool CUDAHooks::isGPUArch(const std::vector<std::string>& archs, DeviceIndex dev
+ const std::vector<std::string>& CUDAHooks::getHipblasltPreferredArchs() const {
+   static const std::vector<std::string> archs = {
+     "gfx90a", "gfx942",
++    // openRuyi: gfx1100/gfx1101 are only "supported" upstream, not "preferred",
++    // so torch defaults to rocBLAS on these consumer RDNA3 cards -- but the rocBLAS
++    // shipped here has no fp16 GEMM Tensile solution for some shapes on gfx1100
++    // (HIPBLAS_STATUS_INTERNAL_ERROR).  Prefer hipBLASLt, which handles all shapes.
++    "gfx1100", "gfx1101",
+ #if ROCM_VERSION >= 60400
+     "gfx1200", "gfx1201",
+ #endif
