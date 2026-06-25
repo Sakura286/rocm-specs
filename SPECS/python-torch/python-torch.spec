@@ -134,6 +134,12 @@ Patch0:        0001-pytorch-magma-2.10.0-version-encoding.patch
 # https://github.com/python/cpython/issues/139783
 Patch1:        0002-remove-pyrefly-comments-between-overload-decorator-and-def.patch
 
+# Default to hipBLASLt on gfx1100: upstream lists gfx1100 only as a hipBLASLt-
+# supported arch, not a preferred one, so torch defaults to rocBLAS -- whose fp16
+# GEMM has no Tensile solution for some shapes on gfx1100, failing with
+# HIPBLAS_STATUS_INTERNAL_ERROR.  hipBLASLt handles every shape.
+Patch2:        0003-default-to-hipblaslt-on-gfx1100.patch
+
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)
@@ -303,11 +309,10 @@ tar xf %{SOURCE7}
 rm -rf third_party/mslk/*
 cp -r MSLK-*/* third_party/mslk/
 
-# Adjust for amd gpu targets currently supported
-# only gfx1100 supported on openruyi
-sed -i -e 's@"gfx90a", "gfx942",@@' aten/src/ATen/native/cuda/Blas.cpp
-sed -i -e 's@"gfx1100", "gfx1101", "gfx1200", "gfx1201", "gfx908"@"gfx1100", "gfx1101",@' aten/src/ATen/native/cuda/Blas.cpp
-sed -i -e 's@"gfx950", "gfx1150", "gfx1151"@@' aten/src/ATen/native/cuda/Blas.cpp
+# GPU-arch / default-BLAS-backend handling is done in Patch2 (0003-*).  The arch
+# lists moved from Blas.cpp to CUDAHooks.cpp in torch 2.11, so the old in-place
+# seds here silently became no-ops; a patch fails the build loudly if upstream
+# moves them again.
 
 # Need to pip this
 sed -i -e '/fsspec/d' setup.py
