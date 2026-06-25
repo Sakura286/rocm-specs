@@ -56,10 +56,11 @@ Patch3:         2003-ROCm-hipsparselt-ordering.patch
 %else
 # Adjust CPU backend for openRuyi's OpenMP path
 Patch4:         2001-CPU-backend-OpenMP-path.patch
-# Single-process CPU: fall back to a fake distributed backend when torch lacks
+%endif
+
+# Single-process: fall back to a fake distributed backend when torch lacks
 # the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
 Patch5:         2005-CPU-single-process-fake-distributed-backend.patch
-%endif
 
 BuildOption(install):  %{srcname}
 
