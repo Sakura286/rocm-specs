@@ -30,16 +30,15 @@ License:        MulanPSL-2.0
 URL:            https://github.com/Sakura286/rocm-specs
 BuildArch:      noarch
 
-# For the %%{python3_version} macro used in the Provides below.
-BuildRequires:  python3-rpm-macros
-
 Requires:       python-torch-rocm
 
 # Both the generic and the ABI-specific dist names -- Base consumers require the
-# ABI-specific python3.NNdist(torch), so the second provide is the one that
-# actually matters.
+# ABI-specific python3.13dist(torch), so the second provide is the one that
+# actually matters.  Hardcoded to 3.13 (the current openRuyi python ABI): the
+# %%{python3_version} macro expands to empty in this metapackage's buildroot,
+# which silently produced a useless "pythondist(torch)" provide.
 Provides:       python3dist(torch) = %{version}
-Provides:       python%{python3_version}dist(torch) = %{version}
+Provides:       python3.13dist(torch) = %{version}
 
 %description
 Empty compatibility shim that makes python3dist(torch) resolvable on a ROCm
