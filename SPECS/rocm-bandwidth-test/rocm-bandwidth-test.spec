@@ -27,6 +27,7 @@ Source0:        %{url}/archive/rocm-%{version}.tar.gz
 Source1:        LICENSE.NCSA.txt
 BuildSystem:    cmake
 
+BuildRequires:  git
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
