@@ -14,6 +14,9 @@ sed -i 's@Args.push_back("-mlink-builtin-bitcode-postopt");@//Args.push_back("-m
 # `using namespace clang;`). Adapt comgr to the new clang API.
 sed -i 's@#include "clang/Driver/Options.h"@#include "clang/Options/Options.h"@' amd/comgr/src/comgr-compiler.cpp
 sed -i 's@using namespace clang::driver::options;@using namespace clang::options;@' amd/comgr/src/comgr-compiler.cpp
+# LLVM 22 also turned Driver::GetResourcesPath into a free function
+# (clang/Options/OptionUtils.h), reachable unqualified via `using namespace clang;`.
+sed -i 's@Driver::GetResourcesPath(@GetResourcesPath(@' amd/comgr/src/comgr-compiler.cpp
 
 # Use system perl
 sed -i 's|\(/usr/bin/\)env perl|\1perl|' amd/hipcc/bin/hipvars.pm
