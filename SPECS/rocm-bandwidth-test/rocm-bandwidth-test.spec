@@ -25,6 +25,12 @@ URL:            https://github.com/ROCm/rocm_bandwidth_test
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
 # From base_test.cpp
 Source1:        LICENSE.NCSA.txt
+# Upstream's USE_LOCAL_* (system-library) cmake paths are undertested: the
+# fmt/spdlog find_package() put the version after REQUIRED (so it is parsed as
+# a bogus component and FOUND is set FALSE), Boost is looked up with a lowercase
+# name that misses BoostConfig.cmake, and the CLI11 system branch never sets
+# CLI11_LIBRARIES. Fix them so the switches below build against distro libraries.
+Patch0:         0001-use-system-libs-via-find_package.patch
 BuildSystem:    cmake
 
 BuildRequires:  clang22
