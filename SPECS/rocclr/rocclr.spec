@@ -48,14 +48,14 @@ BuildOption(conf):  -DHIP_ENABLE_ROCPROFILER_REGISTER=OFF
 BuildOption(conf):  -DUSE_PROF_API=ON
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
-BuildRequires:  clang
+BuildRequires:  clang22
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(LLVM)
 BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipcc
-BuildRequires:  lld
+BuildRequires:  lld22
 BuildRequires:  perl
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libzstd)
@@ -66,8 +66,6 @@ BuildRequires:  python3dist(cppheaderparser)
 BuildRequires:  rocm-llvm-macros
 
 %patchlist
-# https://github.com/ROCm/rocm-systems/commit/655fbae6a1a54e7267fff90a246f0b54cdfcc94a
-1001-fix-potential-data-race.patch
 # Add riscv64 support
 2001-fix-riscv64-abi.patch
 2002-Replace-sfence-and-mfence.patch
