@@ -53,6 +53,7 @@ BuildOption(conf):  -DTensile_CODE_OBJECT_VERSION=default
 BuildOption(conf):  -DTensile_SEPARATE_ARCHITECTURES=ON
 BuildOption(conf):  -DTensile_LAZY_LIBRARY_LOADING=ON
 BuildOption(conf):  -DTensile_ASSEMBLER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
 # https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
@@ -117,10 +118,6 @@ Requires:       diffutils
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %prep -a
-# Create clang symlinks for Tensile (which uses hardcoded PATH)
-ln -sf %{rocmllvm_bindir}/clang %{_bindir}/clang
-ln -sf %{rocmllvm_bindir}/clang++ %{_bindir}/clang++
-
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt
 
 # no git in this build
