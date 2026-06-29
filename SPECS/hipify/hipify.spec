@@ -27,20 +27,19 @@ BuildOption(conf): -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf): -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
 Patch0:         0001-prepare-hipify-cmake.patch
-Patch1:         0002-clang21-compatibility-fix.patch
 
 BuildRequires:  chrpath
-BuildRequires:  clang
-BuildRequires:  clang-devel
-BuildRequires:  clang-tools-extra
-BuildRequires:  clang-tools-extra-devel
+BuildRequires:  clang22
+BuildRequires:  clang22-devel
+BuildRequires:  clang22-tools-extra
+BuildRequires:  clang22-tools-extra-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  lld
-BuildRequires:  lld-devel
-BuildRequires:  llvm
-BuildRequires:  llvm-devel
-BuildRequires:  llvm-static
+BuildRequires:  lld22
+BuildRequires:  lld22-devel
+BuildRequires:  llvm22
+BuildRequires:  llvm22-devel
+BuildRequires:  llvm22-static
 BuildRequires:  perl
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-llvm-macros
