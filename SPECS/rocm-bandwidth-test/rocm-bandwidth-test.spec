@@ -32,9 +32,12 @@ BuildRequires:  git
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
+BuildRequires:  pkgconfig(fmt)
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
 BuildRequires:  pkgconfig(libcurl)
+
+BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
