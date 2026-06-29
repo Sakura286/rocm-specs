@@ -46,11 +46,11 @@ BuildRequires:  pkgconfig(libcurl)
 # Use the distro's system libraries instead of the bundled (empty in the
 # release tarball) git submodules; jthread/Catch2 are skipped (C++20 std::jthread,
 # tests off) and TransferBench ships in-tree under plugins/common/tb_engine.
-BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON \
-    -DUSE_LOCAL_SPDLOG=ON \
-    -DUSE_LOCAL_NLOHMANN_JSON=ON \
-    -DUSE_LOCAL_CLI11=ON \
-    -DUSE_LOCAL_BOOST=ON
+BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
+BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
+BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
+BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
+BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
