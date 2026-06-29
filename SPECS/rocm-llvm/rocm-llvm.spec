@@ -57,12 +57,17 @@ Patch0:         0002-Use-signed-char-in-comgr-building.patch
 
 BuildRequires:  clang%{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-devel
+# clang%{llvm_maj_ver}-devel ships ClangTargets.cmake referencing libclang*.a,
+# which the compat llvm%{llvm_maj_ver} packaging splits into -static.
+BuildRequires:  clang%{llvm_maj_ver}-static
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  fdupes
 BuildRequires:  lld%{llvm_maj_ver}
 BuildRequires:  lld%{llvm_maj_ver}-devel
 BuildRequires:  llvm%{llvm_maj_ver}-devel
+# Likewise LLVMExports.cmake references libLLVM*.a from llvm%{llvm_maj_ver}-static.
+BuildRequires:  llvm%{llvm_maj_ver}-static
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzstd)
