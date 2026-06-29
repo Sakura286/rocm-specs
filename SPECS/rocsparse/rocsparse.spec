@@ -39,17 +39,17 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 %endif
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
-BuildRequires:  compiler-rt
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
+BuildRequires:  compiler-rt22
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  gcc-c++
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
