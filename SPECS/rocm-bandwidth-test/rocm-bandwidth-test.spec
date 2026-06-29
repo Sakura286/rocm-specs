@@ -45,7 +45,6 @@ terms of memory pools and their agents.
 # https://github.com/ROCm/rocm_bandwidth_test/issues/128
 chmod a-x LICENSE.md
 chmod a-x README.md
-chmod a-x ROCmBandwithTest_UserGuide.pdf
 cp %{SOURCE1} .
 
 %install -a
@@ -66,7 +65,7 @@ rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.md
 %endif
 
 %files
-%doc README.md ROCmBandwithTest_UserGuide.pdf
+%doc README.md
 %license LICENSE.md LICENSE.NCSA.txt
 %{_bindir}/rocm-bandwidth-test
 
