@@ -35,6 +35,7 @@ BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_AR=%{rocmllvm_bindir}/llvm-ar
 BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
 BuildOption(conf):  -DCMAKE_LINKER=%{rocmllvm_bindir}/ld.lld
+BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 BuildOption(conf):  -DHIP_COMMON_DIR=%{_builddir}/%{buildsubdir}/hip
 BuildOption(conf):  -DHIPCC_BIN_DIR=%{_bindir}
 BuildOption(conf):  -DHIP_COMPILER=hipcc

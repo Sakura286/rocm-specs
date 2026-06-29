@@ -113,6 +113,9 @@ Requires:       diffutils
 %{summary}
 %endif
 
+%build -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %prep -a
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt
 
