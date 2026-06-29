@@ -1,0 +1,314 @@
+diff --git a/clients/include/blas2/testing_gbmv.hpp b/clients/include/blas2/testing_gbmv.hpp
+index d02e1a5..bfe1046 100644
+--- a/clients/include/blas2/testing_gbmv.hpp
++++ b/clients/include/blas2/testing_gbmv.hpp
+@@ -267,11 +267,11 @@ void testing_gbmv(const Arguments& arg)
+     hy_gold = hy;
+ 
+     // copy data from CPU to device
+-    dAb.transfer_from(hAb);
+-    dx.transfer_from(hx);
+-    dy.transfer_from(hy);
+-    d_alpha.transfer_from(halpha);
+-    d_beta.transfer_from(hbeta);
++    CHECK_HIP_ERROR(dAb.transfer_from(hAb));
++    CHECK_HIP_ERROR(dx.transfer_from(hx));
++    CHECK_HIP_ERROR(dy.transfer_from(hy));
++    CHECK_HIP_ERROR(d_alpha.transfer_from(halpha));
++    CHECK_HIP_ERROR(d_beta.transfer_from(hbeta));
+ 
+     double cpu_time_used;
+     double error_host = 0.0, error_device = 0.0;
+@@ -290,12 +290,12 @@ void testing_gbmv(const Arguments& arg)
+                 (handle, transA, M, N, KL, KU, &h_alpha, dAb, lda, dx, incx, &h_beta, dy, incy));
+             handle.post_test(arg);
+ 
+-            hy.transfer_from(dy);
++            CHECK_HIP_ERROR(hy.transfer_from(dy));
+         }
+ 
+         if(arg.pointer_mode_device)
+         {
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             CHECK_ROCBLAS_ERROR(rocblas_set_pointer_mode(handle, rocblas_pointer_mode_device));
+             handle.pre_test(arg);
+@@ -308,7 +308,7 @@ void testing_gbmv(const Arguments& arg)
+             {
+                 HOST_MEMCHECK(host_vector<T>, hy_copy, (dim_y, incy));
+                 // copy output from device to CPU
+-                hy.transfer_from(dy);
++                CHECK_HIP_ERROR(hy.transfer_from(dy));
+ 
+                 // multi-GPU support
+                 int device_id, device_count;
+@@ -330,17 +330,17 @@ void testing_gbmv(const Arguments& arg)
+                     DEVICE_MEMCHECK(device_vector<T>, d_alpha_copy, (1));
+                     DEVICE_MEMCHECK(device_vector<T>, d_beta_copy, (1));
+ 
+-                    dAb_copy.transfer_from(hAb);
+-                    dx_copy.transfer_from(hx);
+-                    d_alpha_copy.transfer_from(halpha);
+-                    d_beta_copy.transfer_from(hbeta);
++                    CHECK_HIP_ERROR(dAb_copy.transfer_from(hAb));
++                    CHECK_HIP_ERROR(dx_copy.transfer_from(hx));
++                    CHECK_HIP_ERROR(d_alpha_copy.transfer_from(halpha));
++                    CHECK_HIP_ERROR(d_beta_copy.transfer_from(hbeta));
+ 
+                     CHECK_ROCBLAS_ERROR(
+                         rocblas_set_pointer_mode(handle_copy, rocblas_pointer_mode_device));
+ 
+                     for(int runs = 0; runs < arg.iters; runs++)
+                     {
+-                        dy_copy.transfer_from(hy_gold);
++                        CHECK_HIP_ERROR(dy_copy.transfer_from(hy_gold));
+                         DAPI_CHECK(rocblas_gbmv_fn,
+                                    (handle_copy,
+                                     transA,
+@@ -357,7 +357,7 @@ void testing_gbmv(const Arguments& arg)
+                                     dy_copy,
+                                     incy));
+                         // copy output from device to CPU
+-                        hy_copy.transfer_from(dy_copy);
++                        CHECK_HIP_ERROR(hy_copy.transfer_from(dy_copy));
+                         unit_check_general<T>(1, dim_y, incy, hy, hy_copy);
+                     }
+                 }
+@@ -383,7 +383,7 @@ void testing_gbmv(const Arguments& arg)
+         if(arg.pointer_mode_device)
+         {
+             // copy output from device to CPU
+-            hy.transfer_from(dy);
++            CHECK_HIP_ERROR(hy.transfer_from(dy));
+ 
+             if(arg.unit_check)
+             {
+diff --git a/clients/include/blas2/testing_sbmv.hpp b/clients/include/blas2/testing_sbmv.hpp
+index feb1148..95e09e2 100644
+--- a/clients/include/blas2/testing_sbmv.hpp
++++ b/clients/include/blas2/testing_sbmv.hpp
+@@ -204,9 +204,9 @@ void testing_sbmv(const Arguments& arg)
+     hy_gold = hy;
+ 
+     // copy data from CPU to device
+-    dx.transfer_from(hx);
+-    dy.transfer_from(hy);
+-    dAb.transfer_from(hAb);
++    CHECK_HIP_ERROR(dx.transfer_from(hx));
++    CHECK_HIP_ERROR(dy.transfer_from(hy));
++    CHECK_HIP_ERROR(dAb.transfer_from(hAb));
+ 
+     double cpu_time_used;
+     double error_host = 0.0, error_device = 0.0;
+@@ -231,7 +231,7 @@ void testing_sbmv(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+ 
+diff --git a/clients/include/blas2/testing_sbmv_batched.hpp b/clients/include/blas2/testing_sbmv_batched.hpp
+index 4812be9..9a91392 100644
+--- a/clients/include/blas2/testing_sbmv_batched.hpp
++++ b/clients/include/blas2/testing_sbmv_batched.hpp
+@@ -322,9 +322,9 @@ void testing_sbmv_batched(const Arguments& arg)
+     hy_gold.copy_from(hy);
+ 
+     // copy data from CPU to device
+-    dx.transfer_from(hx);
+-    dy.transfer_from(hy);
+-    dAb.transfer_from(hAb);
++    CHECK_HIP_ERROR(dx.transfer_from(hx));
++    CHECK_HIP_ERROR(dy.transfer_from(hy));
++    CHECK_HIP_ERROR(dAb.transfer_from(hAb));
+ 
+     double cpu_time_used;
+     double h_error = 0.0, d_error = 0.0;
+@@ -363,7 +363,7 @@ void testing_sbmv_batched(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+             DAPI_CHECK(rocblas_sbmv_batched_fn,
+diff --git a/clients/include/blas2/testing_sbmv_strided_batched.hpp b/clients/include/blas2/testing_sbmv_strided_batched.hpp
+index a32538a..ad902a3 100644
+--- a/clients/include/blas2/testing_sbmv_strided_batched.hpp
++++ b/clients/include/blas2/testing_sbmv_strided_batched.hpp
+@@ -385,9 +385,9 @@ void testing_sbmv_strided_batched(const Arguments& arg)
+     hy_gold.copy_from(hy);
+ 
+     // copy data from CPU to device
+-    dx.transfer_from(hx);
+-    dy.transfer_from(hy);
+-    dAb.transfer_from(hAb);
++    CHECK_HIP_ERROR(dx.transfer_from(hx));
++    CHECK_HIP_ERROR(dy.transfer_from(hy));
++    CHECK_HIP_ERROR(dAb.transfer_from(hAb));
+ 
+     double cpu_time_used;
+     double error_host = 0.0, error_device = 0.0;
+@@ -428,7 +428,7 @@ void testing_sbmv_strided_batched(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+             DAPI_CHECK(rocblas_sbmv_strided_batched_fn,
+diff --git a/clients/include/blas2/testing_symv.hpp b/clients/include/blas2/testing_symv.hpp
+index 2b31355..d170478 100644
+--- a/clients/include/blas2/testing_symv.hpp
++++ b/clients/include/blas2/testing_symv.hpp
+@@ -213,7 +213,7 @@ void testing_symv(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+             DAPI_CHECK(rocblas_symv_fn,
+diff --git a/clients/include/blas2/testing_symv_batched.hpp b/clients/include/blas2/testing_symv_batched.hpp
+index 6fd3f7b..ceed6f3 100644
+--- a/clients/include/blas2/testing_symv_batched.hpp
++++ b/clients/include/blas2/testing_symv_batched.hpp
+@@ -345,7 +345,7 @@ void testing_symv_batched(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+             DAPI_CHECK(rocblas_symv_batched_fn,
+diff --git a/clients/include/blas2/testing_symv_strided_batched.hpp b/clients/include/blas2/testing_symv_strided_batched.hpp
+index d96e17c..dbaa454 100644
+--- a/clients/include/blas2/testing_symv_strided_batched.hpp
++++ b/clients/include/blas2/testing_symv_strided_batched.hpp
+@@ -433,7 +433,7 @@ void testing_symv_strided_batched(const Arguments& arg)
+             CHECK_HIP_ERROR(d_alpha.transfer_from(alpha));
+             CHECK_HIP_ERROR(d_beta.transfer_from(beta));
+ 
+-            dy.transfer_from(hy_gold);
++            CHECK_HIP_ERROR(dy.transfer_from(hy_gold));
+ 
+             handle.pre_test(arg);
+             DAPI_CHECK(rocblas_symv_strided_batched_fn,
+diff --git a/clients/include/blas_ex/testing_gemm_batched_ex.hpp b/clients/include/blas_ex/testing_gemm_batched_ex.hpp
+index 214f0b4..54ca0b5 100644
+--- a/clients/include/blas_ex/testing_gemm_batched_ex.hpp
++++ b/clients/include/blas_ex/testing_gemm_batched_ex.hpp
+@@ -103,7 +103,7 @@ void testing_gemm_batched_ex_bad_arg(const Arguments& arg)
+         rocblas_seedrand();
+         rocblas_init_matrix<To>(
+             hC, arg, rocblas_client_beta_sets_nan, rocblas_client_general_matrix);
+-        dC.transfer_from(hC);
++        CHECK_HIP_ERROR(dC.transfer_from(hC));
+ 
+         // clang-format off
+ // check for invalid enum
+diff --git a/clients/include/blas_ex/testing_gemm_ex.hpp b/clients/include/blas_ex/testing_gemm_ex.hpp
+index 4977995..be36f2e 100644
+--- a/clients/include/blas_ex/testing_gemm_ex.hpp
++++ b/clients/include/blas_ex/testing_gemm_ex.hpp
+@@ -102,7 +102,7 @@ void testing_gemm_ex_bad_arg(const Arguments& arg)
+         HOST_MEMCHECK(host_matrix<To>, hC, (M, N, ldc));
+         rocblas_seedrand();
+         rocblas_init_matrix(hC, arg, rocblas_client_beta_sets_nan, rocblas_client_general_matrix);
+-        dC.transfer_from(hC);
++        CHECK_HIP_ERROR(dC.transfer_from(hC));
+ 
+         // clang-format off
+ 
+diff --git a/clients/include/testing_set_get_matrix_async.hpp b/clients/include/testing_set_get_matrix_async.hpp
+index 01d0648..de8d301 100644
+--- a/clients/include/testing_set_get_matrix_async.hpp
++++ b/clients/include/testing_set_get_matrix_async.hpp
+@@ -127,7 +127,7 @@ void testing_set_get_matrix_async(const Arguments& arg)
+ 
+         cpu_time_used = get_time_us_no_sync() - cpu_time_used;
+ 
+-        hipStreamSynchronize(stream);
++        CHECK_HIP_ERROR(hipStreamSynchronize(stream));
+ 
+         if(arg.unit_check)
+         {
+@@ -160,7 +160,7 @@ void testing_set_get_matrix_async(const Arguments& arg)
+                           (rows, cols, sizeof(T), dD, ldd, hB, ldb, stream));
+         }
+ 
+-        hipStreamSynchronize(stream);
++        CHECK_HIP_ERROR(hipStreamSynchronize(stream));
+         gpu_time_used = get_time_us_sync(stream) - gpu_time_used;
+ 
+         ArgumentModel<e_M, e_N, e_lda, e_ldb, e_ldd>{}.log_args<T>(
+diff --git a/clients/include/testing_set_get_vector_async.hpp b/clients/include/testing_set_get_vector_async.hpp
+index b88cc0c..0bddc20 100644
+--- a/clients/include/testing_set_get_vector_async.hpp
++++ b/clients/include/testing_set_get_vector_async.hpp
+@@ -113,7 +113,7 @@ void testing_set_get_vector_async(const Arguments& arg)
+ 
+         cpu_time_used = get_time_us_no_sync() - cpu_time_used;
+ 
+-        hipStreamSynchronize(stream);
++        CHECK_HIP_ERROR(hipStreamSynchronize(stream));
+ 
+         if(arg.unit_check)
+         {
+@@ -144,7 +144,7 @@ void testing_set_get_vector_async(const Arguments& arg)
+             DAPI_DISPATCH(rocblas_get_vector_async_fn, (N, sizeof(T), db, ldd, hy, incy, stream));
+         }
+ 
+-        hipStreamSynchronize(stream);
++        CHECK_HIP_ERROR(hipStreamSynchronize(stream));
+         gpu_time_used = get_time_us_sync(stream) - gpu_time_used;
+ 
+         ArgumentModel<e_N, e_incx, e_incy, e_ldd>{}.log_args<T>(rocblas_cout,
+diff --git a/library/src/include/handle.hpp b/library/src/include/handle.hpp
+index a0a1760..c80cc5e 100644
+--- a/library/src/include/handle.hpp
++++ b/library/src/include/handle.hpp
+@@ -147,16 +147,20 @@ private:
+             : device_id(device_id)
+             , old_device_id(-1)
+         {
+-            hipGetDevice(&old_device_id);
++            THROW_IF_HIP_ERROR(hipGetDevice(&old_device_id));
+             if(device_id != old_device_id)
+-                hipSetDevice(device_id);
++            {
++                THROW_IF_HIP_ERROR(hipSetDevice(device_id));
++            }
+         }
+ 
+         // Old device ID is restored on destruction
+         ~_rocblas_saved_device_id()
+         {
+             if(device_id != old_device_id)
+-                hipSetDevice(old_device_id);
++            {
++                (void)(hipSetDevice(old_device_id));
++            }
+         }
+ 
+         // Move constructor
+diff --git a/library/src/src64/blas1/rocblas_dot_kernels_64.cpp b/library/src/src64/blas1/rocblas_dot_kernels_64.cpp
+index 0bd3061..2b38dd7 100644
+--- a/library/src/src64/blas1/rocblas_dot_kernels_64.cpp
++++ b/library/src/src64/blas1/rocblas_dot_kernels_64.cpp
+@@ -325,7 +325,7 @@ rocblas_status rocblas_internal_dot_launcher_64(rocblas_handle __restrict__ hand
+     if(handle->pointer_mode == rocblas_pointer_mode_host)
+     {
+         // sync here to match legacy BLAS
+-        hipStreamSynchronize(handle->get_stream());
++        RETURN_IF_HIP_ERROR(hipStreamSynchronize(handle->get_stream()));
+     }
+ 
+     return rocblas_status_success;
