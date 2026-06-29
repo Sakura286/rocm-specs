@@ -39,11 +39,11 @@ BuildOption(conf):  -DCMAKE_SHARED_LINKER_FLAGS=-ldrm_amdgpu
 BuildOption(conf):  -DINCLUDE_PATH_COMPATIBILITY=OFF
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
-BuildRequires:  clang-devel
+BuildRequires:  clang22-devel
 BuildRequires:  cmake
-BuildRequires:  lld
-BuildRequires:  lld-devel
-BuildRequires:  llvm-devel
+BuildRequires:  lld22
+BuildRequires:  lld22-devel
+BuildRequires:  llvm22-devel
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libelf)
