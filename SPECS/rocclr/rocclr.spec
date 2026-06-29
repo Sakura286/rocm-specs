@@ -67,10 +67,10 @@ BuildRequires:  python3dist(cppheaderparser)
 BuildRequires:  rocm-llvm-macros
 
 %patchlist
-# TODO: rebase riscv64 patches for 7.2.4 source
-# 2001-fix-riscv64-abi.patch
-# 2002-Replace-sfence-and-mfence.patch
-# 2003-add-lp64d-target-to-llvm-mc.patch
+# Add riscv64 support
+2001-fix-riscv64-abi.patch
+2002-Replace-sfence-and-mfence.patch
+2003-add-lp64d-target-to-llvm-mc.patch
 
 %description
 ROCm Compute Language Runtime
