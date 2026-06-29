@@ -115,10 +115,12 @@ Requires:       diffutils
 
 %build -p
 export PATH=%{rocmllvm_bindir}:$PATH
-ln -sf %{rocmllvm_bindir}/clang %{_bindir}/clang 2>/dev/null || true
-ln -sf %{rocmllvm_bindir}/clang++ %{_bindir}/clang++ 2>/dev/null || true
 
 %prep -a
+# Create clang symlinks for Tensile (which uses hardcoded PATH)
+ln -sf %{rocmllvm_bindir}/clang %{_bindir}/clang
+ln -sf %{rocmllvm_bindir}/clang++ %{_bindir}/clang++
+
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt
 
 # no git in this build
