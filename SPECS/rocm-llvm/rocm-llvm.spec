@@ -57,8 +57,8 @@ Patch0:         0002-Use-signed-char-in-comgr-building.patch
 
 BuildRequires:  clang%{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-devel
-# clang%{llvm_maj_ver}-devel ships ClangTargets.cmake referencing libclang*.a,
-# which the compat llvm%{llvm_maj_ver} packaging splits into -static.
+# The clang -devel package ships ClangTargets.cmake referencing libclang*.a,
+# which the compat llvm packaging splits into a separate -static subpackage.
 BuildRequires:  clang%{llvm_maj_ver}-static
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
@@ -66,7 +66,7 @@ BuildRequires:  fdupes
 BuildRequires:  lld%{llvm_maj_ver}
 BuildRequires:  lld%{llvm_maj_ver}-devel
 BuildRequires:  llvm%{llvm_maj_ver}-devel
-# Likewise LLVMExports.cmake references libLLVM*.a from llvm%{llvm_maj_ver}-static.
+# Likewise LLVMExports.cmake references libLLVM*.a from the llvm -static subpackage.
 BuildRequires:  llvm%{llvm_maj_ver}-static
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
@@ -276,7 +276,6 @@ rm -f %{buildroot}%{_datadir}/doc/hipcc/README.md
 %files -n rocm-comgr
 %doc        amd/comgr/README.md
 %license    amd/comgr/LICENSE.txt
-%license    amd/comgr/NOTICES.txt
 %{_libdir}/libamd_comgr.so.*
 
 %files -n rocm-comgr-devel
