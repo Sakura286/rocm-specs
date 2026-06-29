@@ -31,11 +31,11 @@ BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 BuildRequires:  clang22-tools-extra-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(Clang22)
+BuildRequires:  clang22-devel
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(LLD)
-BuildRequires:  cmake(LLVM)
+BuildRequires:  lld22-devel
+BuildRequires:  llvm22-devel
 BuildRequires:  gcc-c++
 BuildRequires:  python3
 BuildRequires:  rocm-cmake

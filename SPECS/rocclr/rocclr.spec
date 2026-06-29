@@ -52,7 +52,7 @@ BuildRequires:  clang22
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(LLVM)
+BuildRequires:  llvm22-devel
 BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipcc
 BuildRequires:  lld22
