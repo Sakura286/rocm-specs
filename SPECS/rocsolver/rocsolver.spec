@@ -43,8 +43,8 @@ Patch0:         0001-rocsolver-ninja-job-pools.patch
 # https://github.com/ROCm/rocSOLVER/pull/962
 Patch1:         0001-rocsolver-parallel-jobs.patch
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
@@ -52,11 +52,11 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocprim)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  rocm-cmake
