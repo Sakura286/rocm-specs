@@ -8,6 +8,13 @@ sed -i 's/lib\(\/clang\)/%{_lib}\1/' amd/comgr/src/comgr-compiler.cpp
 # Unsupported options
 sed -i 's@Args.push_back("-mlink-builtin-bitcode-postopt");@//Args.push_back("-mlink-builtin-bitcode-postopt");@' amd/comgr/src/comgr-compiler.cpp
 
+# LLVM 22 relocated the clang driver option table: clang/Driver/Options.h ->
+# clang/Options/Options.h and namespace clang::driver::options -> clang::options
+# (getDriverOptTable() moved to namespace clang, still resolved via the existing
+# `using namespace clang;`). Adapt comgr to the new clang API.
+sed -i 's@#include "clang/Driver/Options.h"@#include "clang/Options/Options.h"@' amd/comgr/src/comgr-compiler.cpp
+sed -i 's@using namespace clang::driver::options;@using namespace clang::options;@' amd/comgr/src/comgr-compiler.cpp
+
 # Use system perl
 sed -i 's|\(/usr/bin/\)env perl|\1perl|' amd/hipcc/bin/hipvars.pm
 
