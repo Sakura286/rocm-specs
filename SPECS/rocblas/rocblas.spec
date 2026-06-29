@@ -58,18 +58,18 @@ Patch0:         0001-fixup-install-of-tensile-output.patch
 # https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
 Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(msgpack)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  python3dist(tensile)
