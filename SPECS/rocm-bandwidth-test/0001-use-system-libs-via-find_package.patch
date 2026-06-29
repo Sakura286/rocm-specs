@@ -1,5 +1,5 @@
---- a/cmake/build_utils.cmake	2026-06-29 20:44:06.040838523 +0800
-+++ b/cmake/build_utils.cmake	2026-06-29 20:44:06.057325598 +0800
+--- a/cmake/build_utils.cmake	2026-06-29 20:49:27.855240897 +0800
++++ b/cmake/build_utils.cmake	2026-06-29 20:49:27.871313931 +0800
 @@ -1010,7 +1010,7 @@
          add_subdirectory(${FMT_SOURCE_DIR} EXCLUDE_FROM_ALL)
          set(FMT_LIBRARIES fmt::fmt-header-only)
@@ -27,8 +27,17 @@
          set(SPDLOG_LIBRARIES spdlog::spdlog)
      endif()
      list(APPEND 3RD_PARTY_TARGET_LIST ${SPDLOG_LIBRARIES})
---- a/main/cmdline/CMakeLists.txt	2026-06-29 20:44:06.041934826 +0800
-+++ b/main/cmdline/CMakeLists.txt	2026-06-29 20:44:06.057446793 +0800
+@@ -1173,7 +1173,7 @@
+         add_subdirectory(${CATCH2_SOURCE_DIR} EXCLUDE_FROM_ALL)
+         set(CATCH2_LIBRARIES Catch2::Catch2WithMain)
+     else()
+-        find_package(${CATCH2_PACKAGE_NAME} REQUIRED ${CATCH2_PKG_MINIMUM_REQUIRED_VERSION})
++        find_package(Catch2 ${CATCH2_PKG_MINIMUM_REQUIRED_VERSION} REQUIRED)
+         set(CATCH2_LIBRARIES Catch2::Catch2WithMain)
+     endif()
+     list(APPEND 3RD_PARTY_UNIT_TEST_TARGET_LIST ${CATCH2_LIBRARIES})
+--- a/main/cmdline/CMakeLists.txt	2026-06-29 20:49:27.856476330 +0800
++++ b/main/cmdline/CMakeLists.txt	2026-06-29 20:49:27.871763264 +0800
 @@ -54,7 +54,8 @@
      set(CLI11_LIBRARIES CLI11::CLI11)
      set(CLI11_INCLUDE_DIRS)

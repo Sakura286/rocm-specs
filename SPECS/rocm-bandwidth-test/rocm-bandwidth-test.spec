@@ -42,6 +42,7 @@ BuildRequires:  pkgconfig(fmt)
 BuildRequires:  cmake(spdlog)
 BuildRequires:  cmake(nlohmann_json)
 BuildRequires:  cmake(CLI11)
+BuildRequires:  cmake(Catch2)
 BuildRequires:  boost-devel
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
@@ -56,6 +57,7 @@ BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
 BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
 BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
 BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
+BuildOption(conf):  -DUSE_LOCAL_CATCH2=ON
 BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
 
 %description
