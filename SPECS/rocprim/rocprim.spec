@@ -28,10 +28,10 @@ BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
-BuildRequires:  clang-tools-extra-devel
+BuildRequires:  clang22-tools-extra-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(Clang)
+BuildRequires:  cmake(Clang22)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(LLD)
