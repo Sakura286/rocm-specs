@@ -43,10 +43,12 @@ sed -i '/" -isystem " + hsaPath + "\/include"/d' amd/hipcc/src/hipBin_amd.h
 
 sed -i 's/find_package(Clang REQUIRED CONFIG)/find_package(Clang REQUIRED)/' amd/comgr/CMakeLists.txt
 sed -i 's/find_package(LLD REQUIRED CONFIG)/find_package(LLD REQUIRED)/' amd/comgr/CMakeLists.txt
-# comgr globs for opencl-c-base.h under the clang resource dir. The compat
-# llvm%{llvm_maj_ver} packaging installs it under its versioned prefix, not the
-# unversioned /usr/lib/clang/%{llvm_maj_ver}/ that default-version llvm uses.
-sed -i 's@${CLANG_CMAKE_DIR}/../../../@%{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/@' amd/comgr/cmake/opencl_header.cmake
+# comgr GLOB_RECURSEs for opencl-c-base.h under the clang resource dir. The compat
+# llvm%{llvm_maj_ver} packaging installs it under its versioned prefix
+# (%{_libdir}/llvm%{llvm_maj_ver}/lib/clang/<ver>/include), not the unversioned
+# /usr/lib/clang/ that default-version llvm uses. Keep %{llvm_maj_ver} to a single
+# occurrence here: the prep.sh macro substitution is not global (first match only).
+sed -i 's@${CLANG_CMAKE_DIR}/../../../@%{_libdir}/llvm%{llvm_maj_ver}/lib/clang/@' amd/comgr/cmake/opencl_header.cmake
 
 # CMP0053 OLD is only needed on Windows. But on new version of cmake it is deprecated.
 sed -i 's/cmake_policy(SET CMP0053 OLD)/cmake_policy(SET CMP0053 NEW)/' amd/device-libs/cmake/OCL.cmake
