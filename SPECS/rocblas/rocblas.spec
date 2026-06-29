@@ -52,7 +52,7 @@ BuildOption(conf):  -DTensile_LOGIC=asm_full
 BuildOption(conf):  -DTensile_CODE_OBJECT_VERSION=default
 BuildOption(conf):  -DTensile_SEPARATE_ARCHITECTURES=ON
 BuildOption(conf):  -DTensile_LAZY_LIBRARY_LOADING=ON
-BuildOption(conf):  -DTensile_ASSEMBLER=clang++
+BuildOption(conf):  -DTensile_ASSEMBLER=%{rocmllvm_bindir}/clang++
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
 # https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
@@ -115,6 +115,8 @@ Requires:       diffutils
 
 %build -p
 export PATH=%{rocmllvm_bindir}:$PATH
+ln -sf %{rocmllvm_bindir}/clang %{_bindir}/clang 2>/dev/null || true
+ln -sf %{rocmllvm_bindir}/clang++ %{_bindir}/clang++ 2>/dev/null || true
 
 %prep -a
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt

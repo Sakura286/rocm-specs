@@ -43,13 +43,13 @@ terms of memory pools and their agents.
 %prep -a
 # Remove execute permissions on docs
 # https://github.com/ROCm/rocm_bandwidth_test/issues/128
-chmod a-x LICENSE.txt
+chmod a-x LICENSE.md
 chmod a-x README.md
 chmod a-x ROCmBandwithTest_UserGuide.pdf
 cp %{SOURCE1} .
 
 %install -a
-rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.txt
+rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.md
 
 %check
 %if %{with check}
@@ -67,7 +67,7 @@ rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.txt
 
 %files
 %doc README.md ROCmBandwithTest_UserGuide.pdf
-%license LICENSE.txt LICENSE.NCSA.txt
+%license LICENSE.md LICENSE.NCSA.txt
 %{_bindir}/rocm-bandwidth-test
 
 %changelog
