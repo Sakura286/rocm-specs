@@ -258,7 +258,7 @@ install -Dpm 644 macros.rocmcompiler \
 %define _vpath_builddir build-hipcc
 %cmake_install
 
-rm -f %{buildroot}%{_datadir}/doc/ROCm-Device-Libs/LICENSE.TXT
+rm -f %{buildroot}%{_datadir}/doc/rocm-device-libs/LICENSE.TXT
 rm -rf %{buildroot}%{_datadir}/doc/amd_comgr
 rm -f %{buildroot}%{_datadir}/doc/hipcc/LICENSE.txt
 rm -f %{buildroot}%{_datadir}/doc/hipcc/README.md
