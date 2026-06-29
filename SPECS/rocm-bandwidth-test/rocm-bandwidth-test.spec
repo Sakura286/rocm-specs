@@ -27,10 +27,12 @@ Source0:        %{url}/archive/rocm-%{version}.tar.gz
 Source1:        LICENSE.NCSA.txt
 BuildSystem:    cmake
 
+BuildRequires:  clang22
 BuildRequires:  git
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
+BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
 
 %description
@@ -40,6 +42,9 @@ operations. The benchmark help screen shows various options
 for initiating copy, read, and write operations. In
 addition to this, you can also query the system topology in
 terms of memory pools and their agents.
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %prep -a
 # Remove execute permissions on docs
