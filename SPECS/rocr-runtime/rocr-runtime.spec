@@ -40,6 +40,7 @@ BuildOption(conf):  -DINCLUDE_PATH_COMPATIBILITY=OFF
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 BuildRequires:  clang22-devel
+BuildRequires:  clang22-static
 BuildRequires:  cmake
 BuildRequires:  lld22
 BuildRequires:  lld22-devel

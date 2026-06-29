@@ -24,7 +24,7 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
-BuildOption(conf):  -DCMAKE_C_COMPILER=clang
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_AR=%{rocmllvm_bindir}/llvm-ar
 BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..

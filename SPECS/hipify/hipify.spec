@@ -40,6 +40,7 @@ BuildRequires:  lld22-devel
 BuildRequires:  llvm22
 BuildRequires:  llvm22-devel
 BuildRequires:  llvm22-static
+BuildRequires:  clang22-static
 BuildRequires:  perl
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-llvm-macros

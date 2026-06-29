@@ -22,7 +22,7 @@ BuildSystem:    cmake
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_WITH_OFFLOAD_COMPRESS=ON
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
-BuildOption(conf):  -DCMAKE_C_COMPILER=clang
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_LINKER=%{rocmllvm_bindir}/ld.lld
 BuildOption(conf):  -DCMAKE_AR=%{rocmllvm_bindir}/llvm-ar
 BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
