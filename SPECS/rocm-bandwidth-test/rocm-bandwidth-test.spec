@@ -26,10 +26,12 @@ Source0:        %{url}/archive/rocm-%{version}.tar.gz
 # From base_test.cpp
 Source1:        LICENSE.NCSA.txt
 # Upstream's USE_LOCAL_* (system-library) cmake paths are undertested: the
-# fmt/spdlog find_package() put the version after REQUIRED (so it is parsed as
-# a bogus component and FOUND is set FALSE), Boost is looked up with a lowercase
-# name that misses BoostConfig.cmake, and the CLI11 system branch never sets
-# CLI11_LIBRARIES. Fix them so the switches below build against distro libraries.
+# fmt/spdlog/Catch2 find_package() put the version after REQUIRED (so it is parsed
+# as a bogus component and FOUND is set FALSE), Boost/Catch2 are looked up with a
+# lowercase name that misses their *Config.cmake, and the CLI11 system branch never
+# sets CLI11_LIBRARIES. The patch also turns the "no distribution package type"
+# FATAL into a warning so we can skip upstream's CPack/staging install and package
+# the build artifacts directly with rpmbuild (see %install).
 Patch0:         0001-use-system-libs-via-find_package.patch
 BuildSystem:    cmake
 
@@ -50,9 +52,10 @@ BuildRequires:  cmake(hip)
 BuildRequires:  numactl-devel
 BuildRequires:  pkgconfig(libcurl)
 
-# Use the distro's system libraries instead of the bundled (empty in the
-# release tarball) git submodules; jthread/Catch2 are skipped (C++20 std::jthread,
-# tests off) and TransferBench ships in-tree under plugins/common/tb_engine.
+# Use the distro's system libraries instead of the bundled (empty in the release
+# tarball) git submodules. Catch2 is resolved unconditionally even with tests off,
+# so it must use the system lib too; jthread is skipped (C++20 std::jthread) and
+# TransferBench ships in-tree under plugins/common/tb_engine.
 BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
 BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
 BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
@@ -79,7 +82,23 @@ chmod a-x README.md
 cp %{SOURCE1} .
 
 %install -a
-rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.md
+# Upstream's CPack/staging "distribution package" install is bypassed (see Patch0);
+# install the artifacts by hand. The build emits the ELF plus a 'rocm-bandwidth-test'
+# symlink in the vpath build dir, the plugins as *.amdplug, and two internal shared
+# libraries scattered across the build tree.
+install -Dm0755 %{_vpath_builddir}/%{upstreamname} %{buildroot}%{_bindir}/%{upstreamname}
+ln -sf %{upstreamname} %{buildroot}%{_bindir}/%{name}
+
+# Internal shared libs go in the standard libdir so the dynamic linker (and the
+# dlopen'd plugins) resolve them by default, without RPATH.
+install -dm0755 %{buildroot}%{_libdir}
+find . \( -name 'libamd_work_bench.so*' -o -name 'libamd_tb_engine.so*' \) \
+    -exec cp -a -t %{buildroot}%{_libdir}/ {} +
+
+# Plugins are dlopen'd from the path baked into the binary at build time
+# (SYSTEM_DEFAULT_PLUGIN_INSTALL_PATH = %{_libdir}/%{upstreamname}, scanned directly).
+install -dm0755 %{buildroot}%{_libdir}/%{upstreamname}
+install -m0755 %{_vpath_builddir}/plugins/*.amdplug %{buildroot}%{_libdir}/%{upstreamname}/
 
 %check
 %if %{with check}
@@ -98,7 +117,11 @@ rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.md
 %files
 %doc README.md
 %license LICENSE.md LICENSE.NCSA.txt
-%{_bindir}/rocm-bandwidth-test
+%{_bindir}/%{upstreamname}
+%{_bindir}/%{name}
+%{_libdir}/libamd_work_bench.so*
+%{_libdir}/libamd_tb_engine.so*
+%{_libdir}/%{upstreamname}/
 
 %changelog
 %autochangelog

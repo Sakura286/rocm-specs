@@ -1,5 +1,5 @@
---- a/cmake/build_utils.cmake	2026-06-29 20:49:27.855240897 +0800
-+++ b/cmake/build_utils.cmake	2026-06-29 20:49:27.871313931 +0800
+--- a/cmake/build_utils.cmake	2026-06-29 21:06:27.888291491 +0800
++++ b/cmake/build_utils.cmake	2026-06-29 21:06:27.908097644 +0800
 @@ -1010,7 +1010,7 @@
          add_subdirectory(${FMT_SOURCE_DIR} EXCLUDE_FROM_ALL)
          set(FMT_LIBRARIES fmt::fmt-header-only)
@@ -36,8 +36,17 @@
          set(CATCH2_LIBRARIES Catch2::Catch2WithMain)
      endif()
      list(APPEND 3RD_PARTY_UNIT_TEST_TARGET_LIST ${CATCH2_LIBRARIES})
---- a/main/cmdline/CMakeLists.txt	2026-06-29 20:49:27.856476330 +0800
-+++ b/main/cmdline/CMakeLists.txt	2026-06-29 20:49:27.871763264 +0800
+@@ -1417,7 +1417,7 @@
+         endif()
+ 
+     else()
+-        message(FATAL_ERROR ">> No distribution package type was not defined!")
++        message(WARNING ">> No distribution package type defined; skipping upstream install (packaged by rpmbuild).")
+     endif()
+ endmacro()
+ 
+--- a/main/cmdline/CMakeLists.txt	2026-06-29 21:06:27.889222008 +0800
++++ b/main/cmdline/CMakeLists.txt	2026-06-29 21:06:27.908235217 +0800
 @@ -54,7 +54,8 @@
      set(CLI11_LIBRARIES CLI11::CLI11)
      set(CLI11_INCLUDE_DIRS)
