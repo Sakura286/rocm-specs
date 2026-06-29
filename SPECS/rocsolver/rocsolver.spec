@@ -50,7 +50,7 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel
 BuildRequires:  cmake(rocprim)
 BuildRequires:  compiler-rt22
 BuildRequires:  gcc-c++

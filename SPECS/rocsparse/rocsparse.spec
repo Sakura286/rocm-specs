@@ -59,7 +59,7 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 %if %{with test}
 BuildRequires:  cmake(GTest)
-BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel
 BuildRequires:  cmake(openmp)
 BuildRequires:  gcc-gfortran
 BuildRequires:  python3dist(pyyaml)

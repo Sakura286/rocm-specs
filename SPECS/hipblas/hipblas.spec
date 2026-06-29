@@ -24,7 +24,7 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas-common)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel
 BuildRequires:  cmake(rocsolver)
 BuildRequires:  compiler-rt22
 BuildRequires:  gcc-c++
