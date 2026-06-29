@@ -114,7 +114,7 @@ Requires:       diffutils
 %{summary}
 %endif
 
-%build -p
+%conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %prep -a
