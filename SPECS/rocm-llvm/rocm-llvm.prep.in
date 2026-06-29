@@ -48,6 +48,12 @@ sed -i 's@${CLANG_CMAKE_DIR}/../../../@/usr/lib/clang/%{llvm_maj_ver}/@' amd/com
 # CMP0053 OLD is only needed on Windows. But on new version of cmake it is deprecated.
 sed -i 's/cmake_policy(SET CMP0053 OLD)/cmake_policy(SET CMP0053 NEW)/' amd/device-libs/cmake/OCL.cmake
 
+# openRuyi's llvm22 gates these AMDGPU builtins behind target features that
+# ROCm 7.2.4 device-libs uses unguarded (ockl/src/image.cl cube*, media.cl lerp).
+# Enable them for the generic bitcode compilation so clang accepts the builtins;
+# instruction selection still happens per-GPU at final codegen.
+sed -i 's/-Xclang -mcode-object-version=none)/-Xclang -mcode-object-version=none -Xclang -target-feature -Xclang +cube-insts -Xclang -target-feature -Xclang +lerp-inst)/' amd/device-libs/cmake/OCL.cmake
+
 # Fix up the path to the device libs hipcc uses
 sed -i -e 's@amdgcnBitcode = roccmPath@amdgcnBitcode = "%{_prefix}/%{amd_device_libs_prefix}/"@' amd/hipcc/src/hipBin_amd.h
 
