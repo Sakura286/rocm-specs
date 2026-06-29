@@ -34,6 +34,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
+BuildRequires:  pkgconfig(libcurl)
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
