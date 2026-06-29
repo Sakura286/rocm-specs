@@ -21,7 +21,7 @@
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
 %global llvm_triple %{_target_platform}
-%global amd_device_libs_prefix llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}
+%global amd_device_libs_prefix %{_lib}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}
 
 %global toolchain clang
 
