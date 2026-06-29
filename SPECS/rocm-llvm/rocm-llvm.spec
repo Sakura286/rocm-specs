@@ -11,12 +11,13 @@
 %global comgr_full_api_ver %{comgr_maj_api_ver}.0
 
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
-%global llvm_maj_ver 22
-# ROCm 7.2.4 uses LLVM 22, which is available on openRuyi.
-%global rocm_llvm_maj_ver 22
+%global llvm_maj_ver 21
+# Sakura286: ROCm 7.1.1 uses LLVM 20, but only LLVM 21 is on openRuyi.
+#            Backport is needed.
+%global rocm_llvm_maj_ver 20
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.1
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
@@ -47,24 +48,25 @@ Summary:        Various AMD ROCm LLVM related services
 # hipcc is MIT, comgr and device-libs are NCSA:
 License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
-#!RemoteAsset:  sha256:526b5fe23417c41acbeb2273e470887b4593f48a297a8d9c1a1aa730d556f9fb
+#!RemoteAsset:  sha256:d76a16db4a56914383029e241823f7bc2a3d645f2967dd22230f11c11cfe189e
 Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 # RISC-V support patches
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 Patch0:         0002-Use-signed-char-in-comgr-building.patch
+# Backport mainline comgr patches since 7.1.1 is build on llvm-20
+Patch1:         0003-adapt-comgr-api-to-llvm-21.patch
 
-BuildRequires:  clang%{llvm_maj_ver}
-BuildRequires:  clang%{llvm_maj_ver}-devel
-BuildRequires:  clang%{llvm_maj_ver}-static
-BuildRequires:  clang%{llvm_maj_ver}-tools-extra
+BuildRequires:  clang >= %{llvm_maj_ver}
+BuildRequires:  clang-devel >= %{llvm_maj_ver}
+BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  fdupes
-BuildRequires:  lld%{llvm_maj_ver}
-BuildRequires:  lld%{llvm_maj_ver}-devel
-BuildRequires:  llvm%{llvm_maj_ver}-devel
-BuildRequires:  llvm%{llvm_maj_ver}-static
+BuildRequires:  lld >= %{llvm_maj_ver}
+BuildRequires:  lld-devel >= %{llvm_maj_ver}
+BuildRequires:  llvm-devel >= %{llvm_maj_ver}
+BuildRequires:  llvm-test >= %{llvm_maj_ver}
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzstd)
@@ -132,7 +134,9 @@ must ensure the compiler options are appropriate for the target compiler.
 # llvm_maj_ver sanity check (we should be matching the bundled llvm major ver):
 if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion.cmake; then
     echo "ERROR llvm_maj_ver macro is not correctly set"
-    exit 1
+    # Sakura286: ROCm 7.1.1 uses LLVM 20, but only 21 is on openRuyi. Sad.
+    # TODO: Need to re-enable this 'if' when rocm upstream bump to llvm-21
+    # exit 1
 fi
 
 # Make sure we only build the AMD bits by discarding the bundled llvm code:
@@ -144,33 +148,12 @@ sed -i -e 's@%%{_lib}@%{_lib}@' prep.sh
 sed -i -e 's@%%{amd_device_libs_prefix}@%{amd_device_libs_prefix}@' prep.sh
 sed -i -e 's@%%{bundle_prefix}@%{bundle_prefix}@' prep.sh
 sed -i -e 's@%%{llvm_maj_ver}@%{llvm_maj_ver}@' prep.sh
-sed -i -e 's@%%{_libdir}@%{_libdir}@' prep.sh
 grep -v '%%{' prep.sh
 
 . ./prep.sh
 
 %build
 CLANG_VERSION=%llvm_maj_ver
-
-# Workaround: fix LLVMExports.cmake for missing libLLVMTestingAnnotations.a (llvm22 bug)
-# Copy cmake files to writable location and downgrade FATAL_ERROR to WARNING
-mkdir -p %{_builddir}/llvm-prefix/lib/cmake/llvm
-cp %{_libdir}/llvm%{llvm_maj_ver}/lib/cmake/llvm/*.cmake %{_builddir}/llvm-prefix/lib/cmake/llvm/
-# Downgrade the missing-file error to a warning so build continues
-sed -i 's|message(FATAL_ERROR "The imported target|message(WARNING "The imported target|' %{_builddir}/llvm-prefix/lib/cmake/llvm/LLVMExports*.cmake
-# Symlink include dir so LLVMConfig.cmake resolves paths correctly
-ln -sf %{_libdir}/llvm%{llvm_maj_ver}/include %{_builddir}/llvm-prefix/include
-# Symlink .so and .a files from system lib so cmake IMPORTED_LOCATION resolves
-for f in %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.so* %{_libdir}/llvm%{llvm_maj_ver}/lib/lib*.a; do
-    [ -e "$f" ] && ln -sf "$f" %{_builddir}/llvm-prefix/lib/$(basename "$f")
-done
-# Symlink lib64 to lib for cmake path resolution
-ln -snf lib %{_builddir}/llvm-prefix/lib64
-# Symlink binaries so cmake IMPORTED_LOCATION resolves for executables
-mkdir -p %{_builddir}/llvm-prefix/bin
-for f in %{_libdir}/llvm%{llvm_maj_ver}/bin/*; do
-    [ -e "$f" ] && ln -sf "$f" %{_builddir}/llvm-prefix/bin/$(basename "$f")
-done
 
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
@@ -195,7 +178,6 @@ ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 %cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD="" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
-    -DLLVM_DIR=%{_builddir}/llvm-prefix/lib/cmake/llvm \
     %{?__cmake_build_type:-DCMAKE_BUILD_TYPE="%{__cmake_build_type}"}
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -206,7 +188,6 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %define _vpath_builddir build-comgr
 %cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH \
     -DCMAKE_MODULE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib \
-    -DLLVM_DIR=%{_builddir}/llvm-prefix/lib/cmake/llvm \
     -DCMAKE_BUILD_TYPE="RELEASE" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
