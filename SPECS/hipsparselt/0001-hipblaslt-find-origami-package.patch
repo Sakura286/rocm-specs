@@ -8,18 +8,14 @@ Subject: [PATCH] hipblaslt find origami package
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index dbccca92c84f..d02df50540c2 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -218,7 +218,7 @@ if(HIPBLASLT_ENABLE_MSGPACK)
-     endif()
+@@ -217,7 +217,7 @@
+     # TODO: This is a temporary solution to prevent the installation of the origami license files.
+     block(SCOPE_FOR VARIABLES)
+         set(ORIGAMI_ENABLE_INSTALL OFF)
+-        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../shared/origami" origami)
++        find_package(origami CONFIG REQUIRED)
+     endblock()
  endif()
  
--add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../shared/origami" origami)
-+find_package(origami CONFIG REQUIRED)
- add_subdirectory(tensilelite)
- 
- if(HIPBLASLT_ENABLE_HOST)
 -- 
 2.52.0
-
