@@ -698,26 +698,28 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %pyproject_save_files '*torch*'
 
 %check
-# Filter structurally un-importable / unpackageable modules from the import
-# check list.  (%pyproject_check_import's -e flag is silently dropped by the
-# macro definition -- its body forwards %{?**} but not %{-e} -- so edit the
-# modules file directly.)
+# Skip structurally un-importable / unpackageable modules from the import
+# smoke test.  We invoke import_all_modules.py directly instead of using
+# %pyproject_check_import, because that macro's body forwards %{?**}
+# (positional args) but never %{-e} -- so -e excludes are silently dropped.
 #
 # - torch.lib.lib*: C++ shared libs in torch/lib/ (libtorch, libc10, libshm,
 #   libaoti_custom_ops, libbackend_with_compiler, libjitbackend_test,
-#   libtorch_cpu, libtorch_global_deps, libtorch_python, libtorchbind_test)
-#   have no PyInit_ symbol -- not Python extensions, only shipped for rpath.
+#   libtorch_cpu, libtorch_global_deps, libtorch_python, libtorchbind_test,
+#   plus the ROCm-only libc10_hip, libtorch_hip, libcaffe2_nvrtc) have no
+#   PyInit_ symbol -- not Python extensions, only shipped for rpath.
 # - torchgen.static_runtime.gen_static_runtime_ops: imports libfb, which is
 #   Meta-internal and not open source; this is a build-time codegen tool,
 #   not part of the installed runtime.
 # - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi
 #   (heavy optional integration; packaging it is a separate task).
-sed -i \
-  -e '/^torch\.lib\.lib/d' \
-  -e '/^torchgen\.static_runtime\.gen_static_runtime_ops$/d' \
-  -e '/^torch\.utils\.tensorboard/d' \
-  "%{_pyproject_modules}"
-%pyproject_check_import torch
+PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
+PYTHONDONTWRITEBYTECODE=1 \
+%{__python3} -sP %{_rpmconfigdir}/openruyi/import_all_modules.py \
+  -f "%{_pyproject_modules}" torch \
+  -e 'torch.lib.lib*' \
+  -e 'torchgen.static_runtime.gen_static_runtime_ops' \
+  -e 'torch.utils.tensorboard*'
 
 %files
 %license LICENSE
