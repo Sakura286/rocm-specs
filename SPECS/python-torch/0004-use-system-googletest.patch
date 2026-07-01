@@ -1,6 +1,6 @@
-From 90d7693267ed1e5c6e852609b156f79adf6ddac2 Mon Sep 17 00:00:00 2001
+From d602862f2771ffc1f3ae82ea25eb2ef88bc3e624 Mon Sep 17 00:00:00 2001
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Date: Wed, 1 Jul 2026 15:11:12 +0800
+Date: Wed, 1 Jul 2026 16:41:38 +0800
 Subject: [PATCH] use system googletest
 
 Replace the vendored third_party/googletest add_subdirectory() with
@@ -12,20 +12,25 @@ distribution already ships.
 PyTorch's test CMakeLists link the bare target names
   gtest, gtest_main, gmock, gmock_main
 but find_package(GTest) provides the GTest::-prefixed imported targets,
-so ALIAS targets map the bare names to the imported ones.
+so ALIAS targets map the bare names to the imported ones.  The test
+sources include <gtest/gtest.h> and <gmock/gmock.h> directly; the
+GTest:: imported targets carry /usr/include as
+INTERFACE_INCLUDE_DIRECTORIES, but aliasing does not reliably propagate
+those to the bare-named link targets, so add /usr/include explicitly
+the way the upstream vendored block did.
 
 The BUILD_SHARED_LIBS=OFF save/set/restore around the block is kept so
 the vendored benchmark (still built via add_subdirectory below) stays
 static; only the gtest-specific lines are removed.
 ---
- cmake/Dependencies.cmake | 19 ++++++++++---------
- 1 file changed, 10 insertions(+), 9 deletions(-)
+ cmake/Dependencies.cmake | 26 +++++++++++++++++---------
+ 1 file changed, 17 insertions(+), 9 deletions(-)
 
 diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
-index dac0d1f..9a20c6f 100644
+index dac0d1f..56aa919 100644
 --- a/cmake/Dependencies.cmake
 +++ b/cmake/Dependencies.cmake
-@@ -650,17 +650,18 @@ if(BUILD_TEST OR BUILD_MOBILE_BENCHMARK OR BUILD_MOBILE_TEST)
+@@ -650,17 +650,25 @@ if(BUILD_TEST OR BUILD_MOBILE_BENCHMARK OR BUILD_MOBILE_TEST)
    # Preserve build options.
    set(TEMP_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
  
@@ -50,6 +55,13 @@ index dac0d1f..9a20c6f 100644
 +  add_library(gtest_main ALIAS GTest::gtest_main)
 +  add_library(gmock ALIAS GTest::gmock)
 +  add_library(gmock_main ALIAS GTest::gmock_main)
++  # The test sources include <gtest/gtest.h> and <gmock/gmock.h> directly.
++  # The GTest:: imported targets carry /usr/include as
++  # INTERFACE_INCLUDE_DIRECTORIES, but aliasing does not reliably propagate
++  # those to the bare-named link targets the test CMakeLists use, so expose
++  # the system header directory the way the upstream vendored block did
++  # (the headers live under /usr/include/gtest/ and /usr/include/gmock/).
++  include_directories(BEFORE SYSTEM /usr/include)
  
    # We will not need to test benchmark lib itself.
    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Disable benchmark testing as we don't need it.")
