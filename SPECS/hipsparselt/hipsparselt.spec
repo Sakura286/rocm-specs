@@ -40,6 +40,10 @@ BuildSystem:    cmake
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
+# HIPSPARSELT_ENABLE_CLIENT gates the clients/ subdir (benchmarks/samples nest
+# under it); default ON pulls in clients/CMakeLists.txt which fatally requires
+# LAPACK. Tie it to the test toggle like hipblaslt's HIPBLASLT_ENABLE_CLIENT.
+BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=%{cmake_test}
 BuildOption(conf):  -DBUILD_VERBOSE=ON
 BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gcc-fortran
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
