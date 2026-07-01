@@ -5,7 +5,14 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# The "cpu" multibuild flavor builds a CPU-only ollama; the default flavor builds
+# the ROCm backend.  Local builds can also force CPU with --without rocm.
+%global flavor @BUILD_FLAVOR@%{nil}
+%if "%{flavor}" == "cpu"
+%bcond rocm 0
+%else
 %bcond rocm 1
+%endif
 
 %define _name           ollama
 %define go_import_path  github.com/ollama/ollama
