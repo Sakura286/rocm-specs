@@ -223,6 +223,9 @@ BuildRequires:  openmpi-devel
 # gtest-devel only runtime-Requires (not -devel), so pull it in explicitly.
 BuildRequires:  cmake(GTest)
 BuildRequires:  gmock-devel
+# urllib3 is needed by torch.distributed.elastic.rendezvous.etcd_rendezvous_backend
+# (optional etcd backend, shipped in the package); python-urllib3 is in openRuyi.
+BuildRequires:  python3dist(urllib3)
 %endif
 
 %if %{with system_flatbuffers}
@@ -695,7 +698,20 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %pyproject_save_files '*torch*'
 
 %check
-%pyproject_check_import torch
+# Skip modules that are structurally un-importable or need unpackageable deps:
+# - torch.lib.lib*: C++ shared libs in torch/lib/ (libtorch, libc10, libshm,
+#   libaoti_custom_ops, libbackend_with_compiler, libjitbackend_test,
+#   libtorch_cpu, libtorch_global_deps, libtorch_python, libtorchbind_test)
+#   have no PyInit_ symbol -- not Python extensions, only shipped for rpath.
+# - torchgen.static_runtime.gen_static_runtime_ops: imports libfb, which is
+#   Meta-internal and not open source; this is a build-time codegen tool,
+#   not part of the installed runtime.
+# - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi
+#   (heavy optional integration; packaging it is a separate task).
+%pyproject_check_import torch \
+  -e 'torch.lib.lib*' \
+  -e 'torchgen.static_runtime.gen_static_runtime_ops' \
+  -e 'torch.utils.tensorboard*'
 
 %files
 %license LICENSE
