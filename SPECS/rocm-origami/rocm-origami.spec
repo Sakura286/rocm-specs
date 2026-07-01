@@ -30,11 +30,11 @@ BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 
-BuildRequires:  clang
+BuildRequires:  clang22
 BuildRequires:  cmake
 BuildRequires:  cmake(hip)
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  ninja
@@ -70,7 +70,7 @@ rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
 %files
 %doc README.md
 %license LICENSE.md
-%{_libdir}/liborigami.so.0{,.*}
+%{_libdir}/liborigami.so.1{,.*}
 
 %files devel
 %{_includedir}/origami/
