@@ -21,8 +21,8 @@
 # This ROCm package is built with clang by default
 %global toolchain clang
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           hipsparse
@@ -31,7 +31,7 @@ Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
 License:        MIT
 Url:            https://github.com/ROCm/hipSPARSE
-#!RemoteAsset:  sha256:b001834d8e65c3878d1a69d08803d5b6ce4fe623e78099fe51cb146d0ffa10e7
+#!RemoteAsset:  sha256:c6ba07bd940b2678ba8a087333f103c1846efb7ffffffc5ed9174aca78d9f090
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
