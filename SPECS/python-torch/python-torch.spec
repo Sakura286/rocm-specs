@@ -698,7 +698,11 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %pyproject_save_files '*torch*'
 
 %check
-# Skip modules that are structurally un-importable or need unpackageable deps:
+# Filter structurally un-importable / unpackageable modules from the import
+# check list.  (%pyproject_check_import's -e flag is silently dropped by the
+# macro definition -- its body forwards %{?**} but not %{-e} -- so edit the
+# modules file directly.)
+#
 # - torch.lib.lib*: C++ shared libs in torch/lib/ (libtorch, libc10, libshm,
 #   libaoti_custom_ops, libbackend_with_compiler, libjitbackend_test,
 #   libtorch_cpu, libtorch_global_deps, libtorch_python, libtorchbind_test)
@@ -708,10 +712,12 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 #   not part of the installed runtime.
 # - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi
 #   (heavy optional integration; packaging it is a separate task).
-%pyproject_check_import torch \
-  -e 'torch.lib.lib*' \
-  -e 'torchgen.static_runtime.gen_static_runtime_ops' \
-  -e 'torch.utils.tensorboard*'
+sed -i \
+  -e '/^torch\.lib\.lib/d' \
+  -e '/^torchgen\.static_runtime\.gen_static_runtime_ops$/d' \
+  -e '/^torch\.utils\.tensorboard/d' \
+  "%{_pyproject_modules}"
+%pyproject_check_import torch
 
 %files
 %license LICENSE
