@@ -37,8 +37,8 @@ BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 
 BuildRequires:  boost-devel
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -46,10 +46,10 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  libomp-devel
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  pkgconfig(sqlite3)
