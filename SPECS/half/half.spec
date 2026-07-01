@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch   1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           half
@@ -15,7 +15,7 @@ Release:        %autorelease
 Summary:        ROCm half-precision floating point library
 License:        MIT
 Url:            https://github.com/ROCm/half
-#!RemoteAsset:  sha256:1b5de9e50513560265a79022fd74322b77216f9bf938be688709a8e7d1d8d09d
+#!RemoteAsset:  sha256:8cbe655d3ef19675e953934cf0cb49fdf899459407fbc6848af52282269fc7f9
 Source0:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
