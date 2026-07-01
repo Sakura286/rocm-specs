@@ -17,14 +17,10 @@ Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DROCM_VERSION=%{rocm_version}
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  cmake
 
 Provides:       rocm-core = %{version}-%{release}
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 %{summary}
