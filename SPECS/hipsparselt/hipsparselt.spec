@@ -35,6 +35,9 @@ Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
 Source3:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
+# -mf16c is an x86-only clang flag (F16C intrinsics); guard it on x86 so the
+# hipSPARSELt library builds on non-x86 hosts like riscv64. cf. ollama PR #8129
+Patch0:         2001-hipsparselt-guard-mf16c-to-x86.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
