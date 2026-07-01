@@ -19,7 +19,7 @@
 # Install and do something like
 #   export LD_LIBRARY_PATH=/usr/lib64/python3.12/site-packages/torch/lib
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
-%bcond test 0
+%bcond test 1
 
 # The "cpu" multibuild flavor builds a CPU-only torch; the default flavor builds
 # the ROCm backend.  Local builds can also force CPU with --without rocm.
