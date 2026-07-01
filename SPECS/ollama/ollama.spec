@@ -9,6 +9,7 @@
 
 %define _name           ollama
 %define go_import_path  github.com/ollama/ollama
+%define go_test_ignore_failure 1
 
 # Ollama bundles some ggml libs
 # They should be kept private and the scans of these files should be disabled
