@@ -32,8 +32,8 @@ BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
 
 BuildRequires:  boost-devel
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
@@ -42,9 +42,9 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocfft)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  rocm-cmake
