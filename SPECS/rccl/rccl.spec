@@ -43,6 +43,7 @@ BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{rocm_version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DBUILD_TESTS=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
@@ -65,6 +66,9 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 
 Requires:       %{name}-data = %{version}-%{release}
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 RCCL (pronounced "Rickle") is a stand-alone library of standard
