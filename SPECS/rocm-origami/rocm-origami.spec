@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           rocm-origami
@@ -15,7 +15,7 @@ Release:        %autorelease
 Summary:        Analytical GEMM Solution Selection
 License:        MIT
 Url:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:1fb56e620a06e198aeec2cf37c11e6879d0c67c62e295b48779b7f486e34acb4
+#!RemoteAsset:  sha256:f917d10a3a9a8ec2f527c046a90a674a655b007d28132058c20e0fb34f6fcf71
 Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
 # License file is not included in the release tarball
 #!RemoteAsset:  sha256:b185aaa652b0bf066c37a0d6314ce4bf4521e4a3c9bf46edd2f6a777ac522223
