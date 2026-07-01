@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global toolchain clang
@@ -35,7 +35,7 @@ Release:        %autorelease
 Summary:        ROCm general matrix operations beyond BLAS
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
+#!RemoteAsset:  sha256:72ad0a8db025c6d47397791a9fce5c80cde1b89fc830523d0b34e5138329de63
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 BuildSystem:    cmake
 
