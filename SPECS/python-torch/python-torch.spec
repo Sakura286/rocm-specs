@@ -228,10 +228,6 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
 %endif
 
-%if %{with test}
-BuildRequires:  cmake(GTest)
-%endif
-
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
 %if %{with rocm}
@@ -411,6 +407,10 @@ mv third_party/kineto .
 
 mv third_party/mslk .
 
+%if %{with test}
+mv third_party/googletest .
+%endif
+
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
@@ -434,6 +434,10 @@ mv kineto third_party
 %endif
 
 mv mslk third_party
+
+%if %{with test}
+mv googletest third_party
+%endif
 
 # gloo: vendored submodule for the torch.distributed Gloo backend (USE_GLOO=ON).
 # The pytorch archive ships third_party/gloo empty and the scrub above
