@@ -16,13 +16,13 @@
 %global __requires_exclude libggml-.*\\.so(\\..*)?
 
 Name:           ollama
-Version:        0.13.5
+Version:        0.31.1
 Release:        %autorelease
 Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models.
 License:        MIT
 URL:            https://ollama.com/
 VCS:            git:https://github.com/ollama/ollama
-#!RemoteAsset:  sha256:6b6bc20a52c11341aa296eecce5ee6782f05815224a4196983b0aa2f1453c19f
+#!RemoteAsset:  sha256:bb2ce0462f956d44cd4bed39e3c772fcfd22f1b02217dc8dbc1375efeac9751f
 Source0:        https://github.com/ollama/ollama/archive/refs/tags/v%{version}.tar.gz
 Source1:        ollama.service
 Source2:        ollama.sysusers
@@ -31,35 +31,41 @@ BuildSystem:    golang
 BuildOption(prep):  -n %{_name}-%{version}
 
 BuildRequires:  cmake
-BuildRequires:  fdupes
 BuildRequires:  gcc-c++
+BuildRequires:  git
 BuildRequires:  go
 BuildRequires:  go-rpm-macros
 BuildRequires:  go(github.com/agnivade/levenshtein)
+BuildRequires:  go(github.com/charmbracelet/bubbletea)
+BuildRequires:  go(github.com/charmbracelet/lipgloss)
 BuildRequires:  go(github.com/containerd/console)
 BuildRequires:  go(github.com/d4l3k/go-bfloat16)
 BuildRequires:  go(github.com/dlclark/regexp2)
 BuildRequires:  go(github.com/emirpasic/gods/v2)
-BuildRequires:  go(github.com/gin-contrib/cors)
 BuildRequires:  go(github.com/gin-gonic/gin)
 BuildRequires:  go(github.com/google/go-cmp)
 BuildRequires:  go(github.com/google/uuid)
+BuildRequires:  go(github.com/klauspost/compress)
 BuildRequires:  go(github.com/mattn/go-runewidth)
+BuildRequires:  go(github.com/mattn/go-sqlite3)
 BuildRequires:  go(github.com/nlpodyssey/gopickle)
 BuildRequires:  go(github.com/olekukonko/tablewriter) < 1.0.0
 BuildRequires:  go(github.com/pdevine/tensor)
+BuildRequires:  go(github.com/pelletier/go-toml/v2)
+BuildRequires:  go(github.com/pkg/browser)
 BuildRequires:  go(github.com/spf13/cobra)
 BuildRequires:  go(github.com/stretchr/testify)
+BuildRequires:  go(github.com/tkrajina/typescriptify-golang-structs)
+BuildRequires:  go(github.com/tree-sitter/go-tree-sitter)
+BuildRequires:  go(github.com/tree-sitter/tree-sitter-cpp/bindings/go)
+BuildRequires:  go(github.com/wk8/go-ordered-map/v2)
 BuildRequires:  go(github.com/x448/float16)
-BuildRequires:  go(golang.org/x/crypto)
 BuildRequires:  go(golang.org/x/image)
 BuildRequires:  go(golang.org/x/mod)
 BuildRequires:  go(golang.org/x/sync)
-BuildRequires:  go(golang.org/x/term)
-BuildRequires:  go(golang.org/x/text)
+BuildRequires:  go(golang.org/x/sys)
 BuildRequires:  go(golang.org/x/tools)
 BuildRequires:  go(gonum.org/v1/gonum)
-BuildRequires:  go(google.golang.org/protobuf)
 BuildRequires:  ninja
 BuildRequires:  systemd-rpm-macros
 %if %{with rocm}
@@ -89,9 +95,6 @@ Requires:       rocblas
 %endif
 
 %patchlist
-# Ollama vendors ggml code, but it does not sync riscv64 code by default
-# Manually sync riscv64 code here
-0001-ollama-0.14.2_add-riscv.patch
 # Ollama put ggml-cpu code(cpp) inside 'ollama' binary file(go)
 0002-go-riscv64.patch
 # Golang buildsystem on openRuyi use GO11MODULE=off, makes
@@ -99,23 +102,17 @@ Requires:       rocblas
 # Without this patch, ollama cannot provide even the basic http functions
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
 0003-disable-httpmuxgo121-on-newer-version-of-go.patch
-# This patch breaks dlopen of ollama, temporarily disable it
-# Install ollama to /usr/lib as workaround
-# 0004-use-lib64-instead-of-lib.patch
-# GGML_CPU_ALL_VARIANTS only supports x86_64
-0005-disable-cpu-variants.patch
 # Llama.cpp(ggml) on riscv64's ROCm frequently produce nonsense
 # Give parameter '-b 8 -ub 8' can stabilize it
 0006-limit-batch-size-to-stabilize.patch
+# NOTE: 0001 (riscv ggml) and 0005 (disable cpu variants) were dropped
+# because 0.31.1 fetches llama.cpp via FetchContent/ExternalProject.
+# riscv64 CPU variants are now disabled via cmake option in %build.
 
 %description
 Ollama is an open-source platform designed to run large language models locally.
 It allows users to generate text, assist with coding, and create content privately
 and securely on their own devices.
-
-%prep -a
-# Remove bundled dependencies
-rm -rf llama/llama.cpp/vendor
 
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
@@ -128,6 +125,9 @@ rm -rf llama/llama.cpp/vendor
     -DCMAKE_INSTALL_FULL_LIBDIR:PATH=/usr/lib \
     -DLIB_INSTALL_DIR:PATH=/usr/lib \
     -DLIB_SUFFIX= \
+%ifarch riscv64
+    -DGGML_CPU_ALL_VARIANTS=OFF \
+%endif
 %if %{with rocm}
     -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ \
     -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
