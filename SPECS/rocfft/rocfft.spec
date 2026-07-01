@@ -35,6 +35,7 @@ BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
 BuildRequires:  clang22
@@ -57,6 +58,9 @@ BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 rocFFT is a software library for computing fast Fourier transforms (FFTs) written
