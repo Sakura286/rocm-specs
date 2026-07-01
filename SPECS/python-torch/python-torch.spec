@@ -380,9 +380,13 @@ sed -i -e 's@add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)@#add_subdir
 sed -i -e 's@set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")@#set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")@' cmake/Dependencies.cmake
 sed -i -e 's@list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)@#list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)@' cmake/Dependencies.cmake
 
-# When BUILD_TEST=ON, test cmake files also reference fmt::fmt-header-only.
-# Replace it globally across the test tree.
+# When BUILD_TEST=ON, test cmake files reference fmt::fmt-header-only.
+# Our global fmt::fmt-header-only -> fmt replacement also applies to generator
+# expressions ($<TARGET_PROPERTY:fmt,...>) which fail if the system fmt target
+# differs from what pytorch expects. Replace the generator expression with a
+# hardcoded /usr/include (fmt is header-only and installed there).
 find test -name CMakeLists.txt -exec sed -i -e 's@fmt::fmt-header-only@fmt@g' {} +
+sed -i 's@\$<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>@/usr/include@g' test/cpp/c10d/CMakeLists.txt
 
 # No third_party FXdiv
 sed -i -e 's@if(NOT TARGET fxdiv)@if(MSVC AND USE_XNNPACK)@' caffe2/CMakeLists.txt
