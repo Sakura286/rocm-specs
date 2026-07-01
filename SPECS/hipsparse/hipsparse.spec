@@ -42,8 +42,8 @@ BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 %if %{with build_test}
@@ -53,10 +53,10 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
