@@ -34,6 +34,7 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  git
 BuildRequires:  go
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  go-rpm-macros
 BuildRequires:  go(github.com/agnivade/levenshtein)
 BuildRequires:  go(github.com/charmbracelet/bubbletea)
