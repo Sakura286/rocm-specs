@@ -50,6 +50,7 @@ BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
@@ -88,6 +89,9 @@ BuildRequires:  pkgconfig(openblas)
 BuildRequires:  pkgconfig(gtest)
 BuildRequires:  pkgconfig(gmock)
 %endif
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipSPARSELt is a SPARSE marshaling library that provides general sparse
