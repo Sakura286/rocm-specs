@@ -54,14 +54,22 @@ BuildRequires:  pkgconfig(libcurl)
 
 # Use the distro's system libraries instead of the bundled (empty in the release
 # tarball) git submodules. Catch2 is resolved unconditionally even with tests off,
-# so it must use the system lib too; jthread is skipped (C++20 std::jthread) and
-# TransferBench ships in-tree under plugins/common/tb_engine.
+# so it must use the system lib too; jthread is skipped (C++20 std::jthread).
 BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
 BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
 BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
 BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
 BuildOption(conf):  -DUSE_LOCAL_CATCH2=ON
 BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
+
+# Skip the TransferBench (tb) plugin: it is a nested ExternalProject that compiles
+# HIP device code with hipcc for every GPU arch, which needs a working GPU toolchain
+# (rocm_agent_enumerator) in the build root and cannot be verified without a GPU.
+# The core bandwidth-test binary and the builtin/amd-hello plugins do not need it.
+BuildOption(conf):  -DAMD_WORK_BENCH_EXCLUDE_PLUGINS=tb
+# The core libamd_work_bench trips -Werror=unused-parameter under the default GNU
+# toolchain; upstream promotes warnings to errors by default.
+BuildOption(conf):  -DAMD_APP_TREAT_WARNINGS_AS_ERRORS=OFF
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
@@ -84,16 +92,15 @@ cp %{SOURCE1} .
 %install -a
 # Upstream's CPack/staging "distribution package" install is bypassed (see Patch0);
 # install the artifacts by hand. The build emits the ELF plus a 'rocm-bandwidth-test'
-# symlink in the vpath build dir, the plugins as *.amdplug, and two internal shared
-# libraries scattered across the build tree.
+# symlink in the vpath build dir, the plugins as *.amdplug, and the internal
+# libamd_work_bench shared library.
 install -Dm0755 %{_vpath_builddir}/%{upstreamname} %{buildroot}%{_bindir}/%{upstreamname}
 ln -sf %{upstreamname} %{buildroot}%{_bindir}/%{name}
 
-# Internal shared libs go in the standard libdir so the dynamic linker (and the
-# dlopen'd plugins) resolve them by default, without RPATH.
+# The internal shared lib goes in the standard libdir so the dynamic linker (and the
+# dlopen'd plugins) resolve it by default, without RPATH.
 install -dm0755 %{buildroot}%{_libdir}
-find . \( -name 'libamd_work_bench.so*' -o -name 'libamd_tb_engine.so*' \) \
-    -exec cp -a -t %{buildroot}%{_libdir}/ {} +
+find . -name 'libamd_work_bench.so*' -exec cp -a -t %{buildroot}%{_libdir}/ {} +
 
 # Plugins are dlopen'd from the path baked into the binary at build time
 # (SYSTEM_DEFAULT_PLUGIN_INSTALL_PATH = %{_libdir}/%{upstreamname}, scanned directly).
@@ -120,7 +127,6 @@ install -m0755 %{_vpath_builddir}/plugins/*.amdplug %{buildroot}%{_libdir}/%{ups
 %{_bindir}/%{upstreamname}
 %{_bindir}/%{name}
 %{_libdir}/libamd_work_bench.so*
-%{_libdir}/libamd_tb_engine.so*
 %{_libdir}/%{upstreamname}/
 
 %changelog
