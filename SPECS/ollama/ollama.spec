@@ -124,6 +124,10 @@ and securely on their own devices.
 # Pre-extract llama.cpp for offline OBS build (FetchContent/ExternalProject can't access network)
 tar xf %{SOURCE3} -C %{_builddir}
 ln -sf %{_builddir}/llama.cpp-%{llama_cpp_commit} %{_builddir}/llama.cpp-src
+# Apply ollama's compat patch to the pre-extracted llama.cpp
+pushd %{_builddir}/llama.cpp-src
+patch -p1 < %{_builddir}/%{_name}-%{version}/llama/compat/001-llama-cpp-hooks.patch
+popd
 
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
