@@ -135,7 +135,7 @@ popd
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
-%check -a
+%check -p
 # Skip Go tests: some fail due to NumBatch patch and TLS/network issues in OBS
 exit 0
 
