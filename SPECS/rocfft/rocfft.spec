@@ -10,8 +10,8 @@
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1 
+%global rocm_release 7.2
+%global rocm_patch   4 
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -23,7 +23,7 @@ Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 License:        MIT
 Url:            https://github.com/ROCm/rocFFT
-#!RemoteAsset:  sha256:047e4e93e0b12869bf42136b5eb683df3a1635b01a58bbb25c8861df291ab285
+#!RemoteAsset:  sha256:3a01fab8e598e16d42dbcbd3ce942b9b55a86d1c2ce383dec829835f42b42222
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
