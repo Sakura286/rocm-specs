@@ -48,7 +48,7 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(rocrand)
 BuildRequires:  compiler-rt22
-BuildRequires:  libomp-devel
+BuildRequires:  libomp22-devel
 BuildRequires:  lld22
 BuildRequires:  llvm22
 BuildRequires:  ninja
