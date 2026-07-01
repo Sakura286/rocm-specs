@@ -217,10 +217,12 @@ BuildRequires:  openmpi-devel
 %endif
 
 %if %{with test}
-# System googletest for BUILD_TEST=ON (see Patch3).  gtest-devel pulls in
-# gmock-devel transitively; both ship shared libs that the test binaries in
-# torch/bin link against at runtime.
+# System googletest for BUILD_TEST=ON (see Patch3).  cmake(GTest) brings
+# gtest-devel (which carries the gtest/gmock cmake config and gtest headers);
+# gmock's headers ship in the separate gmock-devel package, which
+# gtest-devel only runtime-Requires (not -devel), so pull it in explicitly.
 BuildRequires:  cmake(GTest)
+BuildRequires:  gmock-devel
 %endif
 
 %if %{with system_flatbuffers}
