@@ -45,17 +45,17 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=%{build_test}
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(rocprim)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
