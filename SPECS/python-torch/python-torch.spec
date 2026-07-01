@@ -470,6 +470,11 @@ tar xf %{SOURCE11}
 rm -rf third_party/benchmark
 mkdir -p third_party/benchmark
 cp -r benchmark-*/* third_party/benchmark/
+
+# benchmark's cmake uses try_run to detect regex backend, which fails
+# in this build environment.  Predefine HAVE_STD_REGEX so the
+# cxx_feature_check macro skips the probe and uses std::regex.
+sed -i '/cmake_minimum_required/a\set(HAVE_STD_REGEX 1)' third_party/benchmark/CMakeLists.txt
 %endif
 
 # Fake out pocketfft, and system header will be used
