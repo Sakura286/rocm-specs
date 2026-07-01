@@ -67,6 +67,7 @@ BuildRequires:  gcc-fortran
 BuildRequires:  lld22
 BuildRequires:  llvm22
 BuildRequires:  ninja
+BuildRequires:  libomp22-devel
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(msgpack)
 BuildRequires:  pkgconfig(python3)

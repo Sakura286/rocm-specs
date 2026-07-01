@@ -25,10 +25,6 @@ Url:            https://github.com/ROCm/MIOpen
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-# Adds MIOPEN_PARALLEL_{COMPILE,LINK}_JOBS options to limit Ninja job pools
-# and avoid OOM on memory-constrained build hosts (upstream patch)
-Patch0:         0001-miopen-add-link-and-compile-pools.patch
-
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBoost_USE_STATIC_LIBS=OFF
