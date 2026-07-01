@@ -8,8 +8,8 @@
 # Tests require an AMD GPU; keep the bcond for packagers with hardware.
 %bcond test 0
 
-%global rocm_release 7.1
-%global rocm_patch   1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -21,7 +21,7 @@ Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
 Url:            https://github.com/ROCm/MIOpen
-#!RemoteAsset:  sha256:98c72a2b5ca541d6c172facdf0f15729207ab52ca9af36c00e2480c5b27c5b99
+#!RemoteAsset:  sha256:983fda99d67d57f1354123101bea3af0f11f746d7ff3306bfc2700e6f6f5bb0f
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
