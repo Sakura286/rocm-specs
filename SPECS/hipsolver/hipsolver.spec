@@ -42,6 +42,7 @@ BuildSystem:    cmake
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
@@ -65,6 +66,9 @@ BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  pkgconfig(openblas)
 %endif
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipSOLVER is a LAPACK marshalling library, with multiple supported backends.
