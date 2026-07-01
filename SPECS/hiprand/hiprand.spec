@@ -10,8 +10,8 @@
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond run_test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -23,7 +23,7 @@ Release:        %autorelease
 Summary:        HIP random number generator
 License:        MIT AND BSD-3-Clause
 Url:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:41e4053a3c16ea4bdc6e94fff428d8ffe7279e9cfa7ec142afc50169aae2c1f8
+#!RemoteAsset:  sha256:c31cec665ee0a7333fd4dfa54d46dd601710a17f56826f1d309aea4333c37360
 Source:         %{url}/releases/download/rocm-%{version}/hiprand.tar.gz
 BuildSystem:    cmake
 
