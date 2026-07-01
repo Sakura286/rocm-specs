@@ -116,21 +116,17 @@ Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-
 #!RemoteAsset:  sha256:6a8c7ea8e3048762aaf3472f969ee42c2163e7ffcbb195eea4f245c1f7bd8cc3
 Source9:       https://github.com/pytorch/gloo/archive/%{gloo_commit}/gloo-%{gloo_scommit}.tar.gz
 
-# googletest: pinned submodule for building tests (BUILD_TEST=ON).
-# The release tarball ships third_party/googletest as an empty submodule
-# directory, so vendor it explicitly.
-%global googletest_commit 52eb8108c5bdec04579160ae17225d66034bd723
-%global googletest_scommit 52eb810
-#!RemoteAsset:  sha256:745c55415660044610f7fcd3af7a6420d5de16a7dbb9ebfe2e131275676232be
-Source10:      https://github.com/google/googletest/archive/%{googletest_commit}/googletest-%{googletest_scommit}.tar.gz
+# googletest is provided by the system gtest-devel (openRuyi package) when
+# BUILD_TEST=ON; see Patch3.  No vendored source needed.
 
 # benchmark: pinned submodule for building tests (BUILD_TEST=ON).
 # The release tarball ships third_party/benchmark as an empty submodule
-# directory, so vendor it explicitly.
+# directory, so vendor it explicitly.  (No system google-benchmark in
+# openRuyi yet.)
 %global benchmark_commit 299e5928955cc62af9968370293b916f5130916f
 %global benchmark_scommit 299e592
 #!RemoteAsset:  sha256:a9f63d40157775f13ca8a5c6769603cc0708f4eb81a1f539abdf0f85a10c17dd
-Source11:      https://github.com/google/benchmark/archive/%{benchmark_commit}/benchmark-%{benchmark_scommit}.tar.gz
+Source10:      https://github.com/google/benchmark/archive/%{benchmark_commit}/benchmark-%{benchmark_scommit}.tar.gz
 
 # pytorch upstream issue #173707: libtorch_hip.so references the
 # const_data_ptr / mutable_data_ptr / data_ptr template family with a
@@ -155,6 +151,14 @@ Patch1:        0002-remove-pyrefly-comments-between-overload-decorator-and-def.p
 # GEMM has no Tensile solution for some shapes on gfx1100, failing with
 # HIPBLAS_STATUS_INTERNAL_ERROR.  hipBLASLt handles every shape.
 Patch2:        0003-default-to-hipblaslt-on-gfx1100.patch
+
+# Use the system googletest (openRuyi gtest-devel) instead of the vendored
+# submodule when BUILD_TEST=ON.  Upstream hardcodes
+# add_subdirectory(third_party/googletest) and the test CMakeLists link the
+# bare target names gtest / gtest_main / gmock / gmock_main; switch to
+# find_package(GTest) and alias the GTest:: targets to those bare names so
+# the distro's shared gtest/gmock are used and not statically vendored.
+Patch3:        0004-use-system-googletest.patch
 
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
@@ -210,6 +214,13 @@ BuildRequires:  cmake(onnxruntime)
 
 %if %{with mpi}
 BuildRequires:  openmpi-devel
+%endif
+
+%if %{with test}
+# System googletest for BUILD_TEST=ON (see Patch3).  gtest-devel pulls in
+# gmock-devel transitively; both ship shared libs that the test binaries in
+# torch/bin link against at runtime.
+BuildRequires:  cmake(GTest)
 %endif
 
 %if %{with system_flatbuffers}
@@ -464,17 +475,14 @@ mkdir -p third_party/gloo
 cp -r gloo-*/* third_party/gloo/
 
 %if %{with test}
-# googletest: vendored submodule for building tests (BUILD_TEST=ON).
-# The release tarball ships third_party/googletest empty, so unpack
-# the pinned version explicitly.
-tar xf %{SOURCE10}
-rm -rf third_party/googletest
-mkdir -p third_party/googletest
-cp -r googletest-*/* third_party/googletest/
+# googletest is provided by the system gtest-devel (openRuyi package) instead
+# of the vendored submodule -- see Patch3 which makes PyTorch's cmake call
+# find_package(GTest) and alias the GTest:: targets to the bare names the
+# test CMakeLists link against.
 
 # benchmark: vendored submodule for building tests (BUILD_TEST=ON).
-# Same situation as googletest.
-tar xf %{SOURCE11}
+# No system google-benchmark in openRuyi yet, so vendor it explicitly.
+tar xf %{SOURCE10}
 rm -rf third_party/benchmark
 mkdir -p third_party/benchmark
 cp -r benchmark-*/* third_party/benchmark/
