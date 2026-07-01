@@ -51,8 +51,8 @@ BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -61,10 +61,10 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(msgpack)
