@@ -24,6 +24,7 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 # Workaround hipblaslt build issue:
 #   origami::origami target is missing
@@ -38,6 +39,9 @@ BuildRequires:  llvm22
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  ninja
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 The name "origami" still evokes the elegance of transforming
