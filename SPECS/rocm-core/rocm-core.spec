@@ -42,6 +42,8 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %doc README.md
 %license LICENSE.md
 %{_libdir}/librocm-core.so.*
+%{_bindir}/rdhc
+%{_datadir}/rdhc/
 
 %files devel
 %{_includedir}/rocm-core/*.h
