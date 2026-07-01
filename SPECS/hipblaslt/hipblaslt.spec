@@ -52,6 +52,7 @@ BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
 Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
@@ -99,6 +100,9 @@ BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
 %endif
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipBLASLt is a library that provides general matrix-matrix
