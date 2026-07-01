@@ -62,11 +62,12 @@ BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
 BuildOption(conf):  -DUSE_LOCAL_CATCH2=ON
 BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
 
-# Skip the TransferBench (tb) plugin: it is a nested ExternalProject that compiles
-# HIP device code with hipcc for every GPU arch, which needs a working GPU toolchain
-# (rocm_agent_enumerator) in the build root and cannot be verified without a GPU.
-# The core bandwidth-test binary and the builtin/amd-hello plugins do not need it.
-BuildOption(conf):  -DAMD_WORK_BENCH_EXCLUDE_PLUGINS=tb
+# Build only the 'builtin' plugin (it implements the actual bandwidth commands).
+# This whitelist drops the 'amd-hello' demo plugin and the TransferBench (tb) plugin
+# -- the latter is a nested ExternalProject that compiles HIP device code with hipcc
+# for every GPU arch, needs a working GPU toolchain (rocm_agent_enumerator) in the
+# build root, and cannot be verified without a GPU.
+BuildOption(conf):  -DAMD_WORK_BENCH_INCLUDE_PLUGINS=builtin
 # The core libamd_work_bench trips -Werror=unused-parameter under the default GNU
 # toolchain; upstream promotes warnings to errors by default.
 BuildOption(conf):  -DAMD_APP_TREAT_WARNINGS_AS_ERRORS=OFF
