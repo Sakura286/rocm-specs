@@ -18,8 +18,8 @@
 # keep the test cases for packagers who have a GPU.
 %bcond run_test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -35,7 +35,7 @@ Release:        %autorelease
 Summary:        ROCm SOLVER marshalling library (LAPACK)
 License:        MIT
 Url:            https://github.com/ROCm/hipSOLVER
-#!RemoteAsset:  sha256:bd664e3cd43bfcc7e94d5a387c27262c4b218d6d2e71e086992b174349dd1c10
+#!RemoteAsset:  sha256:a69d71dfadd760eb6b4fd5f45df8586cc1f978e371ad32a006aa9ca6ed9afa03
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
