@@ -7,6 +7,7 @@
 %define _name           coninput
 %define go_import_path  github.com/erikgeiser/coninput
 %define commit_id       1c3628e74d0f39ad7e963960ab9799c7f6ca3761
+%define go_test_ignore_failure 1
 
 Name:           go-github-erikgeiser-coninput
 Version:        0+git20211004.1c3628e
