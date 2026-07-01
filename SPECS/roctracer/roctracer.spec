@@ -14,8 +14,8 @@
 %global build_test OFF
 %endif
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -28,7 +28,7 @@ Summary:        ROCm Tracer Callback/Activity Library
 Url:            https://github.com/ROCm/roctracer
 VCS:            git:https://github.com/ROCm/roctracer.git
 License:        MIT
-#!RemoteAsset:  sha256:dec80803c6d2d684759172145177849efda65672645b95a2f2ad1a84335043bb
+#!RemoteAsset:  sha256:dbae23414fdb186085072b025d6b233b8ece27dd6e58e4650f5fb1fa2fe1af2a
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
