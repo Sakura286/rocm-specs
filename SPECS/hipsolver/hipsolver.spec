@@ -43,8 +43,8 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -52,10 +52,10 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocsolver)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
