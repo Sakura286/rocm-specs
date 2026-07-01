@@ -1,0 +1,111 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] tensilelite: add heartbeat output during parallel map to avoid
+ OBS logidlelimit timeout
+
+When generating assembly kernels on slow platforms (e.g. riscv64 emulation),
+the ParallelMap2 function can run for hours without any output. OBS kills the
+build after 28800 seconds (8 hours) of no output (logidlelimit).
+
+Add periodic progress output every 60 seconds during parallel execution to
+keep the build alive.
+
+diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common/Parallel.py
+index 1234567..abcdefg 100644
+--- a/tensilelite/Tensile/Common/Parallel.py
++++ b/tensilelite/Tensile/Common/Parallel.py
+@@ -23,6 +23,7 @@
+ ################################################################################
+ 
+ import concurrent.futures
++import threading
+ import itertools
+ import os
+ import sys
+@@ -200,6 +201,45 @@ def ParallelMapReturnAsGenerator(function, objects, message="", enable=True, mul
+             yield result.result()
+ 
+ 
++class HeartbeatMonitor:
++    """Periodically prints progress to prevent OBS logidlelimit from killing the build."""
++    
++    def __init__(self, message, interval=60):
++        self.message = message
++        self.interval = interval
++        self.completed = 0
++        self.total = 0
++        self.start_time = None
++        self._stop_event = threading.Event()
++        self._thread = None
++    
++    def start(self, total):
++        self.total = total
++        self.start_time = time.time()
++        self._stop_event.clear()
++        self._thread = threading.Thread(target=self._run, daemon=True)
++        self._thread.start()
++    
++    def update(self, count=1):
++        self.completed += count
++    
++    def stop(self):
++        self._stop_event.set()
++        if self._thread:
++            self._thread.join(timeout=5)
++    
++    def _run(self):
++        while not self._stop_event.wait(self.interval):
++            elapsed = time.time() - self.start_time
++            if self.total > 0:
++                pct = (self.completed / self.total) * 100
++                rate = self.completed / elapsed if elapsed > 0 else 0
++                remaining = (self.total - self.completed) / rate if rate > 0 else 0
++                print(f"{self.message}Heartbeat: {self.completed}/{self.total} tasks ({pct:.1f}%) "
++                      f"elapsed: {elapsed:.0f}s remaining: {remaining:.0f}s")
++            else:
++                print(f"{self.message}Heartbeat: {self.completed} tasks processed, "
++                      f"elapsed: {elapsed:.0f}s")
++            sys.stdout.flush()
++
++
+ def ParallelMap2(
+     function, objects, message="", enable=True, multiArg=True, return_as="list", procs=None
+ ):
+@@ -230,18 +270,42 @@ def ParallelMap2(
+     if message != "":
+         message += ": "
+     print("{0}Launching {1} threads{2}...".format(message, threadCount, countMessage))
+     sys.stdout.flush()
+     currentTime = time.time()
+ 
+     pcall = pcallWithGlobalParamsMultiArg if multiArg else pcallWithGlobalParamsSingleArg
+     pargs = zip(objects, itertools.repeat(globalParameters))
+ 
++    # Start heartbeat monitor for long-running tasks
++    heartbeat = HeartbeatMonitor(message)
++    try:
++        total = len(objects)
++    except TypeError:
++        total = 0
++    heartbeat.start(total)
++    
++    # Wrap function to track progress
++    def tracked_pcall(func_arg_params):
++        result = pcall(*func_arg_params)
++        heartbeat.update()
++        return result
++
+     if joblibParallelSupportsGenerator():
+         rv = Parallel(n_jobs=threadCount, timeout=99999, return_as=return_as)(
+-            delayed(pcall)(function, a, params) for a, params in pargs
++            delayed(tracked_pcall)((function, a, params)) for a, params in pargs
+         )
+     else:
+         rv = Parallel(n_jobs=threadCount, timeout=99999)(
+-            delayed(pcall)(function, a, params) for a, params in pargs
++            delayed(tracked_pcall)((function, a, params)) for a, params in pargs
+         )
+ 
++    heartbeat.stop()
+     totalTime = time.time() - currentTime
+     print("{0}Done. ({1:.1f} secs elapsed)".format(message, totalTime))
+     sys.stdout.flush()

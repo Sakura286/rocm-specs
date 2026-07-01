@@ -61,6 +61,8 @@ Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
 Patch2:         0001-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
 Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
+# add heartbeat output during parallel map to avoid OBS logidlelimit timeout on slow platforms
+Patch4:         0002-tensilelite-add-heartbeat-during-parallel-map.patch
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
