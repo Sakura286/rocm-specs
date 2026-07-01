@@ -56,14 +56,14 @@ BuildRequires:  cmake(rocrand)
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
-BuildRequires:  compiler-rt
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
+BuildRequires:  compiler-rt22
 BuildRequires:  half
 BuildRequires:  hipcc
 BuildRequires:  hipblas-common-devel
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(bzip2)
 BuildRequires:  pkgconfig(libzstd)
