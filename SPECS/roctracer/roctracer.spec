@@ -35,15 +35,15 @@ BuildSystem:    cmake
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(atomic_ops)
 BuildRequires:  python3dist(cppheaderparser)
