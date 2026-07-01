@@ -151,10 +151,6 @@ sed -i -e 's@virtualenv_install@#virtualenv_install@' CMakeLists.txt
 # Unforce the setting of libdir
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' CMakeLists.txt
 
-# We are building from a tarball, not a git repo
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipblaslt/cmake/dependencies.cmake
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Dependencies.cmake
-
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
 find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
