@@ -228,6 +228,10 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
 %endif
 
+%if %{with test}
+BuildRequires:  cmake(GTest)
+%endif
+
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
 %if %{with rocm}
@@ -537,6 +541,9 @@ export BUILD_CUSTOM_PROTOBUF=OFF
 export BUILD_NVFUSER=OFF
 export BUILD_SHARED_LIBS=ON
 export BUILD_TEST=OFF
+%if %{with test}
+export BUILD_TEST=ON
+%endif
 # Use Release instead of RelWithDebInfo to reduce compile time and memory
 # for huge generated files like TraceType/VariableType (saves ~30% compile time)
 export CMAKE_BUILD_TYPE=Release
@@ -633,7 +640,7 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %pyproject_save_files '*torch*'
 
 %check
-# Not working yet
+%pyproject_check_import torch
 
 %files
 %license LICENSE
