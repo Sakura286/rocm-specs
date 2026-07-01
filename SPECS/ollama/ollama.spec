@@ -26,13 +26,16 @@ VCS:            git:https://github.com/ollama/ollama
 Source0:        https://github.com/ollama/ollama/archive/refs/tags/v%{version}.tar.gz
 Source1:        ollama.service
 Source2:        ollama.sysusers
+# Pinned llama.cpp commit (from LLAMA_CPP_VERSION); pre-downloaded for offline OBS build
+%global llama_cpp_commit 8c146a8366304c871efc26057cc90370ccf58dad
+#!RemoteAsset:  sha256:f45fd05086b1dbeeb431e3e72df5361e75fbcdcfaa8717bbcf3f9461a17ba4ad
+Source3:        https://github.com/ggml-org/llama.cpp/archive/%{llama_cpp_commit}.tar.gz#/llama.cpp-%{llama_cpp_commit}.tar.gz
 BuildSystem:    golang
 
 BuildOption(prep):  -n %{_name}-%{version}
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  git
 BuildRequires:  go
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  go-rpm-macros
@@ -117,6 +120,11 @@ Ollama is an open-source platform designed to run large language models locally.
 It allows users to generate text, assist with coding, and create content privately
 and securely on their own devices.
 
+%prep -a
+# Pre-extract llama.cpp for offline OBS build (FetchContent/ExternalProject can't access network)
+tar xf %{SOURCE3} -C ..
+ln -sf ../llama.cpp-%{llama_cpp_commit} ../llama.cpp-src
+
 # Ollama use a mix build of cmake and go.
 # Ollama binary built by go will use dlopen to load *.so built by cmake.
 # Building order of go/cmake is not important.
@@ -128,6 +136,7 @@ and securely on their own devices.
     -DCMAKE_INSTALL_FULL_LIBDIR:PATH=/usr/lib \
     -DLIB_INSTALL_DIR:PATH=/usr/lib \
     -DLIB_SUFFIX= \
+    -DFETCHCONTENT_SOURCE_DIR_LLAMA_CPP=%{_builddir}/llama.cpp-src \
 %ifarch riscv64
     -DGGML_CPU_ALL_VARIANTS=OFF \
 %endif
