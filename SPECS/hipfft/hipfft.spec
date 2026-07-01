@@ -7,8 +7,8 @@
 
 %bcond test 1
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -21,7 +21,7 @@ Summary:        ROCm FFT marshalling library
 Url:            https://github.com/ROCm/rocm-libraries
 VCS:            git:https://github.com/ROCm/hipFFT.git
 License:        MIT
-#!RemoteAsset:  sha256:f6f0352b5f9ffe53c88cea5fa40572eef0c0c1e2e50dce6f85d2c68e47afc63e
+#!RemoteAsset:  sha256:65d08232b0f83dda214c96e869db4b68380a12a7f6526ae008ec5faf19ec30e9
 Source:         %{url}/releases/download/rocm-%{version}/hipfft.tar.gz
 Patch1:         0001-hipfft-hipfftw-soversion.patch
 BuildSystem:    cmake
