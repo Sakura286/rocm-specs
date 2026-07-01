@@ -31,6 +31,7 @@ BuildSystem:    cmake
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=%{build_test}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
@@ -45,6 +46,9 @@ BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipCUB is a thin header-only wrapper library on top of rocPRIM which enables
