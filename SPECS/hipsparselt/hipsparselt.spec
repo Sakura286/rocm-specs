@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global toolchain clang
@@ -27,9 +27,9 @@ Release:        %autorelease
 Summary:        A SPARSE marshaling library
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:7672d1ac94d2694999b6937d19f5e92e67fb844eea394b4e8525c531fd1acd8c
+#!RemoteAsset:  sha256:9ebd347b9b0fab350ce48c27aa848fe8f99c8b743ecf5213965618fa4f9a25ba
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
-#!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
+#!RemoteAsset:  sha256:72ad0a8db025c6d47397791a9fce5c80cde1b89fc830523d0b34e5138329de63
 Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
