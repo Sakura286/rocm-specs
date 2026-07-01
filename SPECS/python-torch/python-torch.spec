@@ -116,6 +116,22 @@ Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-
 #!RemoteAsset:  sha256:6a8c7ea8e3048762aaf3472f969ee42c2163e7ffcbb195eea4f245c1f7bd8cc3
 Source9:       https://github.com/pytorch/gloo/archive/%{gloo_commit}/gloo-%{gloo_scommit}.tar.gz
 
+# googletest: pinned submodule for building tests (BUILD_TEST=ON).
+# The release tarball ships third_party/googletest as an empty submodule
+# directory, so vendor it explicitly.
+%global googletest_commit 52eb8108c5bdec04579160ae17225d66034bd723
+%global googletest_scommit 52eb810
+#!RemoteAsset:  sha256:745c55415660044610f7fcd3af7a6420d5de16a7dbb9ebfe2e131275676232be
+Source10:      https://github.com/google/googletest/archive/%{googletest_commit}/googletest-%{googletest_scommit}.tar.gz
+
+# benchmark: pinned submodule for building tests (BUILD_TEST=ON).
+# The release tarball ships third_party/benchmark as an empty submodule
+# directory, so vendor it explicitly.
+%global benchmark_commit 299e5928955cc62af9968370293b916f5130916f
+%global benchmark_scommit 299e592
+#!RemoteAsset:  sha256:a9f63d40157775f13ca8a5c6769603cc0708f4eb81a1f539abdf0f85a10c17dd
+Source11:      https://github.com/google/benchmark/archive/%{benchmark_commit}/benchmark-%{benchmark_scommit}.tar.gz
+
 # pytorch upstream issue #173707: libtorch_hip.so references the
 # const_data_ptr / mutable_data_ptr / data_ptr template family with a
 # different (non-SFINAE) mangling than libtorch_cpu.so exports.
@@ -407,10 +423,6 @@ mv third_party/kineto .
 
 mv third_party/mslk .
 
-%if %{with test}
-mv third_party/googletest .
-%endif
-
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
@@ -435,10 +447,6 @@ mv kineto third_party
 
 mv mslk third_party
 
-%if %{with test}
-mv googletest third_party
-%endif
-
 # gloo: vendored submodule for the torch.distributed Gloo backend (USE_GLOO=ON).
 # The pytorch archive ships third_party/gloo empty and the scrub above
 # (rm -rf third_party/*) drops it, so unpack and reinstate it here.
@@ -446,6 +454,23 @@ tar xf %{SOURCE9}
 rm -rf third_party/gloo
 mkdir -p third_party/gloo
 cp -r gloo-*/* third_party/gloo/
+
+%if %{with test}
+# googletest: vendored submodule for building tests (BUILD_TEST=ON).
+# The release tarball ships third_party/googletest empty, so unpack
+# the pinned version explicitly.
+tar xf %{SOURCE10}
+rm -rf third_party/googletest
+mkdir -p third_party/googletest
+cp -r googletest-*/* third_party/googletest/
+
+# benchmark: vendored submodule for building tests (BUILD_TEST=ON).
+# Same situation as googletest.
+tar xf %{SOURCE11}
+rm -rf third_party/benchmark
+mkdir -p third_party/benchmark
+cp -r benchmark-*/* third_party/benchmark/
+%endif
 
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
