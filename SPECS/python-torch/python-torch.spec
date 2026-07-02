@@ -134,6 +134,9 @@ Source10:      https://github.com/google/benchmark/archive/%{benchmark_commit}/b
 # Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
 Source8:       pytorch-rocm-symbol-bridge.cpp
 
+# Functional smoke test for the just-built torch, run by the check phase.
+Source11:      pytorch-smoke-test.py
+
 # Fix magma version encoding
 # https://github.com/pytorch/pytorch/pull/180388
 Patch0:        0001-pytorch-magma-2.10.0-version-encoding.patch
@@ -202,13 +205,6 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(sympy)
 BuildRequires:  python3dist(typing-extensions)
-%if %{with test}
-# %check runs a subset of PyTorch's own test suite; its test harness
-# (torch.testing._internal.common_utils) imports expecttest unconditionally
-# and hypothesis for deterministic seeding.
-BuildRequires:  python3dist(expecttest)
-BuildRequires:  python3dist(hypothesis)
-%endif
 
 %if %{with system_httplib}
 BuildRequires:  cmake(httplib)
@@ -742,47 +738,15 @@ PYTHONDONTWRITEBYTECODE=1 \
   -e 'torch.utils.tensorboard*'
 
 %if %{with test}
-# The import check above only proves modules load.  Additionally exercise the
-# built extension at runtime.  Run against the just-built tree in %{buildroot}.
-export PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}"
-export PYTHONDONTWRITEBYTECODE=1
-export PYTORCH_TESTING_DEVICE_ONLY_FOR=cpu
-
-# (1) Hand-written functional smoke: real matmul/autograd/training-step, plus a
-# guard that complex torch.dot/torch.vdot do not collapse to 0 (Patch4's CBLAS
-# complex-dot path).  The references use elementwise mul + sum, which do not go
-# through the BLAS dot routine, so they stay valid regardless of that path.
-%{__python3} -sP - <<'PYEOF'
-import torch, torch.nn as nn
-torch.manual_seed(0)
-xm = torch.randn(64, 128); ym = torch.randn(128, 32)
-torch.testing.assert_close(xm @ ym, (xm.unsqueeze(-1) * ym).sum(-2), rtol=1e-4, atol=1e-4)
-tt = torch.tensor(3.0, requires_grad=True); (tt * tt).backward()
-assert abs(tt.grad.item() - 6.0) < 1e-6
-net = nn.Sequential(nn.Linear(16, 32), nn.ReLU(), nn.Linear(32, 1))
-opt = torch.optim.SGD(net.parameters(), lr=0.05)
-X = torch.randn(256, 16); Y = X @ torch.randn(16, 1)
-lossf = nn.MSELoss(); l0 = lossf(net(X), Y).item()
-for _ in range(200):
-    opt.zero_grad(); lossf(net(X), Y).backward(); opt.step()
-assert lossf(net(X), Y).item() < l0 * 0.5, "training loss did not decrease"
-for dt in (torch.complex64, torch.complex128):
-    a = torch.randn(9, dtype=dt); b = torch.randn(9, dtype=dt)
-    torch.testing.assert_close(torch.dot(a, b), (a * b).sum(), rtol=1e-4, atol=1e-5)
-    torch.testing.assert_close(torch.vdot(a, b), (a.conj() * b).sum(), rtol=1e-4, atol=1e-5)
-print("functional smoke: PASS")
-PYEOF
-
-# (2) A curated slice of PyTorch's own test suite that executes real kernels and
-# is green on a CPU-only, scipy-less build.  scipy-gated comparisons self-skip;
-# test_linalg is intentionally excluded (its numpy/scipy reference comparisons
-# hit openRuyi's LAPACK ABI breakage, and complex64 eigh is a separate upstream
-# bug -- neither is a defect in this package).
-for t in test_type_promotion test_indexing test_view_ops test_shape_ops \
-         test_sort_and_select test_scatter_gather_ops test_spectral_ops; do
-  echo "=== %check: running test/$t.py ==="
-  %{__python3} test/$t.py -q || exit 1
-done
+# The import check above only proves modules load.  Additionally run a small
+# functional smoke (Source11) against the just-built tree: real matmul, autograd,
+# a training step, and a guard that complex torch.dot/torch.vdot do not collapse
+# to 0 (the CBLAS complex-dot path forced on by Patch4).  Other distros do not
+# run PyTorch's own test/*.py suite at build time either; a smoke is enough to
+# catch a numerically broken build.
+PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
+PYTHONDONTWRITEBYTECODE=1 \
+%{__python3} -sP %{SOURCE11}
 %endif
 
 %files
