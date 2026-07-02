@@ -21,13 +21,13 @@
 #   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
 %bcond test 1
 
-# The "cpu" multibuild flavor builds a CPU-only torch; the default flavor builds
-# the ROCm backend.  Local builds can also force CPU with --without rocm.
+# The default flavor builds a CPU-only torch; the "rocm" multibuild flavor
+# builds the ROCm backend.  Local builds can also force ROCm with --with rocm.
 %global flavor @BUILD_FLAVOR@%{nil}
-%if "%{flavor}" == "cpu"
-%bcond rocm 0
-%else
+%if "%{flavor}" == "rocm"
 %bcond rocm 1
+%else
+%bcond rocm 0
 %endif
 
 # For testing distributed+rccl etc.
