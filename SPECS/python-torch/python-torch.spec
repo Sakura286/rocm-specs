@@ -160,6 +160,11 @@ Patch2:        0003-default-to-hipblaslt-on-gfx1100.patch
 # the distro's shared gtest/gmock are used and not statically vendored.
 Patch3:        0004-use-system-googletest.patch
 
+# torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
+# BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
+# the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
+Patch4:        2001-force-cblas-complex-dot-for-openblas.patch
+
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)
@@ -679,6 +684,11 @@ export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
 export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
 export CMAKE_LIBRARY_PATH=/usr/lib64
 export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
+
+# Opt into the CBLAS complex-dot path (Patch4).  Without this ATen's BLAS
+# ABI probe leaves AT_BLAS_USE_CBLAS_DOT=0 and torch.dot()/torch.vdot() on
+# complex tensors return 0.
+export PYTORCH_BLAS_USE_CBLAS_DOT=ON
 
 %pyproject_wheel
 
