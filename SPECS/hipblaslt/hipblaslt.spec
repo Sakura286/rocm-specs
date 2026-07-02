@@ -62,6 +62,10 @@ Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
 Patch2:         0001-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
 Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
+# Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
+# output the silent phase trips OBS's logidlelimit and times out on slow workers
+# (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
+Patch4:         2002-tensilelite-add-heartbeat-during-parallel-map.patch
 
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
