@@ -700,8 +700,11 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %check
 # Skip structurally un-importable / unpackageable modules from the import
 # smoke test.  We invoke import_all_modules.py directly instead of using
-# %pyproject_check_import, because that macro's body forwards %{?**}
-# (positional args) but never %{-e} -- so -e excludes are silently dropped.
+# %%pyproject_check_import, because that macro's body forwards %%{?**}
+# (positional args) but never %%{-e} -- so -e excludes are silently dropped.
+# (The %% escapes matter: a bare %%pyproject_check_import here would be expanded
+# by rpm even inside this comment -- its multi-line body then runs as live shell
+# and fails the no-exclude import check before our command below ever runs.)
 #
 # - torch.lib.lib*: C++ shared libs in torch/lib/ (libtorch, libc10, libshm,
 #   libaoti_custom_ops, libbackend_with_compiler, libjitbackend_test,
