@@ -133,6 +133,8 @@ BuildRequires:  cmake(rocm_smi)
 # links libnuma for NUMA-aware allocation.  RISC-V uses the RVV path.
 BuildRequires:  gcc-c++
 BuildRequires:  numactl-devel
+# PyTorch's ATen CPU vector headers include sleef.h
+BuildRequires:  cmake(sleef)
 # CPU torch (built --without rocm) keeps the CPU flavor free of any HIP/ROCm
 # build- or run-time dependency.
 BuildRequires:  python-torch
