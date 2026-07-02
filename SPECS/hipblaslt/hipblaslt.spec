@@ -61,8 +61,6 @@ Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
 Patch2:         0001-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
 Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
-# add heartbeat output during parallel map to avoid OBS logidlelimit timeout on slow platforms
-Patch4:         0002-tensilelite-add-heartbeat-during-parallel-map.patch
 
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -153,6 +151,12 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
 %build -p
+# On slow arches (e.g. riscv64 emulation) the Tensile assembly-kernel
+# generation runs for a long time with no stdout; keep a heartbeat alive to
+# avoid the OBS inactivity timeout. Killed after the build in the %build
+# append below. (rccl uses the same pattern.)
+timeout 20h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
+
 # Do a manual install instead of cmake's virtualenv
 cd tensilelite
 TL=$PWD
@@ -172,6 +176,9 @@ export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
 export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
+
+%build -a
+kill $TIME_OUT 2>/dev/null || true
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
