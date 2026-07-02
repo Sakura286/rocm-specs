@@ -4,9 +4,7 @@ Subject: [PATCH] tensilelite: add heartbeat during parallel map to avoid OBS
 
 When generating assembly kernels on slow platforms (e.g. riscv64 emulation),
 Tensile's ParallelMap2 can run for a long time without emitting any output, so
-OBS kills the build once its logidlelimit (no-output limit) is exceeded. This
-turned hipSPARSELt's bundled hipBLASLt/tensilelite kernel generation into an
-intermittent build timeout.
+OBS kills the build once its logidlelimit (no-output limit) is exceeded.
 
 Add a background HeartbeatMonitor that prints progress every 60 seconds during
 the parallel execution, keeping the build alive past the idle limit. The monitor

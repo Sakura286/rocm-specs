@@ -38,7 +38,7 @@ Source4:        0001-hipblaslt-find-origami-package.patch
 # Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
 # output the silent phase trips OBS's logidlelimit and times out on slow workers
 # (riscv64 emulation). Same fix as rocm-specs hipblaslt.
-Source5:        0002-tensilelite-add-heartbeat-during-parallel-map.patch
+Source5:        2002-tensilelite-add-heartbeat-during-parallel-map.patch
 # -mf16c is an x86-only clang flag (F16C intrinsics); guard it on x86 so the
 # hipSPARSELt library builds on non-x86 hosts like riscv64. cf. ollama PR #8129
 Patch0:         2001-hipsparselt-guard-mf16c-to-x86.patch
