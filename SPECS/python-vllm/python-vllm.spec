@@ -37,6 +37,10 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # Offline replacement for cmake/external_projects/triton_kernels.cmake, which
 # otherwise git-clones the triton repo at configure time (no network on OBS).
 Source1:        triton_kernels-stub.cmake
+# The x86 CPU backend builds a private, statically linked oneDNN and includes
+# headers from its source tree.  Supply the upstream-pinned version offline.
+#!RemoteAsset:  sha256:ba5834a1fdbb6d1c1b1c065dfd789438e7aa42c03fc52d92c02af85d78d1c75c
+Source2:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
 BuildSystem:    pyproject
 
 %if %{with rocm}
@@ -177,6 +181,14 @@ sed -i '/"torch == 2.11.0",/d' pyproject.toml
 # stub (see Source1).
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 
+%if %{without rocm}
+%ifarch x86_64
+# cpu_extension.cmake consumes oneDNN's public and private source headers, so a
+# prebuilt system libdnnl is insufficient.  Extract the pinned source locally.
+tar -xzf %{SOURCE2}
+%endif
+%endif
+
 %generate_buildrequires
 # Tarball builds have no git, so setuptools_scm cannot infer the version;
 # VLLM_VERSION_OVERRIDE sets SETUPTOOLS_SCM_PRETEND_VERSION and also bypasses
@@ -216,6 +228,10 @@ export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
+%ifarch x86_64
+# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker.
+export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-3.10"
+%endif
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.
