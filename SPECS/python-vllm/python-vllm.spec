@@ -8,10 +8,10 @@
 
 %global srcname vllm
 
-%if "%{flavor}" == "cpu"
-%bcond rocm 0
-%else
+%if "%{flavor}" == "rocm"
 %bcond rocm 1
+%else
+%bcond rocm 0
 %endif
 
 %if %{with rocm}
