@@ -9,12 +9,14 @@ turned hipSPARSELt's bundled hipBLASLt/tensilelite kernel generation into an
 intermittent build timeout.
 
 Add a background HeartbeatMonitor that prints progress every 60 seconds during
-the parallel execution, keeping the build alive past the idle limit. Same fix
-already carried by rocm-specs hipblaslt ("hipblaslt: add heartbeat to avoid
-riscv64 build timeout").
+the parallel execution, keeping the build alive past the idle limit. The monitor
+runs entirely in the parent process and does NOT wrap the per-task callable, so
+the task and its arguments stay picklable for joblib's loky workers (wrapping it
+in a closure that captured the monitor raised "cannot pickle '_thread.lock'
+object" / PicklingError and broke kernel generation).
 ---
- tensilelite/Tensile/Common/Parallel.py | 43 ++++++++++++++++++++++++++
- 1 file changed, 43 insertions(+)
+ tensilelite/Tensile/Common/Parallel.py | 64 +++++++++++++++++++++++++-
+ 1 file changed, 63 insertions(+), 1 deletion(-)
 
 diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common/Parallel.py
 --- a/tensilelite/Tensile/Common/Parallel.py
@@ -27,7 +29,7 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
  import itertools
  import os
  import sys
-@@ -197,6 +198,48 @@
+@@ -197,6 +198,41 @@
              yield result.result()
  
  
@@ -37,7 +39,6 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
 +    def __init__(self, message, interval=60):
 +        self.message = message
 +        self.interval = interval
-+        self.completed = 0
 +        self.total = 0
 +        self.start_time = None
 +        self._stop_event = threading.Event()
@@ -50,9 +51,6 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
 +        self._thread = threading.Thread(target=self._run, daemon=True)
 +        self._thread.start()
 +
-+    def update(self, count=1):
-+        self.completed += count
-+
 +    def stop(self):
 +        self._stop_event.set()
 +        if self._thread:
@@ -62,25 +60,34 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
 +        while not self._stop_event.wait(self.interval):
 +            elapsed = time.time() - self.start_time
 +            if self.total > 0:
-+                pct = (self.completed / self.total) * 100
-+                rate = self.completed / elapsed if elapsed > 0 else 0
-+                remaining = (self.total - self.completed) / rate if rate > 0 else 0
-+                print(f"{self.message}Heartbeat: {self.completed}/{self.total} tasks ({pct:.1f}%) "
-+                      f"elapsed: {elapsed:.0f}s remaining: {remaining:.0f}s")
++                print("{0}Heartbeat: still running {1} tasks, elapsed: {2:.0f}s".format(
++                    self.message, self.total, elapsed))
 +            else:
-+                print(f"{self.message}Heartbeat: {self.completed} tasks processed, "
-+                      f"elapsed: {elapsed:.0f}s")
++                print("{0}Heartbeat: still running, elapsed: {1:.0f}s".format(
++                    self.message, elapsed))
 +            sys.stdout.flush()
 +
 +
  def ParallelMap2(
      function, objects, message="", enable=True, multiArg=True, return_as="list", procs=None
  ):
-@@ -236,15 +279,30 @@
+@@ -236,14 +272,29 @@
      pcall = pcallWithGlobalParamsMultiArg if multiArg else pcallWithGlobalParamsSingleArg
      pargs = zip(objects, itertools.repeat(globalParameters))
  
-+    # Start heartbeat monitor for long-running tasks
+-    if joblibParallelSupportsGenerator():
+-        rv = Parallel(n_jobs=threadCount, timeout=99999, return_as=return_as)(
+-            delayed(pcall)(function, a, params) for a, params in pargs
+-        )
+-    else:
+-        rv = Parallel(n_jobs=threadCount, timeout=99999)(
+-            delayed(pcall)(function, a, params) for a, params in pargs
+-        )
++    # Keep the build alive: emit periodic output during the otherwise-silent
++    # parallel kernel generation so OBS's logidlelimit does not time out. The
++    # heartbeat runs entirely in this (parent) process; the parallel task and
++    # its arguments are left untouched so they stay picklable for the loky
++    # workers.
 +    heartbeat = HeartbeatMonitor(message)
 +    try:
 +        total = len(objects)
@@ -88,24 +95,17 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
 +        total = 0
 +    heartbeat.start(total)
 +
-+    # Wrap function to track progress
-+    def tracked_pcall(func_arg_params):
-+        result = pcall(*func_arg_params)
-+        heartbeat.update()
-+        return result
-+
-     if joblibParallelSupportsGenerator():
-         rv = Parallel(n_jobs=threadCount, timeout=99999, return_as=return_as)(
--            delayed(pcall)(function, a, params) for a, params in pargs
-+            delayed(tracked_pcall)((function, a, params)) for a, params in pargs
-         )
-     else:
-         rv = Parallel(n_jobs=threadCount, timeout=99999)(
--            delayed(pcall)(function, a, params) for a, params in pargs
-+            delayed(tracked_pcall)((function, a, params)) for a, params in pargs
-         )
++    try:
++        if joblibParallelSupportsGenerator():
++            rv = Parallel(n_jobs=threadCount, timeout=99999, return_as=return_as)(
++                delayed(pcall)(function, a, params) for a, params in pargs
++            )
++        else:
++            rv = Parallel(n_jobs=threadCount, timeout=99999)(
++                delayed(pcall)(function, a, params) for a, params in pargs
++            )
++    finally:
++        heartbeat.stop()
  
-+    heartbeat.stop()
      totalTime = time.time() - currentTime
      print("{0}Done. ({1:.1f} secs elapsed)".format(message, totalTime))
-     sys.stdout.flush()
