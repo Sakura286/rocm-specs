@@ -20,7 +20,7 @@
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
 %global llvm_triple %{_target_platform}
-%global amd_device_libs_prefix %{_lib}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}
+%global amd_device_libs_prefix %{bundle_prefix}/lib/clang/%{llvm_maj_ver}
 
 %global toolchain clang
 
@@ -277,7 +277,7 @@ rm -f %{buildroot}%{_datadir}/doc/hipcc/README.md
 %license    amd/device-libs/LICENSE.TXT
 %dir        %{_libdir}/cmake/AMDDeviceLibs
 %{_libdir}/cmake/AMDDeviceLibs/*.cmake
-%{_prefix}/%{amd_device_libs_prefix}/amdgcn
+%{amd_device_libs_prefix}/amdgcn
 
 %files -n rocm-comgr
 %doc        amd/comgr/README.md
