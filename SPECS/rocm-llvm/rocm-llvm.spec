@@ -47,7 +47,7 @@ Summary:        Various AMD ROCm LLVM related services
 License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
 #!RemoteAsset:  sha256:526b5fe23417c41acbeb2273e470887b4593f48a297a8d9c1a1aa730d556f9fb
-Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 # No BuildSystem: this spec configures and builds three independent CMake
@@ -143,7 +143,7 @@ hipcc will pass-through options to the target compiler. The tools calling hipcc
 must ensure the compiler options are appropriate for the target compiler.
 
 %prep
-%autosetup -p1 -n llvm-project-rocm-%{rocm_version}
+%autosetup -p1 -n llvm-project-rocm-%{version}
 
 # llvm_maj_ver sanity check (we should be matching the bundled llvm major ver):
 if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion.cmake; then
