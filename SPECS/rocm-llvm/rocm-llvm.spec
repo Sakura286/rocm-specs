@@ -55,19 +55,6 @@ Source1:        rocm-llvm.prep.in
 # generated %prep script, which the single declarative BuildSystem model cannot
 # express; the build is therefore driven manually in %prep/%build/%install.
 
-# RISC-V support patches
-# https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
-Patch0:         0002-Use-signed-char-in-comgr-building.patch
-# comgr: adapt to the LLVM 22 clang driver-options API (header + namespace moved
-# to clang/Options, getDriverOptTable/GetResourcesPath are free functions).
-# Backports of ROCm/llvm-project amd-staging ebcaa3d9226 and ccb14ba83fd6.
-Patch1:         1000-comgr-Options-changes-for-comgr.patch
-Patch2:         1001-comgr-remove-Driver-from-GetResourcesPath.patch
-# device-libs: gate cube/lerp/qsad/sad builtins behind their target features so
-# clang-22 accepts them when compiling generic bitcode.
-# Backport of ROCm/llvm-project amd-staging bc1578256b48 (PR #651), device-libs only.
-Patch3:         1002-device-libs-add-cube-lerp-qsad-sad-target-features.patch
-
 BuildRequires:  clang%{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-devel
 # The clang -devel package ships ClangTargets.cmake referencing libclang*.a,
@@ -87,6 +74,20 @@ BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-cmake >= %{rocm_release}
+
+%patchlist
+# RISC-V support patches
+# https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
+0002-Use-signed-char-in-comgr-building.patch
+# comgr: adapt to the LLVM 22 clang driver-options API (header + namespace moved
+# to clang/Options, getDriverOptTable/GetResourcesPath are free functions).
+# Backports of ROCm/llvm-project amd-staging ebcaa3d9226 and ccb14ba83fd6.
+1000-comgr-Options-changes-for-comgr.patch
+1001-comgr-remove-Driver-from-GetResourcesPath.patch
+# device-libs: gate cube/lerp/qsad/sad builtins behind their target features so
+# clang-22 accepts them when compiling generic bitcode.
+# Backport of ROCm/llvm-project amd-staging bc1578256b48 (PR #651), device-libs only.
+1002-device-libs-add-cube-lerp-qsad-sad-target-features.patch
 
 %description
 %{summary}
