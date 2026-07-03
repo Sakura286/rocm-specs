@@ -745,12 +745,9 @@ PYTHONDONTWRITEBYTECODE=1 \
 %{__python3} -sP %{SOURCE11}
 %endif
 
-%files
+%files -f %{pyproject_files}
 %license LICENSE
 %doc README.md
-%{_bindir}/torchrun
-%{python3_sitearch}/%{srcname}*
-%{python3_sitearch}/functorch
 
 %changelog
 %autochangelog
