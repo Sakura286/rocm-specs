@@ -11,7 +11,6 @@
 
 %global toolchain clang
 
-%global pypi_version 2.11.0
 %global miniz_version 3.0.2
 
 # For -test subpackage
@@ -61,7 +60,7 @@ Name:           python-%{srcname}-rocm
 %else
 Name:           python-%{srcname}
 %endif
-Version:        %{pypi_version}
+Version:        2.11.0
 Release:        %autorelease
 Summary:        PyTorch AI/ML framework
 # See license.txt for license details
@@ -304,7 +303,7 @@ and Cython to extend PyTorch when needed.
 %autosetup -p1 -n pytorch-%{version}
 
 # GitHub release tarballs identify the version as an alpha, so replace that
-echo "%{pypi_version}" > version.txt
+echo "%{version}" > version.txt
 
 # Remove bundled egg-info
 rm -rf %{srcname}.egg-info
