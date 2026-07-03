@@ -136,6 +136,12 @@ Source8:       pytorch-rocm-symbol-bridge.cpp
 # Functional smoke test for the just-built torch, run by the check phase.
 Source11:      pytorch-smoke-test.py
 
+BuildSystem:    pyproject
+# Save every importable torch* top-level (torch, torchgen, functorch) plus the
+# torchrun entrypoint; consumed by %files -f %{pyproject_files}.  -l is omitted
+# because torch declares no PEP 639 License-File, so %license LICENSE stays.
+BuildOption(install):  '*torch*'
+
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)
@@ -562,7 +568,7 @@ cat %{SOURCE8} >> aten/src/ATen/core/Tensor.cpp
 # moodycamel include path needs adjusting to use the system's
 sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/concurrentqueue@' cmake/Dependencies.cmake
 
-%build
+%build -p
 # Control the number of jobs
 # The build can fail if too many threads exceed the physical memory
 # Run at least one thread, more if CPU & memory resources are available.
@@ -689,9 +695,7 @@ export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-package
 # complex tensors return 0.
 export PYTORCH_BLAS_USE_CBLAS_DOT=ON
 
-%pyproject_wheel
-
-%install
+%install -p
 %if %{with rocm}
 export USE_ROCM=ON
 export USE_ROCM_CK=OFF
@@ -702,9 +706,6 @@ export ROCM_PATH=`hipconfig -R`
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %endif
-
-%pyproject_install
-%pyproject_save_files '*torch*'
 
 %check
 # Skip structurally un-importable / unpackageable modules from the import
