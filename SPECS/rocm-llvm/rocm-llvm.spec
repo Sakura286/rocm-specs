@@ -50,6 +50,11 @@ URL:            https://github.com/ROCm/llvm-project
 Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
+# No BuildSystem: this spec configures and builds three independent CMake
+# projects (device-libs, comgr, hipcc) with separate %cmake invocations plus a
+# generated %prep script, which the single declarative BuildSystem model cannot
+# express; the build is therefore driven manually in %prep/%build/%install.
+
 # RISC-V support patches
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 Patch0:         0002-Use-signed-char-in-comgr-building.patch
