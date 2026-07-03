@@ -18,7 +18,7 @@
 Name:           ollama
 Version:        0.13.5
 Release:        %autorelease
-Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models.
+Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models
 License:        MIT
 URL:            https://ollama.com/
 VCS:            git:https://github.com/ollama/ollama
