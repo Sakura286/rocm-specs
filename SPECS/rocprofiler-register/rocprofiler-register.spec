@@ -12,7 +12,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        A rocprofiler helper library
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/rocprofiler-register
+URL:            https://github.com/ROCm/rocprofiler-register
 #!RemoteAsset:  sha256:81c15210e5a797040469120c0522cab70834e38d4129dd18feb5b05bb00deaf7
 Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
