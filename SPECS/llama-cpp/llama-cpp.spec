@@ -88,12 +88,13 @@ BuildRequires:  pkgconfig(openssl)
 
 %if %{with rocm}
 BuildRequires:  clang22-devel
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  hipcc
 BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
