@@ -30,7 +30,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
 License:        MIT
-Url:            https://github.com/ROCm/hipSPARSE
+URL:            https://github.com/ROCm/hipSPARSE
 #!RemoteAsset:  sha256:c6ba07bd940b2678ba8a087333f103c1846efb7ffffffc5ed9174aca78d9f090
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
