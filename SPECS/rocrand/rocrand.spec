@@ -25,7 +25,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm random number generator
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/rocRAND
+URL:            https://github.com/ROCm/rocRAND
 #!RemoteAsset:  sha256:1e0295d1cf798480fe87147fc5b7d649f869a9afedd0409a4bc6548f2f097dfb
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
