@@ -106,9 +106,6 @@ BuildRequires:  cmake(GTest)
 # (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %description
 hipBLASLt is a library that provides general matrix-matrix
 operations. It has a flexible API that extends functionalities
@@ -158,6 +155,9 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 
 # Forcefully replace all mentions of 'amdclang' with 'clang' in the Tensile Python files
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %build -p
 # Do a manual install instead of cmake's virtualenv
