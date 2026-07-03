@@ -12,7 +12,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm BLAS marshalling library
 License:        MIT
-Url:            https://github.com/ROCm/hipBLAS
+URL:            https://github.com/ROCm/hipBLAS
 #!RemoteAsset:  sha256:114feba5cf2cf8c89f37c7906b7d2697ab4ee8b17e42c25e1b58ec3646d02a57
 Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
 BuildSystem:    cmake
