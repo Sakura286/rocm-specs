@@ -26,7 +26,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Thrust library
 
-Url:            https://github.com/ROCm/rocThrust
+URL:            https://github.com/ROCm/rocThrust
 VCS:            git:https://github.com/ROCm/rocThrust.git
 License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 # All files are Apache 2.0 with some exceptions:
