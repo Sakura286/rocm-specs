@@ -13,7 +13,6 @@
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
 %global llvm_maj_ver 22
 # ROCm 7.2.4 uses LLVM 22, which is available on openRuyi.
-%global rocm_llvm_maj_ver 22
 
 %global rocm_release 7.2
 %global rocm_patch 4
