@@ -51,7 +51,7 @@ Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 # No BuildSystem: this spec configures and builds three independent CMake
-# projects (device-libs, comgr, hipcc) with separate %cmake invocations plus a
+# projects (device-libs, comgr, hipcc) with separate CMake invocations plus a
 # generated %prep script, which the single declarative BuildSystem model cannot
 # express; the build is therefore driven manually in %prep/%build/%install.
 
@@ -306,4 +306,4 @@ rm -f %{buildroot}%{_datadir}/doc/hipcc/README.md
 %{_bindir}/hipvars.pm
 
 %changelog
-%{?autochangelog}
+%autochangelog
