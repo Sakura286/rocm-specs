@@ -20,7 +20,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
-Url:            https://github.com/ROCm/MIOpen
+URL:            https://github.com/ROCm/MIOpen
 #!RemoteAsset:  sha256:983fda99d67d57f1354123101bea3af0f11f746d7ff3306bfc2700e6f6f5bb0f
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
