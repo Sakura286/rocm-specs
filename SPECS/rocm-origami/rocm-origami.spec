@@ -14,7 +14,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        Analytical GEMM Solution Selection
 License:        MIT
-Url:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:f917d10a3a9a8ec2f527c046a90a674a655b007d28132058c20e0fb34f6fcf71
 Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
 # License file is not included in the release tarball
