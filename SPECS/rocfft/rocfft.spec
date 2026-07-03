@@ -22,7 +22,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 License:        MIT
-Url:            https://github.com/ROCm/rocFFT
+URL:            https://github.com/ROCm/rocFFT
 #!RemoteAsset:  sha256:3a01fab8e598e16d42dbcbd3ce942b9b55a86d1c2ce383dec829835f42b42222
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
