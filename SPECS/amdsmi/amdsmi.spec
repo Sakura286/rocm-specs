@@ -26,7 +26,7 @@ Name:           amdsmi
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD System Management Interface
-License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
+License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 # Main license is MIT
 #
 # This file is GPL-2.0:
@@ -34,7 +34,7 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
 # esmi_ib_library/include/asm/amd_hsmp.h
 # Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# NSCA covers the bundled esmi_ib_library
+# NCSA covers the bundled esmi_ib_library
 Url:            https://github.com/ROCm/rocm-systems
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
