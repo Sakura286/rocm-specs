@@ -163,6 +163,7 @@ BuildRequires:  fp16-devel
 BuildRequires:  fxdiv-devel
 BuildRequires:  psimd-devel
 BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
+BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(filelock)
 BuildRequires:  python3dist(jinja2)
