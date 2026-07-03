@@ -34,7 +34,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SOLVER marshalling library (LAPACK)
 License:        MIT
-Url:            https://github.com/ROCm/hipSOLVER
+URL:            https://github.com/ROCm/hipSOLVER
 #!RemoteAsset:  sha256:a69d71dfadd760eb6b4fd5f45df8586cc1f978e371ad32a006aa9ca6ed9afa03
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
