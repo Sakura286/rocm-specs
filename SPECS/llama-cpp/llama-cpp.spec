@@ -87,17 +87,15 @@ BuildRequires:  ninja
 BuildRequires:  pkgconfig(openssl)
 
 %if %{with rocm}
+BuildRequires:  clang22-devel
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(Clang)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(LLD)
-BuildRequires:  cmake(LLVM)
 BuildRequires:  cmake(rocblas)
-BuildRequires:  clang-tools-extra-devel
 BuildRequires:  compiler-rt
 BuildRequires:  hipcc
+BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
 %endif
 
