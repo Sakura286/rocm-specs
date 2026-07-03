@@ -28,7 +28,7 @@ Summary:        ROCm Runtime Library
 License:        NCSA
 URL:            https://github.com/ROCm/ROCR-Runtime
 #!RemoteAsset:  sha256:60532cd86edce5a603aa18df406ec1f5a3d18f0663d79b3b7822ff721c5a04ec
-Source0:        %{url}/archive/refs/tags/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 Patch0:         0001-Add-riscv64-support.patch
