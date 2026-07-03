@@ -757,4 +757,4 @@ PYTHONDONTWRITEBYTECODE=1 \
 %{python3_sitearch}/functorch
 
 %changelog
-%{?autochangelog}
+%autochangelog
