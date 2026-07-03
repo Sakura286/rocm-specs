@@ -9,7 +9,7 @@ Name:           fplus
 Version:        0.2.28
 Release:        %autorelease
 Summary:        Helps you write concise and readable C++ code
-Url:            https://github.com/Dobiasd/FunctionalPlus
+URL:            https://github.com/Dobiasd/FunctionalPlus
 License:        BSL-1.0
 #!RemoteAsset:  sha256:8864a3e9bebde6ebed71b49ac2a036cedf9ae0f02ce758bc28c21e6a2ae15803
 Source0:         %{url}/archive/v%{version}.tar.gz
