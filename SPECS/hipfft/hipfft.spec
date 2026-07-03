@@ -18,7 +18,7 @@ Name:           hipfft
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm FFT marshalling library
-Url:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocm-libraries
 VCS:            git:https://github.com/ROCm/hipFFT.git
 License:        MIT
 #!RemoteAsset:  sha256:65d08232b0f83dda214c96e869db4b68380a12a7f6526ae008ec5faf19ec30e9
