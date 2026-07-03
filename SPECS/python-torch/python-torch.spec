@@ -137,37 +137,6 @@ Source8:       pytorch-rocm-symbol-bridge.cpp
 # Functional smoke test for the just-built torch, run by the check phase.
 Source11:      pytorch-smoke-test.py
 
-# Fix magma version encoding
-# https://github.com/pytorch/pytorch/pull/180388
-Patch0:        0001-pytorch-magma-2.10.0-version-encoding.patch
-
-# CPython 3.13.8 inspect.getsourcelines() truncates a decorated function's
-# source when a comment line sits between the last decorator and the def
-# (fixed in later 3.13.x).  TorchScript parses the RNN/LSTM/GRU forward
-# overload stubs at import time, so "import torch" dies with an
-# IndentationError.  Drop the offending pyrefly comment lines.
-# https://github.com/python/cpython/issues/139783
-Patch1:        0002-remove-pyrefly-comments-between-overload-decorator-and-def.patch
-
-# Default to hipBLASLt on gfx1100: upstream lists gfx1100 only as a hipBLASLt-
-# supported arch, not a preferred one, so torch defaults to rocBLAS -- whose fp16
-# GEMM has no Tensile solution for some shapes on gfx1100, failing with
-# HIPBLAS_STATUS_INTERNAL_ERROR.  hipBLASLt handles every shape.
-Patch2:        0003-default-to-hipblaslt-on-gfx1100.patch
-
-# Use the system googletest (openRuyi gtest-devel) instead of the vendored
-# submodule when BUILD_TEST=ON.  Upstream hardcodes
-# add_subdirectory(third_party/googletest) and the test CMakeLists link the
-# bare target names gtest / gtest_main / gmock / gmock_main; switch to
-# find_package(GTest) and alias the GTest:: targets to those bare names so
-# the distro's shared gtest/gmock are used and not statically vendored.
-Patch3:        0004-use-system-googletest.patch
-
-# torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
-# BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
-# the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
-Patch4:        2001-force-cblas-complex-dot-for-openblas.patch
-
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
 BuildRequires:  cmake(sleef)
@@ -292,6 +261,34 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
 Conflicts:      python-%{srcname}-rocm
 %endif
+
+%patchlist
+# Fix magma version encoding
+# https://github.com/pytorch/pytorch/pull/180388
+0001-pytorch-magma-2.10.0-version-encoding.patch
+# torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
+# BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
+# the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
+2001-force-cblas-complex-dot-for-openblas.patch
+# CPython 3.13.8 inspect.getsourcelines() truncates a decorated function's
+# source when a comment line sits between the last decorator and the def
+# (fixed in later 3.13.x).  TorchScript parses the RNN/LSTM/GRU forward
+# overload stubs at import time, so "import torch" dies with an
+# IndentationError.  Drop the offending pyrefly comment lines.
+# https://github.com/python/cpython/issues/139783
+2002-remove-pyrefly-comments-between-overload-decorator-and-def.patch
+# Default to hipBLASLt on gfx1100: upstream lists gfx1100 only as a hipBLASLt-
+# supported arch, not a preferred one, so torch defaults to rocBLAS -- whose fp16
+# GEMM has no Tensile solution for some shapes on gfx1100, failing with
+# HIPBLAS_STATUS_INTERNAL_ERROR.  hipBLASLt handles every shape.
+2003-default-to-hipblaslt-on-gfx1100.patch
+# Use the system googletest (openRuyi gtest-devel) instead of the vendored
+# submodule when BUILD_TEST=ON.  Upstream hardcodes
+# add_subdirectory(third_party/googletest) and the test CMakeLists link the
+# bare target names gtest / gtest_main / gmock / gmock_main; switch to
+# find_package(GTest) and alias the GTest:: targets to those bare names so
+# the distro's shared gtest/gmock are used and not statically vendored.
+2004-use-system-googletest.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
