@@ -94,11 +94,11 @@ BuildRequires:  cmake(GTest)
 
 %patchlist
 # yappi is used in tensilelite to generate profiling data, we are not using that in the build
-0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
+2003-hipblaslt-tensilelite-remove-yappi-dependency.patch
 # Patch from Fedora, change hard coded vendor paths
-0001-hipblaslt-tensilelite-use-system-paths.patch
+2004-hipblaslt-tensilelite-use-system-paths.patch
 # https://github.com/ROCm/rocm-libraries/issues/2422
-0001-hipblaslt-find-origami-package.patch
+2005-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
 2001-hipblaslt-tensilelite-use-system-nanobind.patch
 # Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
