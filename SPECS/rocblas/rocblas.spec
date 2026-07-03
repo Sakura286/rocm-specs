@@ -17,7 +17,7 @@ Release:        %autorelease
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocBLAS
 #!RemoteAsset:  sha256:39ccaf6a0009a131b7daf3b21e14517f864f7642f109fa2da6dec1127b4a85e0
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
