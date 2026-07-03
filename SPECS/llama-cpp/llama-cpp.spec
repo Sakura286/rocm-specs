@@ -79,6 +79,7 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
 
+BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  git
 BuildRequires:  ninja
@@ -99,7 +100,6 @@ BuildRequires:  hipcc
 BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
 %else
-BuildRequires:  clang
 BuildRequires:  libomp-devel
 %endif
 
