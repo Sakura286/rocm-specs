@@ -23,7 +23,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm port of CUDA CUB (header-only)
 License:        BSD-3-Clause AND MIT
-Url:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:2b08b0e7fc8d97717bc9656a0cc0e502dd221770f34deb8721ced2239939d779
 Source:         %{url}/releases/download/rocm-%{version}/hipcub.tar.gz
 BuildSystem:    cmake
