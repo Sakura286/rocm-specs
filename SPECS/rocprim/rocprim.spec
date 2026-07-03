@@ -14,7 +14,7 @@ Summary:        ROCm parallel primatives
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocPRIM
 #!RemoteAsset:  sha256:6531360bf8d03a0e6c1e8748db7a12e7ab87a9e631eda5463e54f418f639c44b
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
