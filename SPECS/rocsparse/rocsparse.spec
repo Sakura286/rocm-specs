@@ -16,7 +16,7 @@ Summary:        SPARSE implementation for ROCm
 License:        MIT
 URL:            https://github.com/ROCm/rocSPARSE
 #!RemoteAsset:  sha256:0f1a6d1340909a0aa91c70410f62e227d0fc22b30eb2fb19584eeccabd984450
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
