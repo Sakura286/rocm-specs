@@ -14,7 +14,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm half-precision floating point library
 License:        MIT
-Url:            https://github.com/ROCm/half
+URL:            https://github.com/ROCm/half
 #!RemoteAsset:  sha256:8cbe655d3ef19675e953934cf0cb49fdf899459407fbc6848af52282269fc7f9
 Source0:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
