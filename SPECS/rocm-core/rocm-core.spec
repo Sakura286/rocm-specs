@@ -16,7 +16,7 @@ URL:            https://github.com/ROCm/rocm-core
 Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):  -DROCM_VERSION=%{rocm_version}
+BuildOption(conf):  -DROCM_VERSION=%{version}
 
 BuildRequires:  cmake
 
