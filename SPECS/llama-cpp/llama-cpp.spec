@@ -79,16 +79,21 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
 
-BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  git
-BuildRequires:  libomp-devel
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openssl)
 
+%if %{without rocm}
+BuildRequires:  clang
+BuildRequires:  libomp-devel
+%endif
+
 %if %{with rocm}
+BuildRequires:  clang22
 BuildRequires:  clang22-devel
 BuildRequires:  clang22-tools-extra
+BuildRequires:  libomp22-devel
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
