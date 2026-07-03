@@ -68,7 +68,6 @@ BuildRequires:  clang%{llvm_maj_ver}-devel
 # The clang -devel package ships ClangTargets.cmake referencing libclang*.a,
 # which the compat llvm packaging splits into a separate -static subpackage.
 BuildRequires:  clang%{llvm_maj_ver}-static
-BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  fdupes
 BuildRequires:  lld%{llvm_maj_ver}
