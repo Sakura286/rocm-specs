@@ -14,7 +14,7 @@ Summary:        Common files shared by hipBLAS and hipBLASLt
 License:        MIT
 URL:            https://github.com/ROCm/hipBLAS-common
 #!RemoteAsset:  sha256:4d02427f8c9074bd55d397e9e144aaaeb392f6a9b5503e30d5ecca057ac61dc8
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildArch:      noarch
 BuildSystem:    cmake
 
