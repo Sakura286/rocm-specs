@@ -35,7 +35,7 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 # Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
 # NCSA covers the bundled esmi_ib_library
-Url:            https://github.com/ROCm/rocm-systems
+URL:            https://github.com/ROCm/rocm-systems
 #!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
