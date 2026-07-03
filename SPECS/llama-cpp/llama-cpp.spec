@@ -84,11 +84,6 @@ BuildRequires:  git
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openssl)
 
-%if %{without rocm}
-BuildRequires:  clang
-BuildRequires:  libomp-devel
-%endif
-
 %if %{with rocm}
 BuildRequires:  clang22
 BuildRequires:  clang22-devel
@@ -103,6 +98,9 @@ BuildRequires:  compiler-rt22
 BuildRequires:  hipcc
 BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
+%else
+BuildRequires:  clang
+BuildRequires:  libomp-devel
 %endif
 
 %if %{with vulkan}
