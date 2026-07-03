@@ -25,7 +25,7 @@ Name:           roctracer
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Tracer Callback/Activity Library
-Url:            https://github.com/ROCm/roctracer
+URL:            https://github.com/ROCm/roctracer
 VCS:            git:https://github.com/ROCm/roctracer.git
 License:        MIT
 #!RemoteAsset:  sha256:dbae23414fdb186085072b025d6b233b8ece27dd6e58e4650f5fb1fa2fe1af2a
