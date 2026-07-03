@@ -19,7 +19,7 @@ Summary:        Next generation LAPACK implementation for ROCm platform
 License:        BSD-3-Clause AND BSD-2-Clause
 URL:            https://github.com/ROCm/rocSOLVER
 #!RemoteAsset:  sha256:1836ccbeaf3531d6c5e0fc258fb097e484a4c1a016fb84a639386af3c136f986
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
