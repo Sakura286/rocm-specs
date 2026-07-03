@@ -7,8 +7,6 @@
 # Originally extracted from Fedora Project
 # Authors: The Fedora Project Contributors
 
-%global toolchain clang
-
 # The default flavor builds the CPU backend. The "rocm" and "vulkan"
 # multibuild flavors select the corresponding GPU backend.
 %global flavor @BUILD_FLAVOR@%{nil}
@@ -79,7 +77,6 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
 
-BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  git
 BuildRequires:  ninja
