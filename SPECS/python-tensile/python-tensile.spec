@@ -16,7 +16,7 @@ Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 License:        MIT
 URL:            https://github.com/ROCm/Tensile
 #!RemoteAsset:  sha256:a514e11ea6a53ab41d68e335c1dd730d1a480c74d49084450fbeef09f2df2b39
-Source0:        %{url}/archive/rocm-%{rocm_version}.tar.gz
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildArch:      noarch
 BuildSystem:    pyproject
 
