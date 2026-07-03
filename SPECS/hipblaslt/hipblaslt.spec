@@ -54,19 +54,6 @@ BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-# yappi is used in tensilelite to generate profiling data, we are not using that in the build
-Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
-# Patch from Fedora, change hard coded vendor paths
-Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
-# https://github.com/ROCm/rocm-libraries/issues/2422
-Patch2:         0001-hipblaslt-find-origami-package.patch
-# use the distribution-provided nanobind instead of fetching/bundling it
-Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
-# Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
-# output the silent phase trips OBS's logidlelimit and times out on slow workers
-# (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
-Patch4:         2002-tensilelite-add-heartbeat-during-parallel-map.patch
-
 BuildRequires:  clang22
 BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
@@ -104,6 +91,20 @@ BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
 %endif
+
+%patchlist
+# yappi is used in tensilelite to generate profiling data, we are not using that in the build
+0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
+# Patch from Fedora, change hard coded vendor paths
+0001-hipblaslt-tensilelite-use-system-paths.patch
+# https://github.com/ROCm/rocm-libraries/issues/2422
+0001-hipblaslt-find-origami-package.patch
+# use the distribution-provided nanobind instead of fetching/bundling it
+2001-hipblaslt-tensilelite-use-system-nanobind.patch
+# Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
+# output the silent phase trips OBS's logidlelimit and times out on slow workers
+# (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
+2002-tensilelite-add-heartbeat-during-parallel-map.patch
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
