@@ -22,7 +22,7 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        HIP random number generator
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:c31cec665ee0a7333fd4dfa54d46dd601710a17f56826f1d309aea4333c37360
 Source:         %{url}/releases/download/rocm-%{version}/hiprand.tar.gz
 BuildSystem:    cmake
