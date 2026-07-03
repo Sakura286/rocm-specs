@@ -61,7 +61,7 @@ BuildRequires:  cmake(rocblas)
 %if %{with test}
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(openmp)
-BuildRequires:  gcc-gfortran
+BuildRequires:  gcc-fortran
 BuildRequires:  python3dist(pyyaml)
 %endif
 
