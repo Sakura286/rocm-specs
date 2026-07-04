@@ -405,7 +405,7 @@ sed -i -e 's@hiprtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
 # Use the system fmt instead of the vendored third_party/fmt in the main source
 # tree: applied by 2006-use-system-fmt.patch.  The vendored kineto CMakeLists
 # carries the same fmt::fmt-header-only reference but is unpacked from SOURCE6
-# after %autosetup, so patch it here with a sed instead.
+# after %%autosetup, so patch it here with a sed instead.
 sed -i -e 's@fmt::fmt-header-only@fmt@' third_party/kineto/libkineto/CMakeLists.txt
 
 # When BUILD_TEST=ON, test cmake files reference fmt::fmt-header-only.
