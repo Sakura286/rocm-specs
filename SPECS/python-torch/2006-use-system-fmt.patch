@@ -1,0 +1,107 @@
+From 8dda63b6dacac4aa4ce8312c9b13334321183463 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 4 Jul 2026 15:12:50 +0800
+Subject: [PATCH 2/2] use system fmt instead of vendored third_party/fmt
+
+Link the system fmt (openRuyi fmt-devel) rather than the bundled
+third_party/fmt: replace fmt::fmt-header-only with the plain fmt target,
+drop the ATen_HIP_INCLUDE fmt generator expression, and comment out the
+add_subdirectory(third_party/fmt) / fmt-header-only wiring in
+cmake/Dependencies.cmake.  Replaces a block of in-place seds in the spec.
+
+The kineto and BUILD_TEST cmake files carry the same fmt reference but are
+handled by seds in %prep, not here: they come from vendored tarballs that
+are unpacked after %autosetup applies this patch.
+---
+ aten/src/ATen/CMakeLists.txt | 8 ++++----
+ c10/CMakeLists.txt           | 2 +-
+ cmake/Dependencies.cmake     | 6 +++---
+ torch/CMakeLists.txt         | 4 ++--
+ 4 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/aten/src/ATen/CMakeLists.txt b/aten/src/ATen/CMakeLists.txt
+index f1ac624..8e88205 100644
+--- a/aten/src/ATen/CMakeLists.txt
++++ b/aten/src/ATen/CMakeLists.txt
+@@ -552,8 +552,8 @@ endif()
+ if(USE_CUDA)
+   list(APPEND ATen_CUDA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
+   # Next two lines are needed because TunableOp uses third-party/fmt
+-  list(APPEND ATen_CUDA_INCLUDE $<TARGET_PROPERTY:fmt::fmt-header-only,INTERFACE_INCLUDE_DIRECTORIES>)
+-  list(APPEND ATen_CUDA_DEPENDENCY_LIBS fmt::fmt-header-only)
++  list(APPEND ATen_CUDA_INCLUDE $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>)
++  list(APPEND ATen_CUDA_DEPENDENCY_LIBS fmt)
+   list(APPEND ATen_CUDA_CU_SRCS
+     ${cuda_cu}
+     ${native_cuda_cu}
+@@ -613,8 +613,8 @@ if(USE_ROCM)
+   endif()
+ 
+   # Next two lines are needed because TunableOp uses third-party/fmt
+-  list(APPEND ATen_HIP_INCLUDE $<TARGET_PROPERTY:fmt::fmt-header-only,INTERFACE_INCLUDE_DIRECTORIES>)
+-  list(APPEND ATen_HIP_DEPENDENCY_LIBS fmt::fmt-header-only)
++  
++  list(APPEND ATen_HIP_DEPENDENCY_LIBS fmt)
+   if(USE_FLASH_ATTENTION AND USE_ROCM_CK_SDPA)
+     list(APPEND ATen_HIP_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/native/transformers/hip/flash_attn/ck)
+   endif()
+diff --git a/c10/CMakeLists.txt b/c10/CMakeLists.txt
+index f82e460..da4ef93 100644
+--- a/c10/CMakeLists.txt
++++ b/c10/CMakeLists.txt
+@@ -92,7 +92,7 @@ if(NOT BUILD_LIBTORCHLESS)
+   endif()
+ 
+   target_link_libraries(c10 PUBLIC headeronly)
+-  target_link_libraries(c10 PRIVATE fmt::fmt-header-only)
++  target_link_libraries(c10 PRIVATE fmt)
+   target_link_libraries(c10 PRIVATE nlohmann)
+   target_link_libraries(c10 PRIVATE moodycamel)
+ 
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index 735250e..773b8e0 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -1595,7 +1595,7 @@ endif()
+ set(FMT_INSTALL ON)
+ set(TEMP_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+-add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)
++#add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)
+ 
+ # Disable compiler feature checks for `fmt`.
+ #
+@@ -1604,9 +1604,9 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)
+ # CMAKE_CXX_FLAGS in ways that break feature checks. Since we already know
+ # `fmt` is compatible with a superset of the compilers that PyTorch is, it
+ # shouldn't be too bad to just disable the checks.
+-set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")
++#set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")
+ 
+-list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)
++list(APPEND Caffe2_DEPENDENCY_LIBS fmt)
+ set(BUILD_SHARED_LIBS ${TEMP_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libs" FORCE)
+ 
+ # ---[ Kineto
+diff --git a/torch/CMakeLists.txt b/torch/CMakeLists.txt
+index 471fe0c..30aba46 100644
+--- a/torch/CMakeLists.txt
++++ b/torch/CMakeLists.txt
+@@ -85,7 +85,7 @@ set(TORCH_PYTHON_LINK_LIBRARIES
+     nlohmann
+     moodycamel
+     shm
+-    fmt::fmt-header-only
++    fmt
+     ATEN_CPU_FILES_GEN_LIB)
+ 
+ if(USE_ASAN AND TARGET Sanitizer::address)
+@@ -506,7 +506,7 @@ if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+   else()
+     target_link_libraries(nnapi_backend PRIVATE torch)
+   endif()
+-  target_link_libraries(nnapi_backend PRIVATE torch_python pybind::pybind11 fmt::fmt-header-only)
++  target_link_libraries(nnapi_backend PRIVATE torch_python pybind::pybind11 fmt)
+ endif()
+ 
+ set(TORCH_PYTHON_COMPILE_OPTIONS ${TORCH_PYTHON_COMPILE_OPTIONS} PARENT_SCOPE)
