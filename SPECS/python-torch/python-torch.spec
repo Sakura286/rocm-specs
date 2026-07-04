@@ -280,9 +280,10 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 
 %patchlist
-# Fix magma version encoding
+# Fix magma version encoding.  Submitted upstream as PR #180388, but that PR was
+# closed without merging, so openRuyi carries it as a downstream patch.
 # https://github.com/pytorch/pytorch/pull/180388
-0001-pytorch-magma-2.10.0-version-encoding.patch
+2000-pytorch-magma-2.10.0-version-encoding.patch
 # torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
 # BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
 # the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
