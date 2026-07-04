@@ -142,6 +142,16 @@ BuildSystem:    pyproject
 # torchrun entrypoint; consumed by %%files -f %%{pyproject_files}.  -l is omitted
 # because torch declares no PEP 639 License-File, so %%license LICENSE stays.
 BuildOption(install):  '*torch*'
+# The declarative check phase runs %%pyproject_check_import on the saved module
+# list; exclude the entries that cannot be imported in the build chroot:
+#  - torch.lib.lib*: C++ shared libs in torch/lib (libtorch, libc10, libtorch_cpu,
+#    the ROCm-only libtorch_hip, ...) shipped for rpath only -- no PyInit_ symbol.
+#  - torchgen.static_runtime.gen_static_runtime_ops: imports Meta-internal libfb;
+#    a build-time codegen tool, not part of the installed runtime.
+#  - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi.
+BuildOption(check):  -e 'torch.lib.lib*'
+BuildOption(check):  -e 'torchgen.static_runtime.gen_static_runtime_ops'
+BuildOption(check):  -e 'torch.utils.tensorboard*'
 
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
@@ -717,40 +727,14 @@ export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 %endif
 
-%check
-# Skip structurally un-importable / unpackageable modules from the import
-# smoke test.  We invoke import_all_modules.py directly instead of using
-# %%pyproject_check_import, because that macro's body forwards %%{?**}
-# (positional args) but never %%{-e} -- so -e excludes are silently dropped.
-# (The %% escapes matter: a bare %%pyproject_check_import here would be expanded
-# by rpm even inside this comment -- its multi-line body then runs as live shell
-# and fails the no-exclude import check before our command below ever runs.)
-#
-# - torch.lib.lib*: C++ shared libs in torch/lib/ (libtorch, libc10, libshm,
-#   libaoti_custom_ops, libbackend_with_compiler, libjitbackend_test,
-#   libtorch_cpu, libtorch_global_deps, libtorch_python, libtorchbind_test,
-#   plus the ROCm-only libc10_hip, libtorch_hip, libcaffe2_nvrtc) have no
-#   PyInit_ symbol -- not Python extensions, only shipped for rpath.
-# - torchgen.static_runtime.gen_static_runtime_ops: imports libfb, which is
-#   Meta-internal and not open source; this is a build-time codegen tool,
-#   not part of the installed runtime.
-# - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi
-#   (heavy optional integration; packaging it is a separate task).
-PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
-PYTHONDONTWRITEBYTECODE=1 \
-%{__python3} -sP %{_rpmconfigdir}/openruyi/import_all_modules.py \
-  -f "%{_pyproject_modules}" torch \
-  -e 'torch.lib.lib*' \
-  -e 'torchgen.static_runtime.gen_static_runtime_ops' \
-  -e 'torch.utils.tensorboard*'
-
+%check -a
 %if %{with test}
-# The import check above only proves modules load.  Additionally run a small
-# functional smoke (Source11) against the just-built tree: real matmul, autograd,
-# a training step, and a guard that complex torch.dot/torch.vdot do not collapse
-# to 0 (the CBLAS complex-dot path forced on by Patch4).  Other distros do not
-# run PyTorch's own test/*.py suite at build time either; a smoke is enough to
-# catch a numerically broken build.
+# The declarative import check (BuildOption(check)) only proves modules load.
+# Additionally run a small functional smoke (Source11) against the just-built
+# tree: real matmul, autograd, a training step, and a guard that complex
+# torch.dot/torch.vdot do not collapse to 0 (the CBLAS complex-dot path forced
+# on by Patch4).  Other distros do not run PyTorch's own test/*.py suite at
+# build time either; a smoke is enough to catch a numerically broken build.
 PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
 PYTHONDONTWRITEBYTECODE=1 \
 %{__python3} -sP %{SOURCE11}
