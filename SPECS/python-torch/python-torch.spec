@@ -772,6 +772,9 @@ PYTHONDONTWRITEBYTECODE=1 \
 %files -f %{pyproject_files}
 %license LICENSE
 %doc README.md
+# torchrun is a console_scripts entry point; %%pyproject_save_files captures the
+# importable modules under sitearch but not the bindir wrapper, so list it here.
+%{_bindir}/torchrun
 
 %changelog
 %autochangelog
