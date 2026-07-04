@@ -94,6 +94,7 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  compiler-rt22
 BuildRequires:  hipcc
+BuildRequires:  lld22
 BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
 %else
