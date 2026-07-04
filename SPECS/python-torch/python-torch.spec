@@ -366,7 +366,7 @@ sed -i -e '/fsspec/d' setup.py
 # it, so torch's dependents (python-triton, python-vllm) were left unresolvable.
 sed -i -e 's@"setuptools<82"@"setuptools"@' setup.py
 
-# %pyproject_buildrequires (run by BuildSystem: pyproject) turns pyproject.toml's
+# %%pyproject_buildrequires (run by BuildSystem: pyproject) turns pyproject.toml's
 # build-system.requires into RPM BuildRequires.  On openRuyi cmake/ninja are
 # system packages, not python3dist(...); requests/six are not needed for the
 # --no-build-isolation wheel build; and setuptools<82 conflicts with the distro's
@@ -587,7 +587,7 @@ sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/conc
 # -R: only the wheel's build-backend deps (the stripped [build-system].requires);
 # skip torch's large runtime requirement set -- those are the static Requires and
 # the extras, not build dependencies.  Overrides the BuildSystem's default
-# %pyproject_buildrequires, which runs with --generate-extras and would emit
+# %%pyproject_buildrequires, which runs with --generate-extras and would emit
 # unsatisfiable optional-extra deps.
 %pyproject_buildrequires -R
 
