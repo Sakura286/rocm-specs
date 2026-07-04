@@ -295,6 +295,12 @@ Conflicts:      python-%{srcname}-rocm
 # find_package(GTest) and alias the GTest:: targets to those bare names so
 # the distro's shared gtest/gmock are used and not statically vendored.
 2004-use-system-googletest.patch
+# Append the openRuyi ROCm HIP_CLANG_FLAGS (offload compress/jobs, the simm16
+# long-branch fix, clang warning silencing); was a chain of in-place seds.
+2005-append-hip-clang-flags.patch
+# Use the system fmt instead of vendored third_party/fmt (main source tree);
+# the vendored kineto copy is still handled by a sed in %prep.
+2006-use-system-fmt.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
@@ -387,40 +393,20 @@ sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
 # A new dependency
 # Connected to USE_FLASH_ATTENTION, since this is off, do not need it
 sed -i -e '/aotriton.cmake/d' cmake/Dependencies.cmake
-# Compress hip
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-compress@' cmake/Dependencies.cmake
-# Silence noisy warning
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-pass-failed@' cmake/Dependencies.cmake
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-command-line-argument@' cmake/Dependencies.cmake
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-unused-result@' cmake/Dependencies.cmake
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -Wno-deprecated-declarations@' cmake/Dependencies.cmake
-# Fix: error: branch size exceeds simm16 (AMDGPUAsmBackend.cpp)
-# -amdgpu-s-branch-bits=15(default is 16) and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-s-branch-bits=15@' cmake/Dependencies.cmake
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc -mllvm --amdgpu-long-branch-factor=2@' cmake/Dependencies.cmake
-
-# Use parallel jobs for GPU offload compilation
-sed -i -e 's@HIP_CLANG_FLAGS -fno-gpu-rdc@HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8@' cmake/Dependencies.cmake
+# HIP_CLANG_FLAGS additions (--offload-compress / --offload-jobs=8, the
+# amdgpu-s-branch-bits=15 + long-branch-factor=2 simm16 fix, and clang warning
+# silencing) are applied by 2005-append-hip-clang-flags.patch.
 # Need to link with librocm_smi64 (intra_node_comm.cpp calls rsmi_init /
 # rsmi_is_P2P_accessible). The target string is "hiprtc::hiprtc" — the previous
 # pattern "hipzrtc::hiprtc" had a stray 'z' so the sed was a no-op and
 # libtorch_hip.so ended up with an undefined rsmi_init symbol.
 sed -i -e 's@hiprtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
 
-# No third_party fmt, use system
-sed -i -e 's@fmt::fmt-header-only@fmt@' CMakeLists.txt
-sed -i -e 's@fmt::fmt-header-only@fmt@' aten/src/ATen/CMakeLists.txt
-sed -i -e 's@list(APPEND ATen_HIP_INCLUDE $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>)@@' aten/src/ATen/CMakeLists.txt
-
+# Use the system fmt instead of the vendored third_party/fmt in the main source
+# tree: applied by 2006-use-system-fmt.patch.  The vendored kineto CMakeLists
+# carries the same fmt::fmt-header-only reference but is unpacked from SOURCE6
+# after %autosetup, so patch it here with a sed instead.
 sed -i -e 's@fmt::fmt-header-only@fmt@' third_party/kineto/libkineto/CMakeLists.txt
-sed -i -e 's@fmt::fmt-header-only@fmt@' c10/CMakeLists.txt
-sed -i -e 's@fmt::fmt-header-only@fmt@' torch/CMakeLists.txt
-sed -i -e 's@fmt::fmt-header-only@fmt@' cmake/Dependencies.cmake
-sed -i -e 's@fmt::fmt-header-only@fmt@' caffe2/CMakeLists.txt
-
-sed -i -e 's@add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)@#add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)@' cmake/Dependencies.cmake
-sed -i -e 's@set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")@#set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")@' cmake/Dependencies.cmake
-sed -i -e 's@list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)@#list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)@' cmake/Dependencies.cmake
 
 # When BUILD_TEST=ON, test cmake files reference fmt::fmt-header-only.
 # Our global fmt::fmt-header-only -> fmt replacement also applies to generator
