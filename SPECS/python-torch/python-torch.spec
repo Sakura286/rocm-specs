@@ -138,8 +138,8 @@ Source11:      pytorch-smoke-test.py
 
 BuildSystem:    pyproject
 # Save every importable torch* top-level (torch, torchgen, functorch) plus the
-# torchrun entrypoint; consumed by %files -f %{pyproject_files}.  -l is omitted
-# because torch declares no PEP 639 License-File, so %license LICENSE stays.
+# torchrun entrypoint; consumed by %%files -f %%{pyproject_files}.  -l is omitted
+# because torch declares no PEP 639 License-File, so %%license LICENSE stays.
 BuildOption(install):  '*torch*'
 
 BuildRequires:  cmake
@@ -366,6 +366,21 @@ sed -i -e '/fsspec/d' setup.py
 # it, so torch's dependents (python-triton, python-vllm) were left unresolvable.
 sed -i -e 's@"setuptools<82"@"setuptools"@' setup.py
 
+# %pyproject_buildrequires (run by BuildSystem: pyproject) turns pyproject.toml's
+# build-system.requires into RPM BuildRequires.  On openRuyi cmake/ninja are
+# system packages, not python3dist(...); requests/six are not needed for the
+# --no-build-isolation wheel build; and setuptools<82 conflicts with the distro's
+# 82.x.  Drop those from the [build-system] table (only there, not the identical
+# [dependency-groups] copy) so only satisfiable backend deps are generated -- the
+# real build deps come from the static BuildRequires above.
+sed -i '/^\[build-system\]/,/^build-backend/ {
+  /"cmake>=3.27",/d
+  /"ninja",/d
+  /"requests",/d
+  /"six",/d
+  s@"setuptools>=70.1.0,<82",@"setuptools>=70.1.0",@
+}' pyproject.toml
+
 # Use system sympy
 sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
 
@@ -567,6 +582,14 @@ cat %{SOURCE8} >> aten/src/ATen/core/Tensor.cpp
 
 # moodycamel include path needs adjusting to use the system's
 sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/concurrentqueue@' cmake/Dependencies.cmake
+
+%generate_buildrequires
+# -R: only the wheel's build-backend deps (the stripped [build-system].requires);
+# skip torch's large runtime requirement set -- those are the static Requires and
+# the extras, not build dependencies.  Overrides the BuildSystem's default
+# %pyproject_buildrequires, which runs with --generate-extras and would emit
+# unsatisfiable optional-extra deps.
+%pyproject_buildrequires -R
 
 %build -p
 # Control the number of jobs
