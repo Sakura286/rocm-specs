@@ -67,6 +67,9 @@ Summary:        PyTorch AI/ML framework
 License:        BSD-3-Clause AND BSD-2-Clause AND 0BSD AND Apache-2.0 AND MIT AND BSL-1.0 AND GPL-3.0-or-later AND Zlib
 URL:            https://pytorch.org/
 VCS:            git:https://github.com/pytorch/pytorch.git
+# PyTorch publishes only wheels on PyPI (no sdist), and a PyPI sdist would lack
+# the third_party/ C++ submodule sources needed to build from source anyway; use
+# the GitHub release tarball for the tag instead.
 #!RemoteAsset:  sha256:52872a6bbdc42334b00051d88a92f801cfd9be730abdd2b37a2d08996f53bb29
 Source0:        https://github.com/pytorch/pytorch/archive/refs/tags/v%{version}.tar.gz
 %if %{without system_flatbuffers}
