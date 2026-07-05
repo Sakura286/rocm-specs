@@ -42,6 +42,12 @@ VCS:            git:https://github.com/ggml-org/llama.cpp.git
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
+%if %{with rocm}
+# Work around prompt-processing failures with batch sizes above 8 on mixed ROCm GPUs.
+# https://github.com/ggml-org/llama.cpp/issues/19518
+Patch0:         2000-limit-rocm-batch-size.patch
+%endif
+
 BuildOption(prep):  -n llama.cpp-%{version}
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DLLAMA_BUILD_NUMBER=9859

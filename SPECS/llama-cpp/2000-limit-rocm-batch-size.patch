@@ -1,0 +1,24 @@
+Subject: [PATCH] limit default ROCm batch sizes to 8
+
+Mixed ROCm GPU configurations can fail during prompt processing when the
+batch size exceeds 8.  Match the workaround used by the openRuyi Ollama
+package while keeping the command-line options available for explicit
+overrides.
+
+References:
+https://github.com/ggml-org/llama.cpp/issues/19518
+https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
+
+--- a/common/common.h
++++ b/common/common.h
+@@ -448,8 +448,8 @@
+ struct common_params {
+     int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
+     int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
+-    int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
+-    int32_t n_ubatch              =   512; // physical batch size for prompt processing (must be >=32 to use BLAS)
++    int32_t n_batch               =     8; // logical batch size for prompt processing
++    int32_t n_ubatch              =     8; // physical batch size for prompt processing
+     int32_t n_keep                =     0; // number of tokens to keep from initial prompt
+     int32_t n_chunks              =    -1; // max number of chunks to process (-1 = unlimited)
+     int32_t n_parallel            =     1; // number of parallel sequences to decode
