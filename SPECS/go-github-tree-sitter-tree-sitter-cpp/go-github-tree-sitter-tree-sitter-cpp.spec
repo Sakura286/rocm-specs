@@ -6,6 +6,7 @@
 
 %define _name           tree-sitter-cpp
 %define go_import_path  github.com/tree-sitter/tree-sitter-cpp/bindings/go
+# test imports go(github.com/tree-sitter/go-tree-sitter) (circular), not a build dep here
 %define go_test_ignore_failure 1
 
 Name:           go-github-tree-sitter-tree-sitter-cpp
