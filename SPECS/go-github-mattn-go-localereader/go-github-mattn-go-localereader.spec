@@ -29,7 +29,7 @@ Provides:       go(github.com/mattn/go-localereader) = %{version}
 go-localereader is a Go library to read from a locale-aware stdin on Windows.
 
 %files
-%license LICENSE*
+# v0.0.1 tarball ships no LICENSE file (added upstream only after the tag)
 %doc README*
 %{go_sys_gopath}/%{go_import_path}
 
