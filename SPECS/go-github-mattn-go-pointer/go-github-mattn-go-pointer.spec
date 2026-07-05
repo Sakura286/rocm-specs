@@ -32,4 +32,4 @@ pointer is a Go library for dealing with Go pointers to C.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
