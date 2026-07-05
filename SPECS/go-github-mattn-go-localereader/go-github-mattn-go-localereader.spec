@@ -6,6 +6,7 @@
 
 %define _name           go-localereader
 %define go_import_path  github.com/mattn/go-localereader
+# test imports go(golang.org/x/text), not a build dependency here
 %define go_test_ignore_failure 1
 
 Name:           go-github-mattn-go-localereader
