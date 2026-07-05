@@ -8,6 +8,7 @@
 %define go_import_path  github.com/tree-sitter/go-tree-sitter
 # v0.25.0 tag was deleted upstream; use a commit from 2025-02-02
 %define commit_id       adc13ffd8b2c0b01b878fda9f7c422ce0df5fad3
+# tests need testify plus many tree-sitter grammar bindings, not build deps here
 %define go_test_ignore_failure 1
 
 Name:           go-github-tree-sitter-go-tree-sitter
