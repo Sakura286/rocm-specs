@@ -33,4 +33,4 @@ Tree-sitter grammar for C++.
 %{go_sys_gopath}/github.com/tree-sitter/tree-sitter-cpp
 
 %changelog
-%{?autochangelog}
+%autochangelog
