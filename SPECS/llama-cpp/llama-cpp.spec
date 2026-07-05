@@ -43,8 +43,8 @@ Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
 %if %{with rocm}
-# Work around prompt-processing failures with batch sizes above 8 on mixed ROCm GPUs.
-# https://github.com/ggml-org/llama.cpp/issues/19518
+# Match the openRuyi Ollama workaround for unstable riscv64 ROCm inference.
+# https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
 Patch0:         2000-limit-rocm-batch-size.patch
 %endif
 

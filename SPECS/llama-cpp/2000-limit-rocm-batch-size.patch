@@ -1,12 +1,11 @@
 Subject: [PATCH] limit default ROCm batch sizes to 8
 
-Mixed ROCm GPU configurations can fail during prompt processing when the
-batch size exceeds 8.  Match the workaround used by the openRuyi Ollama
-package while keeping the command-line options available for explicit
-overrides.
+llama.cpp/ggml has produced unstable output in openRuyi's riscv64 ROCm
+environment at the upstream default batch sizes.  Match the workaround used
+by the openRuyi Ollama package while keeping the command-line options
+available for explicit overrides.
 
-References:
-https://github.com/ggml-org/llama.cpp/issues/19518
+Reference:
 https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
 
 --- a/common/common.h
