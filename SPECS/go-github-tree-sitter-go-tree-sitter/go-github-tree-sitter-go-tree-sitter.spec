@@ -38,4 +38,4 @@ Go bindings for tree-sitter, the incremental parsing library.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
