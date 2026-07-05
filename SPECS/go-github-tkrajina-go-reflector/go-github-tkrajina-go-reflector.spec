@@ -33,4 +33,4 @@ Go reflection utilities for inspecting and manipulating struct fields.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
