@@ -110,16 +110,16 @@ Requires:       rocblas
 
 %patchlist
 # Ollama put ggml-cpu code(cpp) inside 'ollama' binary file(go)
-0002-go-riscv64.patch
+2000-go-riscv64.patch
 # Golang buildsystem on openRuyi use GO11MODULE=off, makes
 # httpmuxgo121=1, which is deprecated in newer version of go
 # Without this patch, ollama cannot provide even the basic http functions
 # https://github.com/jkroepke/openvpn-auth-oauth2/pull/706
-0003-disable-httpmuxgo121-on-newer-version-of-go.patch
+2001-disable-httpmuxgo121-on-newer-version-of-go.patch
 # Llama.cpp(ggml) on riscv64's ROCm frequently produce nonsense
 # Give parameter '-b 8 -ub 8' can stabilize it
-0006-limit-batch-size-to-stabilize.patch
-# NOTE: 0001 (riscv ggml) and 0005 (disable cpu variants) were dropped
+2002-limit-batch-size-to-stabilize.patch
+# NOTE: earlier riscv-ggml and disable-cpu-variants patches were dropped
 # because 0.31.1 fetches llama.cpp via FetchContent/ExternalProject.
 # riscv64 CPU variants are now disabled via cmake option in %build.
 
