@@ -207,4 +207,4 @@ mkdir -p %{buildroot}%{_var}/lib/ollama
 %{_sysusersdir}/ollama.conf
 
 %changelog
-%{?autochangelog}
+%autochangelog
