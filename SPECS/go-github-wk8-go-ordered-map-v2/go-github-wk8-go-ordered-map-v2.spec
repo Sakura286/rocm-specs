@@ -6,6 +6,7 @@
 
 %define _name           go-ordered-map
 %define go_import_path  github.com/wk8/go-ordered-map/v2
+# tests import go(github.com/stretchr/testify) and go(gopkg.in/yaml.v3), not build deps here
 %define go_test_ignore_failure 1
 
 Name:           go-github-wk8-go-ordered-map-v2
