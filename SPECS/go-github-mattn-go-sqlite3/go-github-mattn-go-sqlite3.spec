@@ -36,4 +36,4 @@ sqlite3 driver conforming to the built-in database/sql interface.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
