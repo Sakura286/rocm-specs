@@ -36,4 +36,4 @@ A Go library that converts Go structs to TypeScript interfaces/classes.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
