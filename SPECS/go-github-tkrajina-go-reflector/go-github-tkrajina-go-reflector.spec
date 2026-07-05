@@ -6,6 +6,7 @@
 
 %define _name           go-reflector
 %define go_import_path  github.com/tkrajina/go-reflector
+# test imports go(github.com/stretchr/testify), not a build dependency here
 %define go_test_ignore_failure 1
 
 Name:           go-github-tkrajina-go-reflector
