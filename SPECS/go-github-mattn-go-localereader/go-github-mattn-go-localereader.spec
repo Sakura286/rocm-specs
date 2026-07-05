@@ -32,4 +32,4 @@ go-localereader is a Go library to read from a locale-aware stdin on Windows.
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
-%{?autochangelog}
+%autochangelog
