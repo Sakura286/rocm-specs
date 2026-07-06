@@ -88,9 +88,6 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  rocminfo
 %endif
 
-Provides:       rocblas = %{version}-%{release}
-Requires:       python3dist(msgpack)
-
 %description
 rocBLAS is the AMD library for Basic Linear Algebra Subprograms
 (BLAS) on the ROCm platform. It is implemented in the HIP
@@ -169,4 +166,4 @@ export LD_LIBRARY_PATH=%{_vpath_builddir}/library/src:$LD_LIBRARY_PATH
 %endif
 
 %changelog
-%{autochangelog}
+%autochangelog
