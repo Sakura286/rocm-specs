@@ -65,8 +65,6 @@ BuildRequires:  gcc-fortran
 BuildRequires:  python3dist(pyyaml)
 %endif
 
-Provides:       %{name} = %{version}-%{release}
-
 %description
 rocSPARSE exposes a common interface that provides Basic
 Linear Algebra Subroutines for sparse computation
@@ -131,4 +129,4 @@ export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
 %endif
 
 %changelog
-%{?autochangelog}
+%autochangelog
