@@ -20,8 +20,6 @@ BuildOption(conf):  -DROCM_VERSION=%{version}
 
 BuildRequires:  cmake
 
-Provides:       rocm-core = %{version}-%{release}
-
 %description
 %{summary}
 
@@ -51,4 +49,4 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %{_libdir}/librocm-core.so
 
 %changelog
-%{?autochangelog}
+%autochangelog
