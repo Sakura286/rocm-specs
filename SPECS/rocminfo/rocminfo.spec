@@ -33,9 +33,6 @@ BuildRequires:  cmake
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  cmake(hsa-runtime64) >= 1.0
 
-# rocminfo calls lsmod to check the kernel mode driver status
-Requires:       kmod
-
 %description
 %{pkg_desc}
 
@@ -54,4 +51,4 @@ chmod 755 %{buildroot}%{_bindir}/*
 %exclude %{_docdir}/*/License.txt
 
 %changelog
-%{?autochangelog}
+%autochangelog
