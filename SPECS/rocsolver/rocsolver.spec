@@ -64,8 +64,6 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocsparse-devel
 BuildRequires:  rocminfo
 
-Provides:       rocsolver = %{version}-%{release}
-
 %description
 rocSOLVER is a work-in-progress implementation of a subset
 of LAPACK functionality on the ROCm platform.
@@ -106,4 +104,4 @@ rm -f %{buildroot}%{_prefix}/share/doc/rocsolver/LICENSE.md
 %endif
 
 %changelog
-%{?autochangelog}
+%autochangelog
