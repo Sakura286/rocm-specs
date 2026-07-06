@@ -131,6 +131,11 @@ The AMD Code Object Manager (Comgr) development package.
 
 %package     -n hipcc
 Summary:        HIP compiler driver
+Requires:       clang%{llvm_maj_ver}
+Requires:       clang%{llvm_maj_ver}-tools-extra
+Requires:       compiler-rt%{llvm_maj_ver}
+Requires:       lld%{llvm_maj_ver}
+Requires:       llvm%{llvm_maj_ver}
 Requires:       rocm-device-libs = %{version}-%{release}
 Suggests:       rocminfo
 
