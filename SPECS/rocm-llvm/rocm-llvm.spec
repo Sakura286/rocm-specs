@@ -12,7 +12,6 @@
 
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
 %global llvm_maj_ver 22
-# ROCm 7.2.4 uses LLVM 22, which is available on openRuyi.
 
 %global rocm_release 7.2
 %global rocm_patch 4
@@ -50,11 +49,6 @@ URL:            https://github.com/ROCm/llvm-project
 Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
-# No BuildSystem: this spec configures and builds three independent CMake
-# projects (device-libs, comgr, hipcc) with separate CMake invocations plus a
-# generated %prep script, which the single declarative BuildSystem model cannot
-# express; the build is therefore driven manually in %prep/%build/%install.
-
 BuildRequires:  clang%{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-devel
 # The clang -devel package ships ClangTargets.cmake referencing libclang*.a,
@@ -76,17 +70,14 @@ BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-cmake >= %{rocm_release}
 
 %patchlist
-# RISC-V support patches
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
-0002-Use-signed-char-in-comgr-building.patch
-# comgr: adapt to the LLVM 22 clang driver-options API (header + namespace moved
-# to clang/Options, getDriverOptTable/GetResourcesPath are free functions).
-# Backports of ROCm/llvm-project amd-staging ebcaa3d9226 and ccb14ba83fd6.
+0001-Use-signed-char-in-comgr-building.patch
+# Clang version of rocm-llvm is bebind llvm22 on openRuyi
+# https://github.com/ROCm/llvm-project/commit/ebcaa3d9
 1000-comgr-Options-changes-for-comgr.patch
+# https://github.com/ROCm/llvm-project/commit/ccb14ba83
 1001-comgr-remove-Driver-from-GetResourcesPath.patch
-# device-libs: gate cube/lerp/qsad/sad builtins behind their target features so
-# clang-22 accepts them when compiling generic bitcode.
-# Backport of ROCm/llvm-project amd-staging bc1578256b48 (PR #651), device-libs only.
+# https://github.com/ROCm/llvm-project/commit/bc157825
 1002-device-libs-add-cube-lerp-qsad-sad-target-features.patch
 
 %description
@@ -175,7 +166,7 @@ CLANG_VERSION=%llvm_maj_ver
 # Maybe use llvm-config-%{llvm_maj_ver} in the future
 LLVM_BINDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --bindir`
 LLVM_CMAKEDIR=`%{_libdir}/llvm%{llvm_maj_ver}/bin/llvm-config --cmakedir`
-# Only enable one target to accelerate build
+# Only enable limited targets to accelerate build
 GPU_TARGET="gfx1100;gfx1101;gfx1200;gfx1201"
 
 echo "%%rocmllvm_version $CLANG_VERSION"        >  macros.rocmcompiler
@@ -194,8 +185,7 @@ ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 #TODO ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_* should be removed in ROCm 7.0:
 %cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD="" \
-    -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
-    %{?__cmake_build_type:-DCMAKE_BUILD_TYPE="%{__cmake_build_type}"}
+    -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld"
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
 export ROCM_PATH=$(realpath %__cmake_builddir)
