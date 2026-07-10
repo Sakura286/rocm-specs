@@ -258,6 +258,10 @@ Conflicts:      python-%{srcname}-rocm
 2005-append-hip-clang-flags.patch
 # Use the system fmt instead of vendored third_party/fmt.
 2006-use-system-fmt.patch
+# Skip PreBuildSteps.cmake submodule sanity checks for vendored directories the
+# openRuyi build intentionally prunes because system libraries or disabled
+# features are used.
+2007-skip-unused-submodule-prebuild-checks.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
