@@ -583,7 +583,15 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 # probe and the real device compile get --rocm-device-lib-path (CMAKE_HIP_FLAGS
 # inherits HIPFLAGS via CMAKE_HIP_FLAGS_INIT); without it configure fails with
 # "cannot find ROCm device library".
-export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
+#
+# --amdgpu-s-branch-bits=15: keep the AMDGPU long-branch (simm16) workaround.
+# Large generated kernels (e.g. aten/.../hip/Loss.hip) overflow the 16-bit
+# s_branch range; the backend's default relaxation then emits an instruction the
+# encoder rejects -> "error in backend: Unsupported instruction".  Forcing the
+# branch-range estimate to 15 bits relaxes such branches early and avoids it.
+# (The old 2005 patch also passed --amdgpu-long-branch-factor, a ROCm-fork-only
+# option absent from system llvm22, so only this upstream flag is kept.)
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode -mllvm --amdgpu-s-branch-bits=15"
 
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
 
@@ -613,7 +621,7 @@ export ROCM_PATH=`hipconfig -R`
 # pytorch uses clang, not hipcc
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
-export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode -mllvm --amdgpu-s-branch-bits=15"
 %endif
 
 %check -a
