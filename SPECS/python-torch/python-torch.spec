@@ -593,6 +593,14 @@ export ROCM_PATH=`hipconfig -R`
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 
+# The system clang used as the HIP device compiler does not auto-detect the
+# rocm-device-libs bitcode, which lives in clang's own resource dir under
+# amdgcn/bitcode.  Seed HIPFLAGS so both CMake's enable_language(HIP) compiler
+# probe and the real device compile get --rocm-device-lib-path (CMAKE_HIP_FLAGS
+# inherits HIPFLAGS via CMAKE_HIP_FLAGS_INIT); without it configure fails with
+# "cannot find ROCm device library".
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
+
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
 
 # export CMAKE_BUILD_TYPE=Debug
@@ -621,6 +629,7 @@ export ROCM_PATH=`hipconfig -R`
 # pytorch uses clang, not hipcc
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
 %endif
 
 %check -a
