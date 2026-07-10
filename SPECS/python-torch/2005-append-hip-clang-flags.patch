@@ -1,33 +1,18 @@
-From 6949c24083180dbfc96295e0be22543c24fbcb10 Mon Sep 17 00:00:00 2001
-From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Date: Sat, 4 Jul 2026 15:12:32 +0800
-Subject: [PATCH 1/2] append HIP clang flags for offload, warnings and
- long-branch
-
-Extend the HIP_CLANG_FLAGS list(APPEND) in cmake/Dependencies.cmake with
-the flags the openRuyi ROCm build needs, replacing a chain of in-place
-seds in the spec:
-  --offload-compress            shrink the fat binary
-  --offload-jobs=8              parallelise GPU offload compilation
-  -mllvm --amdgpu-s-branch-bits=15
-  -mllvm --amdgpu-long-branch-factor=2  avoid 'branch size exceeds simm16'
-                                        from AMDGPUAsmBackend.cpp
-  -Wno-pass-failed -Wno-unused-command-line-argument
-  -Wno-unused-result -Wno-deprecated-declarations  silence clang noise
----
- cmake/Dependencies.cmake | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+Append the openRuyi ROCm HIP device compiler flags to PyTorch 2.13's
+CMAKE_HIP_FLAGS.  Upstream already enables --offload-compress; openRuyi also
+needs bounded offload parallelism, the AMDGPU long-branch workaround for large
+generated kernels, and a small set of clang warning suppressions.
 
 diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
-index dac0d1f..735250e 100644
+index 2baa187e6..3d0db0cfc 100644
 --- a/cmake/Dependencies.cmake
 +++ b/cmake/Dependencies.cmake
-@@ -1066,7 +1066,7 @@ if(USE_ROCM)
-     set(CMAKE_HIP_FLAGS ${HIP_HIPCC_FLAGS})
-     # Ask hcc to generate device code during compilation so we can use
-     # host linker to link.
--    list(APPEND HIP_CLANG_FLAGS -fno-gpu-rdc)
-+    list(APPEND HIP_CLANG_FLAGS -fno-gpu-rdc --offload-jobs=8 -mllvm --amdgpu-long-branch-factor=2 -mllvm --amdgpu-s-branch-bits=15 -Wno-deprecated-declarations -Wno-unused-result -Wno-unused-command-line-argument -Wno-pass-failed --offload-compress)
-     foreach(pytorch_rocm_arch ${PYTORCH_ROCM_ARCH})
-       list(APPEND HIP_CLANG_FLAGS --offload-arch=${pytorch_rocm_arch})
-     endforeach()
+@@ -1052,7 +1052,7 @@ if(USE_ROCM)
+     endif()
+     # CMAKE_HIP_FLAGS: flags passed to the HIP compiler for device code.
+     # Architecture is handled by CMAKE_HIP_ARCHITECTURES (set in LoadHIP.cmake).
+-    string(APPEND CMAKE_HIP_FLAGS " --offload-compress -std=c++20")
++    string(APPEND CMAKE_HIP_FLAGS " --offload-compress --offload-jobs=8 -mllvm --amdgpu-long-branch-factor=2 -mllvm --amdgpu-s-branch-bits=15 -Wno-deprecated-declarations -Wno-unused-result -Wno-unused-command-line-argument -Wno-pass-failed -std=c++20")
+     # Pass device library path for theRock nightly builds
+     if(DEFINED ENV{HIP_DEVICE_LIB_PATH})
+       file(TO_CMAKE_PATH "$ENV{HIP_DEVICE_LIB_PATH}" _hip_device_lib_path)
