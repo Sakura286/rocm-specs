@@ -76,12 +76,6 @@ Source0:        https://github.com/pytorch/pytorch/releases/download/v%{version}
 # googletest is provided by the system gtest-devel (openRuyi package) when
 # BUILD_TEST=ON; see 2004-use-system-googletest.patch.
 
-# pytorch upstream issue #173707: libtorch_hip.so references the
-# const_data_ptr / mutable_data_ptr / data_ptr template family with a
-# different (non-SFINAE) mangling than libtorch_cpu.so exports.
-# Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
-Source8:       pytorch-rocm-symbol-bridge.cpp
-
 # Functional smoke test for the just-built torch, run by the check phase.
 Source11:      pytorch-smoke-test.py
 
@@ -253,9 +247,6 @@ Conflicts:      python-%{srcname}-rocm
 # find_package(GTest) and alias the GTest:: targets to those bare names so
 # the distro's shared gtest/gmock are used and not statically vendored.
 2004-use-system-googletest.patch
-# Append openRuyi ROCm CMAKE_HIP_FLAGS (offload jobs, the simm16 long-branch
-# fix, clang warning silencing).
-2005-append-hip-clang-flags.patch
 # Use the system fmt instead of vendored third_party/fmt.
 2006-use-system-fmt.patch
 # Skip PreBuildSteps.cmake submodule sanity checks for vendored directories the
@@ -314,9 +305,6 @@ sed -i '/^\[build-system\]/,/^build-backend/ {
 # Use system sympy
 sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
 
-# HIP_CLANG_FLAGS additions (--offload-compress / --offload-jobs=8, the
-# amdgpu-s-branch-bits=15 + long-branch-factor=2 simm16 fix, and clang warning
-# silencing) are applied by 2005-append-hip-clang-flags.patch.
 # Need to link with librocm_smi64 (intra_node_comm.cpp calls rsmi_init /
 # rsmi_is_P2P_accessible). The target string is "hiprtc::hiprtc" — the previous
 # pattern "hipzrtc::hiprtc" had a stray 'z' so the sed was a no-op and
@@ -466,10 +454,6 @@ sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
 # silence an assert
 # sed -i -e '/qvalue = std::clamp(qvalue, qmin, qmax);/d' aten/src/ATen/native/cuda/IndexKernel.cu
 
-# Append ROCm symbol bridge — see Source8 header for full context.
-# Without this, libtorch_hip.so dlopen fails on:
-#   undefined symbol: _ZNK2at10TensorBase14const_data_ptrI*Li0EEEPK*v
-cat %{SOURCE8} >> aten/src/ATen/core/Tensor.cpp
 %endif
 
 # moodycamel include path needs adjusting to use the system's
