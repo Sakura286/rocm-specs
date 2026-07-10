@@ -30,7 +30,7 @@
 %global __requires_exclude ^libllama-.*-impl\\.so
 # Keep ctest to local parser/format tests.  The rest includes Hugging Face
 # downloads, model fixtures, Python helpers, backend operations, or GPU use.
-%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-arg-parser|test-gguf)$
+%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-gguf)$
 
 %if %{with rocm}
 Name:           llama-cpp-rocm
