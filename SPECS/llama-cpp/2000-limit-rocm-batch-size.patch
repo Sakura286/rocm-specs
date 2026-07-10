@@ -10,7 +10,7 @@ https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa8
 
 --- a/common/common.h
 +++ b/common/common.h
-@@ -448,8 +448,8 @@
+@@ -449,8 +449,8 @@
  struct common_params {
      int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
