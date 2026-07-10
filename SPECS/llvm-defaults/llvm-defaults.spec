@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
 # SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
@@ -268,10 +269,16 @@ ln -sfn ../../%{_lib}/llvm%{maj_ver}/lib/clang/%{maj_ver} \
   %{buildroot}%{_prefix}/lib/clang/%{maj_ver}
 
 # libomp symlinks
-ln -sfn llvm%{maj_ver}/%{_lib}/libarcher.so %{buildroot}%{_libdir}/libarcher.so
-ln -sfn llvm%{maj_ver}/%{_lib}/libomp.so    %{buildroot}%{_libdir}/libomp.so
-ln -sfn llvm%{maj_ver}/%{_lib}/libompd.so   %{buildroot}%{_libdir}/libompd.so
-ln -sfn ../llvm%{maj_ver}/%{_lib}/cmake/openmp %{buildroot}%{_libdir}/cmake/openmp
+# The llvm%{maj_ver} OpenMP runtime lives under the per-target subdir
+# llvm%{maj_ver}/lib/%{_target_platform}/ (e.g. .../lib/x86_64-openruyi-linux/),
+# not llvm%{maj_ver}/%{_lib}/.  The Base spec pointed these at
+# llvm%{maj_ver}/lib64/libomp.so, which does not exist, so /usr/lib64/libomp.so
+# was a dangling symlink and any clang -fopenmp binary (e.g. python-torch) failed
+# to load libomp.so at runtime.  Point them at the real per-target path.
+ln -sfn llvm%{maj_ver}/lib/%{_target_platform}/libarcher.so %{buildroot}%{_libdir}/libarcher.so
+ln -sfn llvm%{maj_ver}/lib/%{_target_platform}/libomp.so    %{buildroot}%{_libdir}/libomp.so
+ln -sfn llvm%{maj_ver}/lib/%{_target_platform}/libompd.so   %{buildroot}%{_libdir}/libompd.so
+ln -sfn ../llvm%{maj_ver}/lib/%{_target_platform}/cmake/openmp %{buildroot}%{_libdir}/cmake/openmp
 
 # clang-tools-extra symlinks
 ln -sf clang-format-%{maj_ver} %{buildroot}%{_bindir}/clang-format
