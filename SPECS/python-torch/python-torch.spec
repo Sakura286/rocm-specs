@@ -193,6 +193,7 @@ BuildRequires:  cmake(rocsolver)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocthrust)
 BuildRequires:  pkgconfig(magma)
+BuildRequires:  amdsmi-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
