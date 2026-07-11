@@ -50,6 +50,9 @@ BuildRequires:  python3dist(pybind11)
 BuildRequires:  pkgconfig(pybind11)
 BuildRequires:  python3dist(numpy)
 BuildRequires:  python3dist(torch)
+# Select the LLVM 22 OpenMP runtime required by python-torch; Base also exposes
+# libomp23 as a provider of libomp.so, which otherwise leaves OBS with a choice.
+BuildRequires:  libomp%{llvm_maj_ver}
 
 # Triton host compiler and the distro LLVM/MLIR 22 stack.
 BuildRequires:  gcc-c++
