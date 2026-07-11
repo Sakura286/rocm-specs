@@ -1,0 +1,43 @@
+The system llvm22 HIP device backend miscompiles aten/src/ATen/native/hip/Loss.hip
+at -O3 for gfx11xx: a uniform 64-bit scalar-add pseudo (S_ADD_U64_PSEUDO, opcode
+4399) reaches MC emission without being expanded by the SIISelLowering custom
+inserter, so the backend aborts with
+
+  fatal error: error in backend: Unsupported instruction : <MCInst 4399 ...>
+
+Only this one translation unit trips it; every other ROCm package and every other
+torch HIP TU builds cleanly on the same gfx1100/1101/1200/1201 arch set. The
+Loss.cu kernels use no wave-reduce intrinsics or 64-bit atomics -- the offending
+S_ADD_U64_PSEUDO is ordinary uniform i64 index/pointer arithmetic in the
+single-threaded 1d reduce kernels -- so it is a target-backend codegen bug, not a
+source bug.
+
+Build just Loss.hip at -O1 to perturb the middle-end IR enough that the pattern
+which survives the custom inserter no longer arises. Source-level COMPILE_OPTIONS
+are appended after the -O3 from CMAKE_HIP_FLAGS_RELEASE, so -O1 wins for this file
+only, leaving every other TU at -O3. Revert once the system toolchain's AMDGPU
+backend expands the pseudo correctly (upstream llvm has no matching fix as of
+22.1.8; the S_ADD_U64_PSEUDO churn there is all wave-reduce feature work).
+
+--- a/caffe2/CMakeLists.txt
++++ b/caffe2/CMakeLists.txt
+@@ -934,6 +934,19 @@
+   set(__caffe2_hip_srcs_hip ${Caffe2_HIP_SRCS})
+   list(FILTER __caffe2_hip_srcs_hip INCLUDE REGEX "\\.(cu|hip)$")
+   set_source_files_properties(${__caffe2_hip_srcs_hip} PROPERTIES LANGUAGE HIP)
++
++  # openRuyi: the system llvm22 HIP device backend miscompiles Loss.hip at -O3
++  # for gfx11xx -- a uniform 64-bit scalar-add pseudo (S_ADD_U64_PSEUDO) reaches
++  # MC unexpanded ("Unsupported instruction : <MCInst 4399 ...>"). Building just
++  # this one TU at -O1 perturbs the middle-end IR enough to avoid it; source-level
++  # COMPILE_OPTIONS are appended after the -O3 from CMAKE_HIP_FLAGS_RELEASE so -O1
++  # wins. Drop once the backend bug is fixed in the system toolchain.
++  set(__caffe2_loss_hip_workaround ${__caffe2_hip_srcs_hip})
++  list(FILTER __caffe2_loss_hip_workaround INCLUDE REGEX "native/hip/Loss\\.hip$")
++  if(__caffe2_loss_hip_workaround)
++    set_source_files_properties(${__caffe2_loss_hip_workaround}
++        PROPERTIES COMPILE_OPTIONS "-O1")
++  endif()
+ endif()
+ 
+ # Compile exposed libraries.

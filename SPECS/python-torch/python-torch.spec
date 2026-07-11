@@ -253,6 +253,10 @@ Conflicts:      python-%{srcname}-rocm
 # openRuyi build intentionally prunes because system libraries or disabled
 # features are used.
 2007-skip-unused-submodule-prebuild-checks.patch
+# Work around a system llvm22 AMDGPU backend codegen bug: Loss.hip miscompiles at
+# -O3 for gfx11xx (S_ADD_U64_PSEUDO reaches MC unexpanded).  Build only that one
+# TU at -O1.  ROCm-only (the changed block is inside if(USE_ROCM)); no-op for cpu.
+2008-loss-hip-O1-workaround-llvm22-codegen.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
