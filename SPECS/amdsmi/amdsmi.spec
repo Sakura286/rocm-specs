@@ -12,7 +12,7 @@
 %endif
 
 %global rocm_release 7.2
-%global rocm_patch 1
+%global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # esmi_ib_library is not suitable for packaging
@@ -36,7 +36,7 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 #
 # NCSA covers the bundled esmi_ib_library
 URL:            https://github.com/ROCm/rocm-systems
-#!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
+#!RemoteAsset:  sha256:e1b7afe0ba9b12dc0ea9f3a49c381ff65363344b33ac435f7bbcc0ab1e4c8ff6
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
