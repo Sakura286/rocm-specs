@@ -218,6 +218,10 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_arch}
 export ROCM_PATH=%{_prefix}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
+# torch 2.13's LoadHIP.cmake overrides CMAKE_HIP_COMPILER with
+# $HIP_CLANG_PATH/clang++ (defaulting to ROCM_PATH/lib/llvm/bin, wrong on
+# openRuyi), so point it at the ROCm clang like the python-torch build does.
+export HIP_CLANG_PATH=%{rocmllvm_bindir}
 # CMAKE_HIP_ARCHITECTURES must be set explicitly: enable_language(HIP) tries to
 # auto-detect a default arch via rocm_agent_enumerator, which finds nothing on a
 # GPU-less builder ("Failed to find a default HIP architecture").
