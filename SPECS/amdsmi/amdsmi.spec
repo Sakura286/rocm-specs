@@ -132,9 +132,12 @@ rm -f %{buildroot}%{_docdir}/amd-smi-lib/LICENSE.txt
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/README.md
 rm -rf %{buildroot}%{_docdir}/amd-smi-lib/copyright
 
-if [ -e %{buildroot}%{_datadir}/amd_smi/tests ]; then
+# The declarative buildsystem forces SHARE_INSTALL_PREFIX=/usr/share, so amdSMI's
+# tests install to %{_datadir}/tests; relocate them under the package's own
+# datadir so the -test payload is self-contained rather than in a generic path.
+if [ -e %{buildroot}%{_datadir}/tests ]; then
     mkdir -p %{buildroot}%{_datadir}/amdsmi
-    mv %{buildroot}%{_datadir}/amd_smi/tests %{buildroot}%{_datadir}/amdsmi/
+    mv %{buildroot}%{_datadir}/tests %{buildroot}%{_datadir}/amdsmi/tests
 fi
 
 # amdsmitst needs GPU/driver access to run; suppress any default run in the
