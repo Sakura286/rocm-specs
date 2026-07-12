@@ -632,9 +632,11 @@ export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resour
 # On the HIP build, ProcessGroupGloo{,Async}Test link the libc10d_hip_test.so
 # helper that the wheel does not install, leaving a dangling soname Requires
 # that makes the package uninstallable; they cannot run without it, so drop
-# them.
+# them.  %%pyproject_save_files has already recorded them by name, so scrub the
+# generated manifest as well or 'Processing files' fails on the missing paths.
 rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
       %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
+sed -i '/ProcessGroupGloo/d' %{pyproject_files}
 %endif
 
 %check -a
