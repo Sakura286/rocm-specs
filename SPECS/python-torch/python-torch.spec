@@ -242,6 +242,7 @@ Conflicts:      python-%{srcname}-rocm
 %package devel
 Summary:        Development files for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       cmake(concurrentqueue)
 
 %if %{with test}
 %package test
