@@ -622,6 +622,16 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
 %endif
 
+%install -a
+%if %{with rocm}
+# On the HIP build, ProcessGroupGloo{,Async}Test link the libc10d_hip_test.so
+# helper that the wheel does not install, leaving a dangling soname Requires
+# that makes the package uninstallable; they cannot run without it, so drop
+# them.
+rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
+      %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
+%endif
+
 %check -a
 %if %{with test}
 # The declarative import check (BuildOption(check)) only proves modules load.
