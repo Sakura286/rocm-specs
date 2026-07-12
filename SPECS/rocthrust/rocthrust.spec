@@ -109,6 +109,11 @@ rm -f %{buildroot}%{_docdir}/rocthrust/LICENSE
 %{_libdir}/cmake/rocthrust/
 
 %files test
+# rocThrust builds two test suites under BUILD_TEST: its own tests in test/
+# (installed as <name>.hip) and the ported upstream thrust tests in testing/
+# (installed as test_thrust_<name>). Package both, plus the install-time
+# CTestTestfile tree under %{_bindir}/rocthrust/.
+%{_bindir}/*.hip
 %{_bindir}/test_*
 %{_bindir}/rocthrust/
 
