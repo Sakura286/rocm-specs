@@ -1,0 +1,19 @@
+Preselect std::regex because the OBS build environment cannot run benchmark's
+try_run probe, and compile its static library as PIC for PIE test executables.
+
+diff --git a/third_party/benchmark/CMakeLists.txt b/third_party/benchmark/CMakeLists.txt
+index 959cbef..0354318 100644
+--- a/third_party/benchmark/CMakeLists.txt
++++ b/third_party/benchmark/CMakeLists.txt
+@@ -1,6 +1,11 @@
+ # Require CMake 3.10. If available, use the policies up to CMake 3.22.
+ cmake_minimum_required (VERSION 3.13...3.22)
+
++# The OBS build cannot execute try_run probes.  Use the standard regex backend
++# and make the static benchmark library suitable for PIE test executables.
++set(HAVE_STD_REGEX 1)
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++
+ project (benchmark VERSION 1.9.3 LANGUAGES CXX)
+
+ option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)

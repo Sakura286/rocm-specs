@@ -1,0 +1,26 @@
+Use the packaged concurrentqueue CMake target rather than a pruned vendored
+tree, and link the ROCm backend to rocm_smi64 for its RSMI calls.
+
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index 2baa187..8209993 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -1097,7 +1097,7 @@ if(USE_ROCM)
+        $<INSTALL_INTERFACE:include> ${Caffe2_HIP_INCLUDE})
+
+     set(Caffe2_PUBLIC_HIP_DEPENDENCY_LIBS
+-      hip::host MIOpen hiprtc::hiprtc)
++      hip::host MIOpen hiprtc::hiprtc rocm_smi64)
+
+     # Math libraries
+     list(APPEND Caffe2_PUBLIC_HIP_DEPENDENCY_LIBS
+@@ -1739,6 +1739,6 @@ target_include_directories(httplib SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_
+ add_library(nlohmann INTERFACE IMPORTED)
+ include_directories(nlohmann SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_party/nlohmann/include)
+
+-# Include moodycamel
+-add_library(moodycamel INTERFACE IMPORTED)
+-include_directories(moodycamel SYSTEM INTERFACE ${PROJECT_SOURCE_DIR}/third_party/concurrentqueue)
++# Include the system moodycamel concurrentqueue package.
++find_package(concurrentqueue REQUIRED)
++add_library(moodycamel ALIAS concurrentqueue::concurrentqueue)
