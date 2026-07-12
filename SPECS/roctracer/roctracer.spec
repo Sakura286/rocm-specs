@@ -5,10 +5,14 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# roctracer's test suite builds without a GPU but needs one to run. Build and
-# package it so packagers can run it on hardware; keep the run behind run_test
-# (default off) so OBS never executes device tests. cf. hiprand/rocfft.
-%bcond run_test 0
+# roctracer needs a GPU to run tests, but we could still
+# keep the test cases for packagers who have a GPU, so make it optional.
+%bcond test 0
+%if %{with test}
+%global build_test ON
+%else
+%global build_test OFF
+%endif
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -63,28 +67,27 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 The roctracer development package.
 
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
+%endif
 
 %prep -a
-# There is no cmake knob to gate the test subdir, so tests are always built;
-# just fix the test runner's lib dir. The run itself is gated by run_test.
+# No knob in cmake to turn off testing
+%if %{without test}
+sed -i -e 's@add_subdirectory(test)@#add_subdirectory(test)@' CMakeLists.txt
+%else
+# Adjust test running script lib dir
 sed -i -e 's@../lib/@../%{_lib}/@' test/run.sh
+%endif
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/%{name}/LICENSE.md
 rm -rf %{buildroot}%{_datadir}/doc/%{name}-asan
-
-# roctracer's tests need a GPU to run; suppress any default ctest run in the
-# GPU-less builder and only run when a packager opts in with run_test.
-%check
-%if %{with run_test}
-%ctest
-%endif
 
 %files
 %license LICENSE.md
@@ -98,8 +101,10 @@ rm -rf %{buildroot}%{_datadir}/doc/%{name}-asan
 %{_libdir}/libroctracer64.so
 %{_libdir}/libroctx64.so
 
+%if %{with test}
 %files test
 %{_datadir}/roctracer/
+%endif
 
 %changelog
 %autochangelog
