@@ -636,7 +636,8 @@ export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resour
 # generated manifest as well or 'Processing files' fails on the missing paths.
 rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
       %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
-sed -i '/ProcessGroupGloo/d' %{pyproject_files}
+# Anchor to the bin paths: the c10d ProcessGroupGloo*.hpp headers stay packaged.
+sed -i '\#/torch/bin/ProcessGroupGlooTest$#d;\#/torch/bin/ProcessGroupGlooAsyncTest$#d' %{pyproject_files}
 %endif
 
 %check -a
