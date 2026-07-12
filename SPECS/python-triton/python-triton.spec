@@ -34,6 +34,9 @@ Patch0:         2000-Use-system-build-tools.patch
 Patch1:         2001-Adjust-for-MLIR-22-API.patch
 Patch2:         2002-Link-dynamically-against-system-LLVM.patch
 Patch3:         2003-Build-only-the-AMD-backend.patch
+# Keep the pure-Python descriptor types imported by the common native
+# specialization code; this does not restore the NVIDIA codegen backend.
+Patch4:         2004-Retain-NVIDIA-Gluon-descriptor-types.patch
 
 BuildSystem:    pyproject
 BuildOption(install):  %{srcname}
