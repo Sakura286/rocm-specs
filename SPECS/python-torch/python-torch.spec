@@ -201,6 +201,11 @@ BuildRequires:  roctracer-devel
 
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
+# torch links -fopenmp with the unversioned SONAME libomp.so; the auto-generated
+# soname dep is satisfied by bare libomp22/libomp23 whose real runtime lives
+# outside the loader path, so require the llvm-defaults libomp symlink package
+# explicitly (our fixed rebuild wins in-project; see SPECS/llvm-defaults).
+Requires:       libomp
 %if %{with rocm}
 Requires:       amdsmi
 %endif
