@@ -17,8 +17,12 @@
 %if %{with rocm}
 %global toolchain clang
 
-# TODO: gfx1100 for test build
-%global rocm_gpu_arch gfx1100
+# Target every GPU the ROCm 7.2.4 stack builds for (rocm-llvm exports
+# %%{rocm_gpu_list_default} = gfx1100;gfx1101;gfx1200;gfx1201), so
+# python-vllm-rocm carries the same code objects as the torch and ROCm
+# libraries it depends on -- covering gfx1201 (RX 9070 XT) alongside
+# gfx1100 (RX 7900 XTX).  The macro value includes its own double quotes.
+%global rocm_gpu_arch %{rocm_gpu_list_default}
 %endif
 
 %if %{with rocm}
@@ -224,13 +228,19 @@ export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 # CMAKE_HIP_ARCHITECTURES must be set explicitly: enable_language(HIP) tries to
 # auto-detect a default arch via rocm_agent_enumerator, which finds nothing on a
-# GPU-less builder ("Failed to find a default HIP architecture").
+# GPU-less builder ("Failed to find a default HIP architecture").  It is passed
+# via the already-exported $PYTORCH_ROCM_ARCH rather than %%{rocm_gpu_arch}
+# directly: that macro carries embedded double quotes, which inside CMAKE_ARGS'
+# own double quotes would close the string early and leave the ';' arch
+# separators unquoted (bare shell command separators).  $PYTORCH_ROCM_ARCH holds
+# the same list without quotes, so the ';' stays inside CMAKE_ARGS and reaches
+# CMake as a proper multi-arch list.
 #
 # --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
 # in its own resource dir, but rocm-device-libs installs it under
 # %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
 # (a single flag — no ';' — to avoid CMake's list-separator splitting).
-export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
+export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=$PYTORCH_ROCM_ARCH -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
