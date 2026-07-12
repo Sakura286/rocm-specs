@@ -26,12 +26,12 @@ Name:           python-%{srcname}-rocm
 %else
 Name:           python-%{srcname}-cpu
 %endif
-Version:        0.22.1
+Version:        0.25.0
 Release:        %autorelease
 Summary:        A high-throughput and memory-efficient inference and serving engine for LLMs
 License:        Apache-2.0
 URL:            https://github.com/vllm-project/vllm
-#!RemoteAsset:  sha256:4666b4052880d29c4a2c3d5b14cbb37b0457de1ea495dafc07ee128e7f3c4ad8
+#!RemoteAsset:  sha256:3eaed3d6f23d2077513014577e5cbd4f22a95f5d995d960a27eb96f5a89af008
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # TODO: add triton-conch deps
 # Offline replacement for cmake/external_projects/triton_kernels.cmake, which
@@ -184,11 +184,11 @@ sed -i '/"torch == 2.11.0",/d' pyproject.toml
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 
 %if %{without rocm}
-%ifarch x86_64
 # cpu_extension.cmake consumes oneDNN's public and private source headers, so a
 # prebuilt system libdnnl is insufficient.  Extract the pinned source locally.
+# Needed on x86 always; since 0.25.0 also on riscv64 when the builder's
+# /proc/cpuinfo reports RVV fp16/bf16 (zvfhmin/zvfbfmin), so supply it always.
 tar -xzf %{SOURCE2}
-%endif
 %endif
 
 %generate_buildrequires
@@ -230,10 +230,9 @@ export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
-%ifarch x86_64
-# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker.
+# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker
+# (unused when the arch/ISA does not enable the oneDNN path).
 export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-3.10"
-%endif
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.

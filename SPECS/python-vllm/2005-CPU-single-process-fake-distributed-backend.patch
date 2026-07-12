@@ -9,40 +9,42 @@
 # PyTorch's in-process "fake" c10d backend instead of requiring gloo.  Multi-rank
 # (TP/PP/DP > 1) still asserts and asks for a gloo-enabled torch.
 #
---- a/vllm/distributed/parallel_state.py
-+++ b/vllm/distributed/parallel_state.py
-@@ -339,15 +339,28 @@
+--- a/vllm/distributed/parallel_state.py	2026-07-12 11:50:06.406876902 +0800
++++ b/vllm/distributed/parallel_state.py	2026-07-12 11:52:59.768117393 +0800
+@@ -432,17 +432,30 @@
+             timeout = get_cpu_distributed_timeout_or_none()
+             device_timeout = get_distributed_timeout_or_none()
  
-         timeout = get_cpu_distributed_timeout_or_none()
- 
-+        # openRuyi: a CPU torch may be built without the gloo c10d backend.  In
-+        # that case the WORLD pg uses PyTorch's in-process "fake" backend
-+        # (single-process only), so build the per-group device/cpu groups with
-+        # that same backend instead of gloo.  At world_size==1 no real
-+        # collectives run, so this is sufficient for single-process inference.
-+        gloo_available = torch.distributed.is_gloo_available()
-+        device_backend = torch_distributed_backend
-+        cpu_backend = "gloo"
-+        if not gloo_available:
-+            if str(device_backend) == "gloo":
-+                device_backend = "fake"
-+            cpu_backend = "fake"
++            # openRuyi: a CPU torch may be built without the gloo c10d backend.  In
++            # that case the WORLD pg uses PyTorch's in-process "fake" backend
++            # (single-process only), so build the per-group device/cpu groups with
++            # that same backend instead of gloo.  At world_size==1 no real
++            # collectives run, so this is sufficient for single-process inference.
++            gloo_available = torch.distributed.is_gloo_available()
++            device_backend = torch_distributed_backend
++            cpu_backend = "gloo"
++            if not gloo_available:
++                if str(device_backend) == "gloo":
++                    device_backend = "fake"
++                cpu_backend = "fake"
 +
-         for ranks in group_ranks:
-             device_group = torch.distributed.new_group(
--                ranks, backend=torch_distributed_backend
-+                ranks, backend=device_backend
-             )
-             # a group with `gloo` backend, to allow direct coordination between
-             # processes through the CPU.
-             with suppress_stdout():
-                 cpu_group = torch.distributed.new_group(
--                    ranks, backend="gloo", timeout=timeout
-+                    ranks, backend=cpu_backend, timeout=timeout
+             for ranks in group_ranks:
+                 device_group = torch.distributed.new_group(
+                     ranks,
+-                    backend=torch_distributed_backend,
++                    backend=device_backend,
+                     timeout=device_timeout,
                  )
-             if self.rank in ranks:
-                 self.ranks = ranks
-@@ -1431,23 +1444,50 @@
+                 # a group with `gloo` backend, to allow direct coordination between
+                 # processes through the CPU.
+                 with suppress_stdout():
+                     cpu_group = torch.distributed.new_group(
+-                        ranks, backend="gloo", timeout=timeout
++                        ranks, backend=cpu_backend, timeout=timeout
+                     )
+                 if self.rank in ranks:
+                     self.ranks = ranks
+@@ -1616,16 +1629,42 @@
              "distributed_init_method must be provided when initializing "
              "distributed environment"
          )
@@ -51,6 +53,9 @@
 -            logger.warning(
 -                "Distributed backend %s is not available; falling back to gloo.",
 -                backend,
+-            )
+-            assert torch.distributed.is_gloo_available(), (
+-                "Fallback Gloo backend is not available."
 +            if torch.distributed.is_gloo_available():
 +                logger.warning(
 +                    "Distributed backend %s is not available; falling back to gloo.",
@@ -74,7 +79,6 @@
 +                )
 +                backend = "fake"
 +                use_fake_backend = True
-+        # this backend is used for WORLD
 +        if use_fake_backend:
 +            # Importing fake_pg registers the "fake" c10d backend.
 +            from torch.testing._internal.distributed.fake_pg import FakeStore
@@ -85,25 +89,9 @@
 +                world_size=world_size,
 +                rank=rank,
              )
--            assert torch.distributed.is_gloo_available(), (
--                "Fallback Gloo backend is not available."
-+        else:
-+            torch.distributed.init_process_group(
-+                backend=backend,
-+                init_method=distributed_init_method,
-+                world_size=world_size,
-+                rank=rank,
-+                timeout=timeout,
-             )
 -            backend = "gloo"
--        # this backend is used for WORLD
--        torch.distributed.init_process_group(
--            backend=backend,
--            init_method=distributed_init_method,
--            world_size=world_size,
--            rank=rank,
--            timeout=timeout,
--        )
-         if enable_elastic_ep:
-             tp_pp_cpu_group = torch.distributed.new_group(
-                 backend="gloo", timeout=timeout
+-        if envs.VLLM_DISTRIBUTED_USE_SPLIT_GROUP:
++        elif envs.VLLM_DISTRIBUTED_USE_SPLIT_GROUP:
+             # split_group needs local_rank early to compute device_id for
+             # the eager init. local_rank is not available in torch
+             # ProcessGroup, see https://github.com/pytorch/pytorch/issues/122816
