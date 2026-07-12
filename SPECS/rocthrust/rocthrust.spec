@@ -41,6 +41,10 @@ BuildSystem:    cmake
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
+# BUILD_TEST pulls in SQLite (for run-to-run reproducibility tests); use the
+# system package instead of the upstream FetchContent download, which a
+# network-isolated OBS builder cannot fetch. cf. rocfft.
+BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  clang22
@@ -53,6 +57,7 @@ BuildRequires:  compiler-rt22
 BuildRequires:  lld22
 BuildRequires:  llvm22
 BuildRequires:  ninja
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
