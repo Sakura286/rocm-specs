@@ -4,12 +4,10 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%bcond test 0
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
+# amdSMI's gtest client (amdsmitst) builds without a GPU but needs GPU/driver
+# access to run. Build and package it so packagers can run it on hardware; keep
+# the run behind run_test (default off) so OBS never executes device tests.
+%bcond run_test 0
 
 %global rocm_release 7.2
 %global rocm_patch 4
@@ -53,16 +51,14 @@ Patch1:         2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
 Patch2:         2002-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DBUILD_TESTS=%{build_test}
+BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
 %ifnarch x86_64
 BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
 %endif
 
 BuildRequires:  cmake
-%if %{with test}
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
@@ -82,14 +78,12 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{summary}
 
-%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-%endif
 
 %prep
 %autosetup -p1 -N -n %{name}
@@ -143,6 +137,13 @@ if [ -e %{buildroot}%{_datadir}/amd_smi/tests ]; then
     mv %{buildroot}%{_datadir}/amd_smi/tests %{buildroot}%{_datadir}/amdsmi/
 fi
 
+# amdsmitst needs GPU/driver access to run; suppress any default run in the
+# GPU-less builder and only run when a packager opts in with run_test.
+%check
+%if %{with run_test}
+%ctest
+%endif
+
 %files
 %doc README.md
 %license LICENSE
@@ -166,10 +167,8 @@ fi
 %{_libdir}/libgoamdsmi_shim64.so
 %endif
 
-%if %{with test}
 %files test
 %{_datadir}/amdsmi/
-%endif
 
 %changelog
 %autochangelog
