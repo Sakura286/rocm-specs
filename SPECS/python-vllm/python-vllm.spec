@@ -94,7 +94,12 @@ BuildRequires:  ninja
 
 %if %{with rocm}
 # ROCm torch by name -- the generic python3dist(torch) now resolves to CPU torch.
-BuildRequires:  python-torch-rocm
+# The -devel subpackage carries torch's headers and share/cmake (TorchConfig.cmake)
+# that find_package(Torch) needs to build vLLM's extensions; python-torch split
+# its development payload out of the base package, so requiring the runtime
+# python-torch-rocm alone no longer supplies them.  -devel Requires the base, so
+# the runtime package comes in transitively.
+BuildRequires:  python-torch-rocm-devel
 # --- ROCm toolchain ---------------------------------------------------------
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
