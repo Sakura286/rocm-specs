@@ -10,6 +10,8 @@
 
 %global rocm_version 7.2.4
 
+%global llvm_maj_ver 22
+
 Name:           rocblas
 Summary:        BLAS implementation for ROCm
 Version:        %{rocm_version}
@@ -59,18 +61,18 @@ Patch0:         0001-fixup-install-of-tensile-output.patch
 # https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
 Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(msgpack)
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  python3dist(tensile)
