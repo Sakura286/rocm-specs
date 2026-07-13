@@ -293,6 +293,8 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 2011-fix-rocm-compatibility.patch
 # Configure bundled benchmark for the non-executable OBS probe environment.
 2012-configure-benchmark-for-obs.patch
+# Install the CPU ProcessGroupGloo native test when tests are enabled.
+2013-install-cpu-gloo-test.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
@@ -639,7 +641,6 @@ PYTHONDONTWRITEBYTECODE=1 \
 %{python3_sitearch}/torch/bin/FileStoreTest
 %{python3_sitearch}/torch/bin/HashStoreTest
 %if %{without rocm}
-%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
 %{python3_sitearch}/torch/bin/ProcessGroupGlooTest
 %endif
 %{python3_sitearch}/torch/bin/TCPStoreTest
