@@ -7,6 +7,8 @@
 
 %global rocm_version 7.2.4
 
+%global llvm_maj_ver 22
+
 Name:           rocprim
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -28,15 +30,15 @@ BuildOption(conf):  -DCMAKE_RANLIB=%{rocmllvm_bindir}/llvm-ranlib
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DROCM_SYMLINK_LIBS=OFF
 
-BuildRequires:  clang22-tools-extra-devel
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra-devel
+BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  clang22-devel
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  lld22-devel
-BuildRequires:  llvm22-devel
 BuildRequires:  gcc-c++
+BuildRequires:  lld-devel(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
 BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
@@ -66,4 +68,4 @@ rm -f %{buildroot}%{_prefix}/share/doc/rocprim/LICENSE.md
 %{_libdir}/cmake/rocprim
 
 %changelog
-%{?autochangelog}
+%autochangelog
