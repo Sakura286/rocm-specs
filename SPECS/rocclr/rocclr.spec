@@ -5,6 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+%global llvm_maj_ver 22
+
 # ROCclr loads comgr at run time by soversion, so this needs to be checked when
 # updating this package as it's used for the comgr requires for opencl and hip:
 %global comgr_maj_api_ver 3
@@ -49,14 +51,14 @@ BuildOption(conf):  -DHIP_ENABLE_ROCPROFILER_REGISTER=OFF
 BuildOption(conf):  -DUSE_PROF_API=ON
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
-BuildRequires:  clang22
+BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  llvm22-devel
 BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipcc
-BuildRequires:  lld22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  perl
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libzstd)
@@ -69,8 +71,7 @@ BuildRequires:  rocm-llvm-macros
 %patchlist
 # Add riscv64 support
 2001-fix-riscv64-abi.patch
-2002-Replace-sfence-and-mfence.patch
-2003-add-lp64d-target-to-llvm-mc.patch
+2002-add-lp64d-target-to-llvm-mc.patch
 
 %description
 ROCm Compute Language Runtime
@@ -171,4 +172,4 @@ rm -f %{buildroot}%{_prefix}/share/doc/hip/LICENSE.md
 %{_includedir}/hip_prof_str.h
 
 %changelog
-%{?autochangelog}
+%autochangelog
