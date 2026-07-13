@@ -111,14 +111,14 @@ rm -f %{buildroot}%{_libdir}/pkgconfig/libhsakmt.pc
 %license    LICENSE.txt
 %{_libdir}/libhsa-runtime64.so.1{,.*}
 
-%files      devel
+%files devel
 %{_includedir}/hsa/
 %{_includedir}/hsakmt
 %{_libdir}/libhsa-runtime64.so
 %{_libdir}/cmake/hsa-runtime64/
 
 %if 0%{kfdtest}
-%files   -n kfdtest
+%files -n kfdtest
 %doc        libhsakmt/tests/kfdtest/README.txt
 %license    libhsakmt/tests/kfdtest/LICENSE.kfdtest
 %{_bindir}/kfdtest
@@ -127,4 +127,4 @@ rm -f %{buildroot}%{_libdir}/pkgconfig/libhsakmt.pc
 %endif
 
 %changelog
-%{?autochangelog}
+%autochangelog

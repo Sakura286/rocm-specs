@@ -11,23 +11,20 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
    /// @brief Force a WC flush on PCIe devices by doing a write and then read-back
    __forceinline void PcieWcFlush(void *ptr, size_t size) const {
      if (!xgmi_cpu_gpu_) {
--      _mm_sfence();
-+  #if !defined(__riscv)
-+    _mm_sfence();
++#if !defined(__riscv)
+       _mm_sfence();
 +#else
-+    asm volatile("fence w,w" ::: "memory");
++      asm volatile("fence w,w" ::: "memory");
 +#endif
        *((uint8_t*)ptr + size - 1) = *((uint8_t*)ptr + size - 1);
--      _mm_mfence();
-+  #if !defined(__riscv)
-+    _mm_mfence();
++#if !defined(__riscv)
+       _mm_mfence();
 +#else
-+    asm volatile("fence rw,rw" ::: "memory");
++      asm volatile("fence rw,rw" ::: "memory");
 +#endif
        auto readback = *(reinterpret_cast<volatile uint8_t*>(ptr) + size - 1);
        UNUSED(readback);
      }
-
 --- a/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 +++ b/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 @@ -474,7 +474,11 @@
@@ -53,7 +50,7 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
 +#endif
    }
    atomic::Store(&queue_slot[0], slot_data[0], std::memory_order_release);
-
+ 
 --- a/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp
 +++ b/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp
 @@ -901,7 +901,11 @@
@@ -68,18 +65,16 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
    }
  #if defined(__linux__)
    __atomic_store_n(&(queue_buffer[index & queue_bitmask_].full_header),
-
 --- a/runtime/hsa-runtime/core/runtime/intercept_queue.cpp
 +++ b/runtime/hsa-runtime/core/runtime/intercept_queue.cpp
 @@ -271,7 +271,11 @@
        ring[barrier & mask].barrier_and.completion_signal = Signal::Convert(async_doorbell_);
        if (wrapped->IsDeviceMemRingBuf() && needsPcieOrdering()) {
          // Ensure the packet body is written as header may get reordered when writing over PCIE
--        _mm_sfence();
-+    #if !defined(__riscv)
-+    _mm_sfence();
++#if !defined(__riscv)
+         _mm_sfence();
 +#else
-+    asm volatile("fence w,w" ::: "memory");
++        asm volatile("fence w,w" ::: "memory");
 +#endif
        }
        atomic::Store(&ring[barrier & mask].barrier_and.header, kBarrierHeader,
@@ -88,11 +83,10 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
        if (write_index != 0) {
          if (wrapped->IsDeviceMemRingBuf() && needsPcieOrdering()) {
            // Ensure the packet body is written as header may get reordered when writing over PCIE
--          _mm_sfence();
-+      #if !defined(__riscv)
-+    _mm_sfence();
++#if !defined(__riscv)
+           _mm_sfence();
 +#else
-+    asm volatile("fence w,w" ::: "memory");
++          asm volatile("fence w,w" ::: "memory");
 +#endif
          }
          atomic::Store(&ring[write & mask].packet.header, packets[first_written_packet_index].packet.header,
@@ -101,16 +95,14 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
  
      if (IsDeviceMemRingBuf() && needsPcieOrdering()) {
        // Ensure the packet body is written as header may get reordered when writing over PCIE
--      _mm_sfence();
-+  #if !defined(__riscv)
-+    _mm_sfence();
++#if !defined(__riscv)
+       _mm_sfence();
 +#else
-+    asm volatile("fence w,w" ::: "memory");
++      asm volatile("fence w,w" ::: "memory");
 +#endif
      }
    }
    i = next_packet_;
-
 --- a/runtime/hsa-runtime/core/util/utils.h
 +++ b/runtime/hsa-runtime/core/util/utils.h
 @@ -409,7 +409,11 @@
