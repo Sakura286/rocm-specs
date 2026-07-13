@@ -7,6 +7,8 @@
 
 %global rocm_version 7.2.4
 
+%global llvm_maj_ver 22
+
 Name:           hipblas
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -17,21 +19,21 @@ URL:            https://github.com/ROCm/hipBLAS
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas-common)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  rocblas-devel
+BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocsolver)
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
 BuildRequires:  gcc-fortran
 BuildRequires:  hipcc
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 
