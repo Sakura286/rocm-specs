@@ -9,6 +9,8 @@
 
 %global rocm_version 7.2.4
 
+%global llvm_maj_ver 22
+
 Name:           rocsparse
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -39,8 +41,8 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 %endif
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  compiler-rt22
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
@@ -48,8 +50,8 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  hipcc
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
