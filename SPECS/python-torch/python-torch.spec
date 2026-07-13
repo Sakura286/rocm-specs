@@ -609,7 +609,8 @@ sed -i \
     -e '\#%{python3_sitearch}/torch/bin/\(script_module_v4\.ptl\|test_interpreter_async\.pt\)$#d' \
     -e '\#%{python3_sitearch}/torch/bin/upgrader_models#d' \
     -e '\#%{python3_sitearch}/torch/lib/\(libaoti_custom_ops\|libbackend_with_compiler\|libjitbackend_test\|libtorchbind_test\)\.so$#d' \
-    -e '\#%{python3_sitearch}/torch/test#d' \
+    -e '\#%{python3_sitearch}/torch/test/#d' \
+    -e '\#%{python3_sitearch}/torch/test$#d' \
     %{pyproject_files}
 %endif
 
