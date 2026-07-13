@@ -9,8 +9,7 @@
 %global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-# This is a clang tool so best to build with clang
-%global toolchain clang
+%global llvm_maj_ver 22
 
 Name:           hipify
 Version:        %{rocm_version}
@@ -22,29 +21,28 @@ URL:            https://github.com/ROCm/HIPIFY
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf): -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
-BuildOption(conf): -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf): -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
 Patch0:         0001-prepare-hipify-cmake.patch
 
 BuildRequires:  chrpath
-BuildRequires:  clang22
-BuildRequires:  clang22-devel
-BuildRequires:  clang22-tools-extra
-BuildRequires:  clang22-tools-extra-devel
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
+BuildRequires:  clang-static(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  lld22
-BuildRequires:  lld22-devel
-BuildRequires:  llvm22
-BuildRequires:  llvm22-devel
-BuildRequires:  llvm22-static
-BuildRequires:  clang22-static
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  lld-devel(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-static(major) = %{llvm_maj_ver}
 BuildRequires:  perl
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-llvm-macros
-
 
 %description
 HIPIFY is a set of tools to translate CUDA source code into portable
@@ -77,4 +75,4 @@ rm -rf %{buildroot}%{_includedir}
 %{_libexecdir}/hipify
 
 %changelog
-%{?autochangelog}
+%autochangelog
