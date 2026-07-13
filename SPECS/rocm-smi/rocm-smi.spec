@@ -90,7 +90,7 @@ mv %{buildroot}%{_datadir}/doc/rocm-smi-lib %{buildroot}%{_datadir}/doc/rocm_smi
 %{_libdir}/librocm_smi64.so.1{,.*}
 %{_libexecdir}/rocm_smi
 
-%files      devel
+%files devel
 %{_includedir}/oam/
 %{_includedir}/rocm_smi/
 %{_libdir}/cmake/rocm_smi/
@@ -98,9 +98,9 @@ mv %{buildroot}%{_datadir}/doc/rocm-smi-lib %{buildroot}%{_datadir}/doc/rocm_smi
 %{_libdir}/librocm_smi64.so
 
 %if %{with test}
-%files      test
+%files test
 %{_datarootdir}/rsmitst_tests
 %endif
 
 %changelog
-%{?autochangelog}
+%autochangelog
