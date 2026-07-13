@@ -49,18 +49,15 @@ URL:            https://github.com/ROCm/llvm-project
 Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
-BuildRequires:  clang%{llvm_maj_ver}
-BuildRequires:  clang%{llvm_maj_ver}-devel
-# The clang -devel package ships ClangTargets.cmake referencing libclang*.a,
-# which the compat llvm packaging splits into a separate -static subpackage.
-BuildRequires:  clang%{llvm_maj_ver}-static
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
+BuildRequires:  clang-static(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  fdupes
-BuildRequires:  lld%{llvm_maj_ver}
-BuildRequires:  lld%{llvm_maj_ver}-devel
-BuildRequires:  llvm%{llvm_maj_ver}-devel
-# Likewise LLVMExports.cmake references libLLVM*.a from the llvm -static subpackage.
-BuildRequires:  llvm%{llvm_maj_ver}-static
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  lld-devel(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-static(major) = %{llvm_maj_ver}
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzstd)
