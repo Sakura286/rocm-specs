@@ -7,6 +7,8 @@
 
 %global rocm_version 7.2.4
 
+%global llvm_maj_ver 22
+
 # consume too much time
 %bcond test 0
 %bcond sample 0
@@ -41,27 +43,27 @@ BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=%{?with_sample:ON}%{!?with_sample:OF
 # https://github.com/ROCm/rocSOLVER/pull/652
 Patch0:         0001-rocsolver-ninja-job-pools.patch
 # https://github.com/ROCm/rocSOLVER/pull/962
-Patch1:         0001-rocsolver-parallel-jobs.patch
+Patch1:         0002-rocsolver-parallel-jobs.patch
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  rocblas-devel
+BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocprim)
-BuildRequires:  compiler-rt22
+BuildRequires:  cmake(rocsparse)
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
-BuildRequires:  rocsparse-devel
 BuildRequires:  rocminfo
 
 %description
