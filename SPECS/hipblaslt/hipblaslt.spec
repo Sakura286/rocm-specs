@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global toolchain clang
@@ -35,7 +35,7 @@ Release:        %autorelease
 Summary:        ROCm general matrix operations beyond BLAS
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
+#!RemoteAsset:  sha256:72ad0a8db025c6d47397791a9fce5c80cde1b89fc830523d0b34e5138329de63
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 BuildSystem:    cmake
 
@@ -52,18 +52,10 @@ BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-# yappi is used in tensilelite to generate profiling data, we are not using that in the build
-Patch0:         0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
-# Patch from Fedora, change hard coded vendor paths
-Patch1:         0001-hipblaslt-tensilelite-use-system-paths.patch
-# https://github.com/ROCm/rocm-libraries/issues/2422
-Patch2:         0001-hipblaslt-find-origami-package.patch
-# use the distribution-provided nanobind instead of fetching/bundling it
-Patch3:         2001-hipblaslt-tensilelite-use-system-nanobind.patch
-
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -73,11 +65,11 @@ BuildRequires:  cmake(msgpack)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocm_smi)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
 BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(python3)
@@ -99,6 +91,20 @@ BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
 %endif
+
+%patchlist
+# yappi is used in tensilelite to generate profiling data, we are not using that in the build
+2003-hipblaslt-tensilelite-remove-yappi-dependency.patch
+# Patch from Fedora, change hard coded vendor paths
+2004-hipblaslt-tensilelite-use-system-paths.patch
+# https://github.com/ROCm/rocm-libraries/issues/2422
+2005-hipblaslt-find-origami-package.patch
+# use the distribution-provided nanobind instead of fetching/bundling it
+2001-hipblaslt-tensilelite-use-system-nanobind.patch
+# Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
+# output the silent phase trips OBS's logidlelimit and times out on slow workers
+# (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
+2002-tensilelite-add-heartbeat-during-parallel-map.patch
 
 %description
 hipBLASLt is a library that provides general matrix-matrix
@@ -150,13 +156,10 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/depe
 # Forcefully replace all mentions of 'amdclang' with 'clang' in the Tensile Python files
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
-%build -p
-# On slow arches (e.g. riscv64 emulation) the Tensile assembly-kernel
-# generation runs for a long time with no stdout; keep a heartbeat alive to
-# avoid the OBS inactivity timeout. Killed after the build in the %build
-# append below. (rccl uses the same pattern.)
-timeout 20h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
+%build -p
 # Do a manual install instead of cmake's virtualenv
 cd tensilelite
 TL=$PWD
@@ -176,9 +179,6 @@ export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
 export PATH=${TL}/%{_bindir}:$PATH
 export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
 export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
-
-%build -a
-kill $TIME_OUT 2>/dev/null || true
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md

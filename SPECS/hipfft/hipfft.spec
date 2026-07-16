@@ -7,8 +7,8 @@
 
 %bcond test 1
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -18,10 +18,10 @@ Name:           hipfft
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm FFT marshalling library
-Url:            https://github.com/ROCm/rocm-libraries
+URL:            https://github.com/ROCm/rocm-libraries
 VCS:            git:https://github.com/ROCm/hipFFT.git
 License:        MIT
-#!RemoteAsset:  sha256:f6f0352b5f9ffe53c88cea5fa40572eef0c0c1e2e50dce6f85d2c68e47afc63e
+#!RemoteAsset:  sha256:65d08232b0f83dda214c96e869db4b68380a12a7f6526ae008ec5faf19ec30e9
 Source:         %{url}/releases/download/rocm-%{version}/hipfft.tar.gz
 Patch1:         0001-hipfft-hipfftw-soversion.patch
 BuildSystem:    cmake
@@ -30,10 +30,11 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
@@ -42,14 +43,17 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocfft)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipFFT is a FFT marshalling library. Currently, hipFFT supports either

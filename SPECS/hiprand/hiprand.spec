@@ -10,8 +10,8 @@
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond run_test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -22,8 +22,8 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        HIP random number generator
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:41e4053a3c16ea4bdc6e94fff428d8ffe7279e9cfa7ec142afc50169aae2c1f8
+URL:            https://github.com/ROCm/rocm-libraries
+#!RemoteAsset:  sha256:c31cec665ee0a7333fd4dfa54d46dd601710a17f56826f1d309aea4333c37360
 Source:         %{url}/releases/download/rocm-%{version}/hiprand.tar.gz
 BuildSystem:    cmake
 
@@ -31,22 +31,26 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipRAND is a RAND marshalling library, with multiple supported backends. It

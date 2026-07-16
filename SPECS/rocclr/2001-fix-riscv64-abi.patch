@@ -1,0 +1,71 @@
+From: Sakura286 <sakura286@outlook.com>
+Date: Mon, 29 Jun 2026 19:00:00 +0800
+Subject: Fix riscv64 ABI and replace fence instructions
+
+Read the stack pointer through an ATI_ARCH_RISCV inline-asm branch, and
+replace _mm_sfence/_mm_mfence with RISC-V fence equivalents in
+rocvirtual.cpp and hip_graph_internal.cpp.
+
+--- a/hipamd/src/hip_graph_internal.cpp
++++ b/hipamd/src/hip_graph_internal.cpp
+@@ -2077,9 +2077,17 @@
+ 
+       // Read-modify-write sequence with memory barriers
+       volatile unsigned char kSentinel = *sentinel_ptr;
++#if !defined(__riscv)
+       _mm_sfence();
++#else
++      asm volatile("fence w,w" ::: "memory");
++#endif
+       *sentinel_ptr = kSentinel;
++#if !defined(__riscv)
+       _mm_mfence();
++#else
++      asm volatile("fence rw,rw" ::: "memory");
++#endif
+       kSentinel = *sentinel_ptr;
+       (void)kSentinel; // Suppress unused variable warning
+     }
+--- a/rocclr/device/rocm/rocvirtual.cpp
++++ b/rocclr/device/rocm/rocvirtual.cpp
+@@ -3582,8 +3582,12 @@
+   std::memcpy(dst, src, size);
+ 
+   // Add memory fence
++#if !defined(__riscv)
+   _mm_sfence();
+ #else
++  asm volatile("fence w,w" ::: "memory");
++#endif
++#else
+   std::memcpy(dst, src, size);
+ #endif
+ }
+@@ -3840,9 +3844,17 @@
+         *dev().info().hdpMemFlushCntl = 1u;
+         auto kSentinel = *reinterpret_cast<volatile int*>(dev().info().hdpMemFlushCntl);
+       } else if (kernArgImpl == KernelArgImpl::DeviceKernelArgsReadback && argSize != 0) {
++#if !defined(__riscv)
+         _mm_sfence();
++#else
++        asm volatile("fence w,w" ::: "memory");
++#endif
+         *(argBuffer + argSize - 1) = *(parameters + argSize - 1);
++#if !defined(__riscv)
+         _mm_mfence();
++#else
++        asm volatile("fence rw,rw" ::: "memory");
++#endif
+         auto kSentinel = *reinterpret_cast<volatile unsigned char*>(argBuffer + argSize - 1);
+       }
+     }
+--- a/rocclr/os/os_posix.cpp
++++ b/rocclr/os/os_posix.cpp
+@@ -677,6 +677,7 @@
+       LP64_SWITCH("movl %%esp", "movq %%rsp") ",%0"
+       : "=r"(value)
+ #elif defined(ATI_ARCH_ARM)
++#elif defined(ATI_ARCH_RISCV)
+       "mov %0,sp"
+       : "=r"(value)
+ #else

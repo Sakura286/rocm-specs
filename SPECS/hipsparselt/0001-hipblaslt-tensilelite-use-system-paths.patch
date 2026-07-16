@@ -9,10 +9,7 @@ Subject: [PATCH] hipblaslt tensilelite use fedora paths
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/tensilelite/Tensile/Common/GlobalParameters.py b/tensilelite/Tensile/Common/GlobalParameters.py
-index 567188da59bd..1f8037c183a6 100644
---- a/tensilelite/Tensile/Common/GlobalParameters.py
-+++ b/tensilelite/Tensile/Common/GlobalParameters.py
-@@ -538,7 +538,7 @@ def assignGlobalParameters(config, isaInfoMap: Dict[IsaVersion, IsaInfo]):
+@@ -544,7 +544,7 @@
          else:
              print2(" %24s: %8s (unspecified)" % (key, defaultValue))
  
@@ -22,12 +19,9 @@ index 567188da59bd..1f8037c183a6 100644
          globalParameters["ROCmPath"] = os.environ.get("ROCM_PATH")
      if "TENSILE_ROCM_PATH" in os.environ:
 diff --git a/tensilelite/Tensile/Toolchain/Validators.py b/tensilelite/Tensile/Toolchain/Validators.py
-index fd5dab5324c0..3ce024d31f52 100644
---- a/tensilelite/Tensile/Toolchain/Validators.py
-+++ b/tensilelite/Tensile/Toolchain/Validators.py
-@@ -30,8 +30,8 @@ from typing import List, NamedTuple, Union
+@@ -30,8 +30,8 @@
  
- from Tensile.Common.Utilities import isRhel8
+ from Tensile.Common.Utilities import isRhel8, print2
  
 -DEFAULT_ROCM_BIN_PATH_POSIX = Path("/opt/rocm/bin")
 -DEFAULT_ROCM_LLVM_BIN_PATH_POSIX = Path("/opt/rocm/lib/llvm/bin")
@@ -38,4 +32,3 @@ index fd5dab5324c0..3ce024d31f52 100644
  
 -- 
 2.52.0
-

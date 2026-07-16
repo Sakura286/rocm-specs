@@ -14,8 +14,8 @@
 %global build_test OFF
 %endif
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -25,31 +25,35 @@ Name:           roctracer
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Tracer Callback/Activity Library
-Url:            https://github.com/ROCm/roctracer
+URL:            https://github.com/ROCm/roctracer
 VCS:            git:https://github.com/ROCm/roctracer.git
 License:        MIT
-#!RemoteAsset:  sha256:dec80803c6d2d684759172145177849efda65672645b95a2f2ad1a84335043bb
+#!RemoteAsset:  sha256:dbae23414fdb186085072b025d6b233b8ece27dd6e58e4650f5fb1fa2fe1af2a
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(atomic_ops)
 BuildRequires:  python3dist(cppheaderparser)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 roctracer is a callback and activity tracing library for ROCm. It provides

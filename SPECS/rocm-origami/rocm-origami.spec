@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           rocm-origami
@@ -14,8 +14,8 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        Analytical GEMM Solution Selection
 License:        MIT
-Url:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:1fb56e620a06e198aeec2cf37c11e6879d0c67c62e295b48779b7f486e34acb4
+URL:            https://github.com/ROCm/rocm-libraries
+#!RemoteAsset:  sha256:f917d10a3a9a8ec2f527c046a90a674a655b007d28132058c20e0fb34f6fcf71
 Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
 # License file is not included in the release tarball
 #!RemoteAsset:  sha256:b185aaa652b0bf066c37a0d6314ce4bf4521e4a3c9bf46edd2f6a777ac522223
@@ -24,20 +24,24 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 # Workaround hipblaslt build issue:
 #   origami::origami target is missing
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 
-BuildRequires:  clang
+BuildRequires:  clang22
 BuildRequires:  cmake
 BuildRequires:  cmake(hip)
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  ninja
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 The name "origami" still evokes the elegance of transforming
@@ -70,7 +74,7 @@ rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
 %files
 %doc README.md
 %license LICENSE.md
-%{_libdir}/liborigami.so.0{,.*}
+%{_libdir}/liborigami.so.1{,.*}
 
 %files devel
 %{_includedir}/origami/

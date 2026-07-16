@@ -8,8 +8,8 @@
 # Tests require an AMD GPU; keep the bcond for packagers with hardware.
 %bcond test 0
 
-%global rocm_release 7.1
-%global rocm_patch   1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -20,14 +20,10 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
-Url:            https://github.com/ROCm/MIOpen
-#!RemoteAsset:  sha256:98c72a2b5ca541d6c172facdf0f15729207ab52ca9af36c00e2480c5b27c5b99
+URL:            https://github.com/ROCm/MIOpen
+#!RemoteAsset:  sha256:983fda99d67d57f1354123101bea3af0f11f746d7ff3306bfc2700e6f6f5bb0f
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
-
-# Adds MIOPEN_PARALLEL_{COMPILE,LINK}_JOBS options to limit Ninja job pools
-# and avoid OOM on memory-constrained build hosts (upstream patch)
-Patch0:         0001-miopen-add-link-and-compile-pools.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -35,15 +31,19 @@ BuildOption(conf):  -DBoost_USE_STATIC_LIBS=OFF
 BuildOption(conf):  -DMIOPEN_BUILD_DRIVER=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_KERNEL_TUNING=OFF
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 %if %{with test}
 BuildOption(conf):  -DBUILD_TESTING=ON
 BuildOption(conf):  -DMIOPEN_TEST_ALL=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 %else
 BuildOption(conf):  -DBUILD_TESTING=OFF
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 %endif
 # Disable optional backends not yet packaged on openRuyi
 BuildOption(conf):  -DMIOPEN_USE_COMPOSABLEKERNEL=OFF
 BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
 BuildRequires:  cmake
@@ -56,14 +56,14 @@ BuildRequires:  cmake(rocrand)
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
-BuildRequires:  compiler-rt
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
+BuildRequires:  compiler-rt22
 BuildRequires:  half
 BuildRequires:  hipcc
 BuildRequires:  hipblas-common-devel
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(bzip2)
 BuildRequires:  pkgconfig(libzstd)
@@ -79,6 +79,9 @@ BuildRequires:  roctracer-devel
 Requires:       cmake(hip)
 Requires:       cmake(rocrand)
 Requires:       gcc-c++
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 AMD's library for high performance machine learning primitives.

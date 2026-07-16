@@ -4,17 +4,14 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# rocRAND need a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
-%bcond test 0
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
+# rocRAND's test client is HIP device-test code: it compiles on a GPU-less
+# builder but needs a GPU to run. Build and package the test binaries so
+# packagers can run them on hardware; keep the run behind run_test (default
+# off) so OBS never executes device tests. cf. hiprand/rocfft.
+%bcond run_test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm builds with clang
@@ -25,31 +22,33 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm random number generator
 License:        MIT AND BSD-3-Clause
-Url:            https://github.com/ROCm/rocRAND
-#!RemoteAsset:  sha256:15c33c595aa8e4de1d8b3736df9eaf2ceba7914ffebe718f0997b0da28215d9e
+URL:            https://github.com/ROCm/rocRAND
+#!RemoteAsset:  sha256:1e0295d1cf798480fe87147fc5b7d649f869a9afedd0409a4bc6548f2f097dfb
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_TEST=%{build_test}
+BuildOption(conf):  -DBUILD_TEST=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with test}
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  compiler-rt
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 The rocRAND project provides functions that generate pseudo-random and
@@ -66,17 +65,24 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 The rocRAND development package.
 
-%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-%endif
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
+
+# rocRAND registers its gtest binaries as ctest tests, so the buildsystem's
+# default %%check would run them and fail on a GPU-less builder. Only run when
+# a packager opts in with run_test.
+%check
+%if %{with run_test}
+export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
+%ctest
+%endif
 
 %files
 %doc README.md
@@ -88,11 +94,9 @@ rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 %{_libdir}/cmake/rocrand/
 %{_libdir}/librocrand.so
 
-%if %{with test}
 %files test
 %{_bindir}/rocRAND/
 %{_bindir}/test_*
-%endif
 
 %changelog
 %autochangelog

@@ -10,8 +10,8 @@
 # keep the test cases for packagers who have a GPU, so make it optional.
 %bcond test 0
 
-%global rocm_release 7.1
-%global rocm_patch 1 
+%global rocm_release 7.2
+%global rocm_patch   4 
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # rocm stack builds with clang
@@ -22,8 +22,8 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 License:        MIT
-Url:            https://github.com/ROCm/rocFFT
-#!RemoteAsset:  sha256:047e4e93e0b12869bf42136b5eb683df3a1635b01a58bbb25c8861df291ab285
+URL:            https://github.com/ROCm/rocFFT
+#!RemoteAsset:  sha256:3a01fab8e598e16d42dbcbd3ce942b9b55a86d1c2ce383dec829835f42b42222
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
@@ -35,10 +35,11 @@ BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -46,10 +47,10 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt
-BuildRequires:  libomp-devel
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  compiler-rt22
+BuildRequires:  libomp22-devel
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  pkgconfig(sqlite3)
@@ -57,6 +58,9 @@ BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 rocFFT is a software library for computing fast Fourier transforms (FFTs) written
@@ -84,7 +88,7 @@ sed -i -e 's@SQLite3 3.50.2 @SQLite3 @' cmake/sqlite.cmake
 
 %install -a
 # we don't need the rocfft_rtc_helper binary and client-info file
-find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} /usr/bin/rm -rf "{}"
+find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} rm -rf "{}"
 rm -rf %{buildroot}/%{_prefix}/.info
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 

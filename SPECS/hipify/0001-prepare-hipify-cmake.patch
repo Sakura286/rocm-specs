@@ -1,0 +1,47 @@
+--- ./CMakeLists.txt.ori	2025-12-12 16:55:46
++++ ./CMakeLists.txt	2025-12-12 19:25:30
+@@ -78,20 +78,6 @@
+     Core
+   )
+   
+-  if(LLVM_PACKAGE_VERSION VERSION_GREATER "6.0.1")
+-    list(APPEND HIPIFY_ADDL_LINK_LIBS clangToolingInclusions)
+-  endif()
+-
+-  if(LLVM_PACKAGE_VERSION VERSION_GREATER "9.0.1")
+-    list(APPEND LLVM_LINK_COMPONENTS FrontendOpenMP)
+-  endif()
+-
+-  if(LLVM_PACKAGE_VERSION VERSION_EQUAL "15.0.0" OR LLVM_PACKAGE_VERSION VERSION_GREATER "15.0.0")
+-    list(APPEND LLVM_LINK_COMPONENTS WindowsDriver)
+-    list(APPEND HIPIFY_ADDL_LINK_LIBS clangSupport)
+-  endif()
+-
+-
+   add_llvm_executable(hipify-clang
+     ${HIPIFY_SOURCES} ${HIPIFY_HEADERS}
+   )
+@@ -129,21 +115,8 @@
+ 
+   # Link against LLVM and CLANG libraries.
+   target_link_libraries(hipify-clang PRIVATE
+-    clangASTMatchers
+-    clangFrontend
+-    clangTooling
+-    clangParse
+-    clangSerialization
+-    clangSema
+-    clangEdit
+-    clangFormat
+-    clangLex
+-    clangAnalysis
+-    clangDriver
+-    clangAST
+-    clangToolingCore
+-    clangRewrite
+-    clangBasic
++    clang-cpp
++    LLVM
+     ${HIPIFY_ADDL_LINK_LIBS}
+   )
+ 

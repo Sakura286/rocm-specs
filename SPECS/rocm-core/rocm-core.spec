@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.1.1
+%global rocm_version 7.2.4
 
 Name:           rocm-core
 Version:        %{rocm_version}
@@ -12,15 +12,13 @@ Release:        %autorelease
 Summary:        A utility to get the ROCm release version
 License:        MIT
 URL:            https://github.com/ROCm/rocm-core
-#!RemoteAsset:  sha256:0171b82a4d028d57035d0d57a01a058f50f1a23959d230cdeab14972dcd94da8
+#!RemoteAsset:  sha256:32dab2f00e22fb5462beffae03cc642403925d22a42662e15ac0f68d8e885dea
 Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):  -DROCM_VERSION=%{rocm_version}
+BuildOption(conf):  -DROCM_VERSION=%{version}
 
 BuildRequires:  cmake
-
-Provides:       rocm-core = %{version}-%{release}
 
 %description
 %{summary}
@@ -42,6 +40,8 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %doc README.md
 %license LICENSE.md
 %{_libdir}/librocm-core.so.*
+%{_bindir}/rdhc
+%{_datadir}/rdhc/
 
 %files devel
 %{_includedir}/rocm-core/*.h
@@ -49,4 +49,4 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %{_libdir}/librocm-core.so
 
 %changelog
-%{?autochangelog}
+%autochangelog

@@ -4,15 +4,13 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%bcond test 0
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
+# amdSMI's gtest client (amdsmitst) builds without a GPU but needs GPU/driver
+# access to run. Build and package it so packagers can run it on hardware; keep
+# the run behind run_test (default off) so OBS never executes device tests.
+%bcond run_test 0
 
 %global rocm_release 7.2
-%global rocm_patch 1
+%global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # esmi_ib_library is not suitable for packaging
@@ -26,7 +24,7 @@ Name:           amdsmi
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD System Management Interface
-License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
+License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 # Main license is MIT
 #
 # This file is GPL-2.0:
@@ -34,9 +32,9 @@ License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NSCA
 # esmi_ib_library/include/asm/amd_hsmp.h
 # Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# NSCA covers the bundled esmi_ib_library
-Url:            https://github.com/ROCm/rocm-systems
-#!RemoteAsset:  sha256:23c31cd787d86ee35c82746fcde705eacc46517815110376f28417909ef46406
+# NCSA covers the bundled esmi_ib_library
+URL:            https://github.com/ROCm/rocm-systems
+#!RemoteAsset:  sha256:e1b7afe0ba9b12dc0ea9f3a49c381ff65363344b33ac435f7bbcc0ab1e4c8ff6
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
@@ -53,16 +51,14 @@ Patch1:         2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
 Patch2:         2002-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DBUILD_TESTS=%{build_test}
+BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
 %ifnarch x86_64
 BuildOption(conf):  -DENABLE_ESMI_LIB=OFF
 %endif
 
 BuildRequires:  cmake
-%if %{with test}
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
@@ -82,14 +78,12 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{summary}
 
-%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-%endif
 
 %prep
 %autosetup -p1 -N -n %{name}
@@ -138,10 +132,20 @@ rm -f %{buildroot}%{_docdir}/amd-smi-lib/LICENSE.txt
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/README.md
 rm -rf %{buildroot}%{_docdir}/amd-smi-lib/copyright
 
-if [ -e %{buildroot}%{_datadir}/amd_smi/tests ]; then
+# The declarative buildsystem forces SHARE_INSTALL_PREFIX=/usr/share, so amdSMI's
+# tests install to %{_datadir}/tests; relocate them under the package's own
+# datadir so the -test payload is self-contained rather than in a generic path.
+if [ -e %{buildroot}%{_datadir}/tests ]; then
     mkdir -p %{buildroot}%{_datadir}/amdsmi
-    mv %{buildroot}%{_datadir}/amd_smi/tests %{buildroot}%{_datadir}/amdsmi/
+    mv %{buildroot}%{_datadir}/tests %{buildroot}%{_datadir}/amdsmi/tests
 fi
+
+# amdsmitst needs GPU/driver access to run; suppress any default run in the
+# GPU-less builder and only run when a packager opts in with run_test.
+%check
+%if %{with run_test}
+%ctest
+%endif
 
 %files
 %doc README.md
@@ -166,10 +170,8 @@ fi
 %{_libdir}/libgoamdsmi_shim64.so
 %endif
 
-%if %{with test}
 %files test
 %{_datadir}/amdsmi/
-%endif
 
 %changelog
 %autochangelog

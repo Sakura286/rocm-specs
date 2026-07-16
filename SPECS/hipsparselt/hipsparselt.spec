@@ -5,8 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global toolchain clang
@@ -27,32 +27,44 @@ Release:        %autorelease
 Summary:        A SPARSE marshaling library
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:7672d1ac94d2694999b6937d19f5e92e67fb844eea394b4e8525c531fd1acd8c
+#!RemoteAsset:  sha256:9ebd347b9b0fab350ce48c27aa848fe8f99c8b743ecf5213965618fa4f9a25ba
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
-#!RemoteAsset:  sha256:05d73038b1b4f66f3df4eb595b7cb0c8935f7aa18d0e07dbe5cc740a4b691898
+#!RemoteAsset:  sha256:72ad0a8db025c6d47397791a9fce5c80cde1b89fc830523d0b34e5138329de63
 Source1:        %{url}/releases/download/rocm-%{version}/hipblaslt.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source2:        0001-hipblaslt-tensilelite-remove-yappi-dependency.patch
 Source3:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
+# Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
+# output the silent phase trips OBS's logidlelimit and times out on slow workers
+# (riscv64 emulation). Same fix as rocm-specs hipblaslt.
+Source5:        2002-tensilelite-add-heartbeat-during-parallel-map.patch
+# -mf16c is an x86-only clang flag (F16C intrinsics); guard it on x86 so the
+# hipSPARSELt library builds on non-x86 hosts like riscv64. cf. ollama PR #8129
+Patch0:         2001-hipsparselt-guard-mf16c-to-x86.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
+# HIPSPARSELT_ENABLE_CLIENT gates the clients/ subdir (benchmarks/samples nest
+# under it); default ON pulls in clients/CMakeLists.txt which fatally requires
+# LAPACK. Tie it to the test toggle like hipblaslt's HIPBLASLT_ENABLE_CLIENT.
+BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=%{cmake_test}
 BuildOption(conf):  -DBUILD_VERBOSE=ON
 BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gcc-fortran
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
-BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DGPU_TARGETS="gfx942;gfx950"
 BuildOption(conf):  -DTensile_COMPILER=clang++
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
 BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -61,11 +73,12 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
+BuildRequires:  libomp22-devel
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(msgpack)
 BuildRequires:  pkgconfig(python3)
@@ -88,6 +101,9 @@ BuildRequires:  pkgconfig(openblas)
 BuildRequires:  pkgconfig(gtest)
 BuildRequires:  pkgconfig(gmock)
 %endif
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipSPARSELt is a SPARSE marshaling library that provides general sparse
@@ -119,6 +135,7 @@ cd hipblaslt
 patch -p1 < %{SOURCE2}
 patch -p1 < %{SOURCE3}
 patch -p1 < %{SOURCE4}
+patch -p1 < %{SOURCE5}
 
 # Use PATH to find where TensileGetPath and other tensile bins are
 sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g' \
@@ -147,14 +164,8 @@ sed -i -e 's@virtualenv_install@#virtualenv_install@' CMakeLists.txt
 # Unforce the setting of libdir
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' CMakeLists.txt
 
-# Change looking for cblas to flexiblas
-sed -i -e 's@find_package( cblas REQUIRED CONFIG )@#find_package( cblas REQUIRED CONFIG )@' clients/CMakeLists.txt
-sed -i -e 's@set( BLAS_LIBRARY "blas" )@set( BLAS_LIBRARY "flexiblas" )@' clients/CMakeLists.txt
-sed -i -e 's@lapack cblas@flexiblas@' clients/gtest/CMakeLists.txt
-
 # We are building from a tarball, not a git repo
 sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipblaslt/cmake/dependencies.cmake
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/Dependencies.cmake
 
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
 find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +

@@ -17,8 +17,12 @@
 %if %{with rocm}
 %global toolchain clang
 
-# TODO: gfx1100 for test build
-%global rocm_gpu_arch gfx1100
+# Target every GPU the ROCm 7.2.4 stack builds for (rocm-llvm exports
+# %%{rocm_gpu_list_default} = gfx1100;gfx1101;gfx1200;gfx1201), so
+# python-vllm-rocm carries the same code objects as the torch and ROCm
+# libraries it depends on -- covering gfx1201 (RX 9070 XT) alongside
+# gfx1100 (RX 7900 XTX).  The macro value includes its own double quotes.
+%global rocm_gpu_arch %{rocm_gpu_list_default}
 %endif
 
 %if %{with rocm}
@@ -26,12 +30,12 @@ Name:           python-%{srcname}-rocm
 %else
 Name:           python-%{srcname}-cpu
 %endif
-Version:        0.22.1
+Version:        0.25.0
 Release:        %autorelease
 Summary:        A high-throughput and memory-efficient inference and serving engine for LLMs
 License:        Apache-2.0
 URL:            https://github.com/vllm-project/vllm
-#!RemoteAsset:  sha256:4666b4052880d29c4a2c3d5b14cbb37b0457de1ea495dafc07ee128e7f3c4ad8
+#!RemoteAsset:  sha256:3eaed3d6f23d2077513014577e5cbd4f22a95f5d995d960a27eb96f5a89af008
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 # TODO: add triton-conch deps
 # Offline replacement for cmake/external_projects/triton_kernels.cmake, which
@@ -90,7 +94,12 @@ BuildRequires:  ninja
 
 %if %{with rocm}
 # ROCm torch by name -- the generic python3dist(torch) now resolves to CPU torch.
-BuildRequires:  python-torch-rocm
+# The -devel subpackage carries torch's headers and share/cmake (TorchConfig.cmake)
+# that find_package(Torch) needs to build vLLM's extensions; python-torch split
+# its development payload out of the base package, so requiring the runtime
+# python-torch-rocm alone no longer supplies them.  -devel Requires the base, so
+# the runtime package comes in transitively.
+BuildRequires:  python-torch-rocm-devel
 # --- ROCm toolchain ---------------------------------------------------------
 BuildRequires:  clang
 BuildRequires:  clang-tools-extra
@@ -184,11 +193,11 @@ sed -i '/"torch == 2.11.0",/d' pyproject.toml
 cp -f %{SOURCE1} cmake/external_projects/triton_kernels.cmake
 
 %if %{without rocm}
-%ifarch x86_64
 # cpu_extension.cmake consumes oneDNN's public and private source headers, so a
 # prebuilt system libdnnl is insufficient.  Extract the pinned source locally.
+# Needed on x86 always; since 0.25.0 also on riscv64 when the builder's
+# /proc/cpuinfo reports RVV fp16/bf16 (zvfhmin/zvfbfmin), so supply it always.
 tar -xzf %{SOURCE2}
-%endif
 %endif
 
 %generate_buildrequires
@@ -218,22 +227,31 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_arch}
 export ROCM_PATH=%{_prefix}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:%{_bindir}:$PATH
+# torch 2.13's LoadHIP.cmake overrides CMAKE_HIP_COMPILER with
+# $HIP_CLANG_PATH/clang++ (defaulting to ROCM_PATH/lib/llvm/bin, wrong on
+# openRuyi), so point it at the ROCm clang like the python-torch build does.
+export HIP_CLANG_PATH=%{rocmllvm_bindir}
 # CMAKE_HIP_ARCHITECTURES must be set explicitly: enable_language(HIP) tries to
 # auto-detect a default arch via rocm_agent_enumerator, which finds nothing on a
-# GPU-less builder ("Failed to find a default HIP architecture").
+# GPU-less builder ("Failed to find a default HIP architecture").  It is passed
+# via the already-exported $PYTORCH_ROCM_ARCH rather than %%{rocm_gpu_arch}
+# directly: that macro carries embedded double quotes, which inside CMAKE_ARGS'
+# own double quotes would close the string early and leave the ';' arch
+# separators unquoted (bare shell command separators).  $PYTORCH_ROCM_ARCH holds
+# the same list without quotes, so the ';' stays inside CMAKE_ARGS and reaches
+# CMake as a proper multi-arch list.
 #
 # --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
 # in its own resource dir, but rocm-device-libs installs it under
 # %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
 # (a single flag — no ';' — to avoid CMake's list-separator splitting).
-export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=%{rocm_gpu_arch} -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
+export CMAKE_ARGS="-DROCM_PATH=%{_prefix} -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++ -DCMAKE_HIP_ARCHITECTURES=$PYTORCH_ROCM_ARCH -DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
-%ifarch x86_64
-# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker.
+# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker
+# (unused when the arch/ISA does not enable the oneDNN path).
 export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-3.10"
-%endif
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
 # /proc/cpuinfo; override with -DVLLM_RVV_VLEN=128/256, or =0 to force scalar.
 # sg2044 has VLEN=128; specify it explicitly to ensure correct configuration.

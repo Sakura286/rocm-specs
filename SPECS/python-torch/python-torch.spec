@@ -13,11 +13,18 @@
 
 %global miniz_version 3.0.2
 
-# For -test subpackage
-# suitable only for local testing
-# Install and do something like
-#   export LD_LIBRARY_PATH=/usr/lib64/python3.12/site-packages/torch/lib
-#   /usr/lib64/python3.12/site-packages/torch/bin/test_api, test_lazy
+# LibTorch and the installed native-test helpers live below Python's private
+# module directory. Do not expose their SONAMEs as system-wide capabilities,
+# and suppress only the matching in-package requirements.
+%global torch_privlibs libaoti_custom_ops|libbackend_with_compiler|libc10|libc10_hip
+%global torch_privlibs %{torch_privlibs}|libcaffe2_nvrtc|libjitbackend_test|libshm
+%global torch_privlibs %{torch_privlibs}|libtorch|libtorch_cpu|libtorch_global_deps
+%global torch_privlibs %{torch_privlibs}|libtorch_hip|libtorch_python|libtorchbind_test
+%global __provides_exclude_from ^%{python3_sitearch}/torch/lib/.*\\.so$
+%global __requires_exclude ^(%{torch_privlibs})\\.so
+
+# Build the installed native-test payload. These tests are split from the
+# runtime package and are intended for post-install checks on suitable hosts.
 %bcond test 1
 
 # The default flavor builds a CPU-only torch; the "rocm" multibuild flavor
@@ -60,91 +67,32 @@ Name:           python-%{srcname}-rocm
 %else
 Name:           python-%{srcname}
 %endif
-Version:        2.11.0
+Version:        2.13.0
 Release:        %autorelease
 Summary:        PyTorch AI/ML framework
-# See license.txt for license details
-License:        BSD-3-Clause AND BSD-2-Clause AND 0BSD AND Apache-2.0 AND MIT AND BSL-1.0 AND GPL-3.0-or-later AND Zlib
+# This is upstream's PEP 639 expression for the installed distribution; the
+# build prunes unused third-party trees before constructing the wheel.
+License:        Apache-2.0 AND (Apache-2.0 WITH LLVM-exception) AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 URL:            https://pytorch.org/
 VCS:            git:https://github.com/pytorch/pytorch.git
-# PyTorch publishes only wheels on PyPI (no sdist), and a PyPI sdist would lack
-# the third_party/ C++ submodule sources needed to build from source anyway; use
-# the GitHub release tarball for the tag instead.
-#!RemoteAsset:  sha256:52872a6bbdc42334b00051d88a92f801cfd9be730abdd2b37a2d08996f53bb29
-Source0:        https://github.com/pytorch/pytorch/archive/refs/tags/v%{version}.tar.gz
-%if %{without system_flatbuffers}
-%global flatbuffers_version 24.12.23
-#!RemoteAsset:  sha256:7e2ef35f1af9e2aa0c6a7d0a09298c2cb86caf3d4f58c0658b306256e5bcab10
-Source1:        https://github.com/google/flatbuffers/archive/refs/tags/v%{flatbuffers_version}.tar.gz
-%endif
-%if %{without system_tensorpipe}
-# Developement on tensorpipe has stopped, repo made read only July 1, 2023, this is the last commit
-%global tp_commit 2b4cd91092d335a697416b2a3cb398283246849d
-%global tp_scommit 2b4cd91
-#!RemoteAsset:  sha256:0e85ca56bfe25ed7b3026d2784f716eb10ed1328ade346e3a252814752c57eeb
-Source2:       https://github.com/pytorch/tensorpipe/archive/%{tp_commit}/tensorpipe-%{tp_scommit}.tar.gz
-# The old libuv tensorpipe uses
-#!RemoteAsset:  sha256:6cfeb5f4bab271462b4a2cc77d4ecec847fdbdc26b72019c27ae21509e6f94fa
-Source3:       https://github.com/libuv/libuv/archive/refs/tags/v1.41.0.tar.gz
-# Developement afaik on libnop has stopped, this is the last commit
-%global nop_commit 910b55815be16109f04f4180e9adee14fb4ce281
-%global nop_scommit 910b558
-#!RemoteAsset:  sha256:ec3604671f8ea11aed9588825f9098057ebfef7a8908e97459835150eea9f63a
-Source4:       https://github.com/google/libnop/archive/%{nop_commit}/libnop-%{nop_scommit}.tar.gz
-%endif
-
-%if %{without system_httplib}
-%global hl_commit 4d7c9a788de136071ccf0dd4e96239151e2adadb
-%global hl_scommit 4d7c9a7
-#!RemoteAsset:  sha256:8ecb7bbe844f9b4a1418b8a015d0f815d021d2c0d53291387122cb510c8783ef
-Source5:       https://github.com/yhirose/cpp-httplib/archive/%{hl_commit}/cpp-httplib-%{hl_scommit}.tar.gz
-%endif
-%if %{without system_kineto}
-%global ki_commit 23b5bb5764b3dec988e25c52098407e508d84bb4
-%global ki_scommit 23b5bb5
-#!RemoteAsset:  sha256:5b85352628319e22c48b589d2f423f3761479058f87a3ecc328818f16e4394c6
-Source6:       https://github.com/pytorch/kineto/archive/%{ki_commit}/kineto-%{ki_scommit}.tar.gz
-%endif
-
-%global mslk_commit 3d332d1c0c0ac7765852c97b3979c9ef913e037f
-%global mslk_scommit 3d332d1
-#!RemoteAsset:  sha256:1944e67d1baeffef3bb8f89793ea06e0f05b88aac4d5cd89b4558a21aca6754b
-Source7:       https://github.com/meta-pytorch/MSLK/archive/%{mslk_commit}/MSLK-%{mslk_scommit}.tar.gz
-
-# gloo: pinned submodule providing the torch.distributed Gloo backend.
-# Required by USE_GLOO=ON; the v%{version} GitHub archive ships
-# third_party/gloo empty (submodules excluded), so vendor it explicitly.
-%global gloo_commit 3135b0b41b67dde590eef0938a0bf3d6238df5f7
-%global gloo_scommit 3135b0b
-#!RemoteAsset:  sha256:6a8c7ea8e3048762aaf3472f969ee42c2163e7ffcbb195eea4f245c1f7bd8cc3
-Source9:       https://github.com/pytorch/gloo/archive/%{gloo_commit}/gloo-%{gloo_scommit}.tar.gz
+# PyTorch publishes only wheels on PyPI.  The GitHub tag archive excludes
+# submodules, but the official release asset includes the third_party C++
+# sources needed for a distro source build.
+#!RemoteAsset:  sha256:66614a19060f69cfd63cd0295f65a1241bd15df2fa65c60ae51066c11c2ce812
+Source0:        https://github.com/pytorch/pytorch/releases/download/v%{version}/pytorch-v%{version}.tar.gz
 
 # googletest is provided by the system gtest-devel (openRuyi package) when
-# BUILD_TEST=ON; see Patch3.  No vendored source needed.
-
-# benchmark: pinned submodule for building tests (BUILD_TEST=ON).
-# The release tarball ships third_party/benchmark as an empty submodule
-# directory, so vendor it explicitly.  (No system google-benchmark in
-# openRuyi yet.)
-%global benchmark_commit 299e5928955cc62af9968370293b916f5130916f
-%global benchmark_scommit 299e592
-#!RemoteAsset:  sha256:a9f63d40157775f13ca8a5c6769603cc0708f4eb81a1f539abdf0f85a10c17dd
-Source10:      https://github.com/google/benchmark/archive/%{benchmark_commit}/benchmark-%{benchmark_scommit}.tar.gz
-
-# pytorch upstream issue #173707: libtorch_hip.so references the
-# const_data_ptr / mutable_data_ptr / data_ptr template family with a
-# different (non-SFINAE) mangling than libtorch_cpu.so exports.
-# Appended to aten/src/ATen/core/Tensor.cpp in %prep when rocm is enabled.
-Source8:       pytorch-rocm-symbol-bridge.cpp
+# BUILD_TEST=ON; see 2004-use-system-googletest.patch.
 
 # Functional smoke test for the just-built torch, run by the check phase.
-Source11:      pytorch-smoke-test.py
+Source1:        pytorch-smoke-test.py
 
 BuildSystem:    pyproject
+BuildOption(prep):  -n pytorch-v%{version}
 # Save every importable torch* top-level (torch, torchgen, functorch) plus the
-# torchrun entrypoint; consumed by %%files -f %%{pyproject_files}.  -l is omitted
-# because torch declares no PEP 639 License-File, so %%license LICENSE stays.
-BuildOption(install):  '*torch*'
+# torchrun entrypoint; -l records the PEP 639 license files in the generated
+# manifest consumed by %%files -f %%{pyproject_files}.
+BuildOption(install):  -l '*torch*'
 # The declarative check phase runs %%pyproject_check_import on the saved module
 # list; exclude the entries that cannot be imported in the build chroot:
 #  - torch.lib.lib*: C++ shared libs in torch/lib (libtorch, libc10, libtorch_cpu,
@@ -166,13 +114,13 @@ BuildRequires:  eigen3
 BuildRequires:  foxi-devel
 BuildRequires:  libomp-devel
 BuildRequires:  ninja
-BuildRequires:  pkgconfig(fmt)
+BuildRequires:  cmake(fmt)
 BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(openblas64)
 BuildRequires:  pkgconfig(protobuf)
 # The system protobuf's cmake config does find_package(ZLIB), which imports the
-# ZLIB::ZLIBSTATIC target referencing /usr/lib64/libz.a; cmake configure aborts
+# ZLIB::ZLIBSTATIC target referencing %%{_libdir}/libz.a; cmake configure aborts
 # if that static lib is absent. Pull it in (provided by zlib-ng-compat-static).
 BuildRequires:  zlib-ng-compat-static
 BuildRequires:  pkgconfig(valgrind)
@@ -185,9 +133,11 @@ BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(filelock)
+BuildRequires:  python3dist(fsspec)
 BuildRequires:  python3dist(jinja2)
 BuildRequires:  python3dist(networkx)
 BuildRequires:  python3dist(numpy)
+BuildRequires:  python3dist(packaging)
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(pybind11)
 BuildRequires:  python3dist(pyyaml)
@@ -214,7 +164,8 @@ BuildRequires:  openmpi-devel
 %endif
 
 %if %{with test}
-# System googletest for BUILD_TEST=ON (see Patch3).  cmake(GTest) brings
+# System googletest for BUILD_TEST=ON (see 2004-use-system-googletest.patch).
+# cmake(GTest) brings
 # gtest-devel (which carries the gtest/gmock cmake config and gtest headers);
 # gmock's headers ship in the separate gmock-devel package, which
 # gtest-devel only runtime-Requires (not -devel), so pull it in explicitly.
@@ -252,6 +203,7 @@ BuildRequires:  cmake(rocsolver)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocthrust)
 BuildRequires:  pkgconfig(magma)
+BuildRequires:  amdsmi-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
@@ -259,6 +211,11 @@ BuildRequires:  roctracer-devel
 
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
+# torch links -fopenmp with the unversioned SONAME libomp.so; the auto-generated
+# soname dep is satisfied by bare libomp22/libomp23 whose real runtime lives
+# outside the loader path, so require the llvm-defaults libomp symlink package
+# explicitly (our fixed rebuild wins in-project; see SPECS/llvm-defaults).
+Requires:       libomp
 %if %{with rocm}
 Requires:       amdsmi
 %endif
@@ -282,22 +239,29 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 Conflicts:      python-%{srcname}-rocm
 %endif
 
+%package devel
+Summary:        Development files for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       cmake(concurrentqueue)
+
+%if %{with test}
+%package test
+Summary:        Installed native test payload for %{name}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+%endif
+
 %patchlist
-# Fix magma version encoding.  Submitted upstream as PR #180388, but that PR was
-# closed without merging, so openRuyi carries it as a downstream patch.
-# https://github.com/pytorch/pytorch/pull/180388
-2000-pytorch-magma-2.10.0-version-encoding.patch
+# Backport google/benchmark PR #2108 so clang 22 does not fail BUILD_TEST=ON on
+# a -Wc2y-extensions diagnostic from benchmark's __COUNTER__ preprocessor check.
+1000-benchmark-silence-c2y-counter-warning.patch
+# Disable PyTorch's ROCm aotriton ExternalProject hook; openRuyi builds with
+# USE_FLASH_ATTENTION=OFF / USE_MEM_EFF_ATTENTION=OFF and must not download
+# aotriton artifacts during CMake configure/build.
+2000-disable-aotriton-download.patch
 # torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
 # BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
 # the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
 2001-force-cblas-complex-dot-for-openblas.patch
-# CPython 3.13.8 inspect.getsourcelines() truncates a decorated function's
-# source when a comment line sits between the last decorator and the def
-# (fixed in later 3.13.x).  TorchScript parses the RNN/LSTM/GRU forward
-# overload stubs at import time, so "import torch" dies with an
-# IndentationError.  Drop the offending pyrefly comment lines.
-# https://github.com/python/cpython/issues/139783
-2002-remove-pyrefly-comments-between-overload-decorator-and-def.patch
 # Default to hipBLASLt on gfx1100: upstream lists gfx1100 only as a hipBLASLt-
 # supported arch, not a preferred one, so torch defaults to rocBLAS -- whose fp16
 # GEMM has no Tensile solution for some shapes on gfx1100, failing with
@@ -310,12 +274,27 @@ Conflicts:      python-%{srcname}-rocm
 # find_package(GTest) and alias the GTest:: targets to those bare names so
 # the distro's shared gtest/gmock are used and not statically vendored.
 2004-use-system-googletest.patch
-# Append the openRuyi ROCm HIP_CLANG_FLAGS (offload compress/jobs, the simm16
-# long-branch fix, clang warning silencing); was a chain of in-place seds.
-2005-append-hip-clang-flags.patch
-# Use the system fmt instead of vendored third_party/fmt (main source tree);
-# the vendored kineto copy is still handled by a sed in %prep.
+# Use the system fmt instead of vendored third_party/fmt.
 2006-use-system-fmt.patch
+# Skip PreBuildSteps.cmake submodule sanity checks for vendored directories the
+# openRuyi build intentionally prunes because system libraries or disabled
+# features are used.
+2007-skip-unused-submodule-prebuild-checks.patch
+# Work around a system llvm22 AMDGPU SelectionDAG codegen bug: Loss.hip
+# miscompiles for gfx11xx (S_ADD_U64_PSEUDO reaches MC unexpanded; reproduces at
+# -O3 and -O1 alike).  Build only that one TU at -O0, switching it to GlobalISel.
+# ROCm-only (the changed block is inside if(USE_ROCM)); no-op for cpu.
+2008-loss-hip-O0-workaround-llvm22-codegen.patch
+# Use satisfiable distro build-backend requirements while preserving PEP 639.
+2009-use-system-pyproject-build-dependencies.patch
+# Use packaged concurrentqueue and link the ROCm RSMI dependency.
+2010-use-system-cmake-dependencies.patch
+# Adapt shared CUDA/HIP declarations to the ROCm 7.2 clang ABI.
+2011-fix-rocm-compatibility.patch
+# Configure bundled benchmark for the non-executable OBS probe environment.
+2012-configure-benchmark-for-obs.patch
+# Install the CPU ProcessGroupGloo native test when tests are enabled.
+2013-install-cpu-gloo-test.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
@@ -326,8 +305,17 @@ PyTorch is a Python package that provides two high-level features:
 You can reuse your favorite Python packages such as NumPy, SciPy,
 and Cython to extend PyTorch when needed.
 
-%prep
-%autosetup -p1 -n pytorch-%{version}
+%description devel
+Headers and CMake metadata for building C++ and HIP extensions against the
+matching %{name} runtime.
+
+%if %{with test}
+%description test
+Native test programs, helper libraries, and fixtures for post-install
+validation of %{name}. This is not the complete upstream Python test suite.
+%endif
+
+%prep -a
 
 # GitHub release tarballs identify the version as an alpha, so replace that
 echo "%{version}" > version.txt
@@ -335,57 +323,11 @@ echo "%{version}" > version.txt
 # Remove bundled egg-info
 rm -rf %{srcname}.egg-info
 
-%if %{without system_flatbuffers}
-tar xf %{SOURCE1}
-rm -rf third_party/flatbuffers/*
-cp -r flatbuffers-%{flatbuffers_version}/* third_party/flatbuffers/
-%endif
-
-%if %{without system_tensorpipe}
-tar xf %{SOURCE2}
-rm -rf third_party/tensorpipe/*
-cp -r tensorpipe-*/* third_party/tensorpipe/
-tar xf %{SOURCE3}
-rm -rf third_party/tensorpipe/third_party/libuv/*
-cp -r libuv-*/* third_party/tensorpipe/third_party/libuv/
-tar xf %{SOURCE4}
-rm -rf third_party/tensorpipe/third_party/libnop/*
-cp -r libnop-*/* third_party/tensorpipe/third_party/libnop/
-
-# gcc 15 include cstdint
-sed -i '/#include <tensorpipe.*/a#include <cstdint>' third_party/tensorpipe/tensorpipe/common/allocator.h
-sed -i '/#include <tensorpipe.*/a#include <cstdint>' third_party/tensorpipe/tensorpipe/common/memory.h
-%endif
-
-%if %{without system_httplib}
-tar xf %{SOURCE5}
-rm -rf third_party/cpp-httplib/*
-cp -r cpp-httplib-*/* third_party/cpp-httplib/
-%endif
-
-%if %{without system_kineto}
-tar xf %{SOURCE6}
-rm -rf third_party/kineto/*
-cp -r kineto-*/* third_party/kineto/
-%endif
-
-tar xf %{SOURCE7}
-rm -rf third_party/mslk/*
-cp -r MSLK-*/* third_party/mslk/
-
-# GPU-arch / default-BLAS-backend handling is done in Patch2 (0003-*).  The arch
+# GPU-arch / default-BLAS-backend handling is done in
+# 2003-default-to-hipblaslt-on-gfx1100.patch.  The arch
 # lists moved from Blas.cpp to CUDAHooks.cpp in torch 2.11, so the old in-place
 # seds here silently became no-ops; a patch fails the build loudly if upstream
 # moves them again.
-
-# Need to pip this
-sed -i -e '/fsspec/d' setup.py
-
-# Relax the setuptools<82 runtime pin — the distro ships 82.0.1.  The bound is
-# in setup.py's install_requires, which becomes the wheel's Requires-Dist and
-# thus the RPM Requires; editing pyproject.toml (build-system) does not affect
-# it, so torch's dependents (python-triton, python-vllm) were left unresolvable.
-sed -i -e 's@"setuptools<82"@"setuptools"@' setup.py
 
 # %%pyproject_buildrequires (run by BuildSystem: pyproject) turns pyproject.toml's
 # build-system.requires into RPM BuildRequires.  On openRuyi cmake/ninja are
@@ -394,53 +336,11 @@ sed -i -e 's@"setuptools<82"@"setuptools"@' setup.py
 # 82.x.  Drop those from the [build-system] table (only there, not the identical
 # [dependency-groups] copy) so only satisfiable backend deps are generated -- the
 # real build deps come from the static BuildRequires above.
-sed -i '/^\[build-system\]/,/^build-backend/ {
-  /"cmake>=3.27",/d
-  /"ninja",/d
-  /"requests",/d
-  /"six",/d
-  s@"setuptools>=70.1.0,<82",@"setuptools>=70.1.0",@
-}' pyproject.toml
+# Applied by 2009-use-system-pyproject-build-dependencies.patch.
 
-# Use system sympy
-sed -i -e 's@sympy==1.13.1@sympy>=1.13.1@' setup.py
-
-# A new dependency
-# Connected to USE_FLASH_ATTENTION, since this is off, do not need it
-sed -i -e '/aotriton.cmake/d' cmake/Dependencies.cmake
-# HIP_CLANG_FLAGS additions (--offload-compress / --offload-jobs=8, the
-# amdgpu-s-branch-bits=15 + long-branch-factor=2 simm16 fix, and clang warning
-# silencing) are applied by 2005-append-hip-clang-flags.patch.
-# Need to link with librocm_smi64 (intra_node_comm.cpp calls rsmi_init /
-# rsmi_is_P2P_accessible). The target string is "hiprtc::hiprtc" — the previous
-# pattern "hipzrtc::hiprtc" had a stray 'z' so the sed was a no-op and
-# libtorch_hip.so ended up with an undefined rsmi_init symbol.
-sed -i -e 's@hiprtc::hiprtc@hiprtc::hiprtc rocm_smi64@' cmake/Dependencies.cmake
-
-# Use the system fmt instead of the vendored third_party/fmt in the main source
-# tree: applied by 2006-use-system-fmt.patch.  The vendored kineto CMakeLists
-# carries the same fmt::fmt-header-only reference but is unpacked from SOURCE6
-# after %%autosetup, so patch it here with a sed instead.
-sed -i -e 's@fmt::fmt-header-only@fmt@' third_party/kineto/libkineto/CMakeLists.txt
-
-# When BUILD_TEST=ON, test cmake files reference fmt::fmt-header-only.
-# Our global fmt::fmt-header-only -> fmt replacement also applies to generator
-# expressions ($<TARGET_PROPERTY:fmt,...>) which fail if the system fmt target
-# differs from what pytorch expects. Replace the generator expression with a
-# hardcoded /usr/include (fmt is header-only and installed there).
-find test -name CMakeLists.txt -exec sed -i -e 's@fmt::fmt-header-only@fmt@g' {} +
-sed -i 's@\$<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>@/usr/include@g' test/cpp/c10d/CMakeLists.txt
-
-# No third_party FXdiv
-sed -i -e 's@if(NOT TARGET fxdiv)@if(MSVC AND USE_XNNPACK)@' caffe2/CMakeLists.txt
-sed -i -e 's@TARGET_LINK_LIBRARIES(torch_cpu PRIVATE fxdiv)@#TARGET_LINK_LIBRARIES(torch_cpu PRIVATE fxdiv)@' caffe2/CMakeLists.txt
-
-# https://github.com/pytorch/pytorch/issues/149803
-# Tries to checkout nccl
-sed -i -e 's@    checkout_nccl()@    True@' tools/build_pytorch_libs.py
-
-# Disable the use of check_submodule's in the setup.py, we are a tarball, not a git repo
-sed -i -e 's@check_submodules()$@#check_submodules()@' setup.py
+# System CMake dependencies and fmt compatibility are applied by patches 2006
+# and 2010. The other historical edits in this block no longer match 2.13.0 or
+# are disabled by the configured feature set, so they have been removed.
 
 # Release comes fully loaded with third party src
 # Remove what we can
@@ -451,10 +351,6 @@ sed -i -e 's@check_submodules()$@#check_submodules()@' setup.py
 # mimiz is licensed MIT
 # https://github.com/richgel999/miniz/blob/master/LICENSE
 mv third_party/miniz-%{miniz_version} .
-#
-# setup.py depends on this script
-mv third_party/build_bundled.py .
-
 %if %{without system_flatbuffers}
 # Need the just untarred flatbuffers/flatbuffers.h
 mv third_party/flatbuffers .
@@ -472,12 +368,15 @@ mv third_party/cpp-httplib .
 mv third_party/kineto .
 %endif
 
+mv third_party/gloo .
+%if %{with test}
+mv third_party/benchmark .
+%endif
 mv third_party/mslk .
 
 # Remove everything
 rm -rf third_party/*
 # Put stuff back
-mv build_bundled.py third_party
 mv miniz-%{miniz_version} third_party
 
 %if %{without system_flatbuffers}
@@ -498,91 +397,31 @@ mv kineto third_party
 
 mv mslk third_party
 
-# gloo: vendored submodule for the torch.distributed Gloo backend (USE_GLOO=ON).
-# The pytorch archive ships third_party/gloo empty and the scrub above
-# (rm -rf third_party/*) drops it, so unpack and reinstate it here.
-tar xf %{SOURCE9}
-rm -rf third_party/gloo
-mkdir -p third_party/gloo
-cp -r gloo-*/* third_party/gloo/
+mv gloo third_party
 
 %if %{with test}
 # googletest is provided by the system gtest-devel (openRuyi package) instead
-# of the vendored submodule -- see Patch3 which makes PyTorch's cmake call
-# find_package(GTest) and alias the GTest:: targets to the bare names the
-# test CMakeLists link against.
+# of the vendored submodule -- see 2004-use-system-googletest.patch, which makes
+# PyTorch's cmake call find_package(GTest) and alias the GTest:: targets to the
+# bare names the test CMakeLists link against.
+mv benchmark third_party
 
-# benchmark: vendored submodule for building tests (BUILD_TEST=ON).
-# No system google-benchmark in openRuyi yet, so vendor it explicitly.
-tar xf %{SOURCE10}
-rm -rf third_party/benchmark
-mkdir -p third_party/benchmark
-cp -r benchmark-*/* third_party/benchmark/
-
-# benchmark's cmake uses try_run to detect regex backend, which fails
-# in this build environment.  Predefine HAVE_STD_REGEX so the
-# cxx_feature_check macro skips the probe and uses std::regex.
-# Also enable position-independent code: the vendored benchmark static
-# library must be compiled with -fPIE so it can be linked into PIE
-# test executables (we pass -pie in CMAKE_EXE_LINKER_FLAGS).
-sed -i '/cmake_minimum_required/a\set(HAVE_STD_REGEX 1)\nset(CMAKE_POSITION_INDEPENDENT_CODE ON)' third_party/benchmark/CMakeLists.txt
+# Benchmark configuration is applied by patch 2012.
 %endif
 
 # Fake out pocketfft, and system header will be used
 mkdir third_party/pocketfft
-cp /usr/include/pocketfft_hdronly.h third_party/pocketfft/
+cp %{_includedir}/pocketfft_hdronly.h third_party/pocketfft/
 
 # Use the system valgrind headers
 mkdir third_party/valgrind-headers
 cp %{_includedir}/valgrind/* third_party/valgrind-headers
 
-# Fix installing to /usr/lib64
-sed -i -e 's@DESTINATION ${PYTHON_LIB_REL_PATH}@DESTINATION ${CMAKE_INSTALL_PREFIX}/${PYTHON_LIB_REL_PATH}@' caffe2/CMakeLists.txt
-
-# reenable foxi linking
-sed -i -e 's@list(APPEND Caffe2_DEPENDENCY_LIBS foxi_loader)@#list(APPEND Caffe2_DEPENDENCY_LIBS foxi_loader)@' cmake/Dependencies.cmake
-
-%if %{without system_tensorpipe}
-# cmake version changed
-sed -i -e 's@cmake_minimum_required(VERSION 3.4)@cmake_minimum_required(VERSION 3.5)@' third_party/tensorpipe/third_party/libuv/CMakeLists.txt
-sed -i -e 's@cmake_minimum_required(VERSION 3.4)@cmake_minimum_required(VERSION 3.5)@' libuv*/CMakeLists.txt
-%endif
-
 %if %{with rocm}
-# Fix: hipOccupancyMaxActiveBlocksPerMultiprocessor is overloaded in new ROCm,
-# force using hipModuleOccupancyMaxActiveBlocksPerMultiprocessor
-sed -i -e 's/TORCH_HIP_VERSION < 305/TORCH_HIP_VERSION < 305 \&\& TORCH_HIP_VERSION > 0/' \
-    aten/src/ATen/cuda/nvrtc_stub/ATenNVRTC.h
-# pytorch upstream issue #173707 (gemm/bgemm variant):
-# clang 21 mangles the instantiation-dependent SFINAE non-type template parameter
-#   typename std::enable_if<...,Dtype>::type* = nullptr
-# of at::cuda::blas::gemm/bgemm differently at an explicit specialization (the
-# definition, Tn...enable_if form) than at a deduced call site (the reference,
-# ...IffLPf0E... form), so libtorch_hip.so fails to dlopen with e.g.
-#   undefined symbol: _ZN2at4cuda4blas4gemmIffLPf0EEEvcclllNS_10OpMathTypeIT_E4typeEPKS5_lS9_lS7_PT0_l
-# Every real dtype is provided by an explicit specialization, so the SFINAE guard
-# is redundant: drop it so the two overloads collapse to one primary template and
-# clang emits a single consistent mangling everywhere. Must run before hipify.
-sed -i \
-    -e 's/, typename std::enable_if<!CUDABLAS_GEMM_DTYPE_IS_FLOAT_TYPE_AND_C_DTYPE_IS_FLOAT, Dtype>::type\* = nullptr>/>/g' \
-    -e 's/, typename std::enable_if<CUDABLAS_GEMM_DTYPE_IS_FLOAT_TYPE_AND_C_DTYPE_IS_FLOAT, Dtype>::type\* = nullptr>/>/g' \
-    aten/src/ATen/cuda/CUDABlas.h
-# hipify
+# Patch 2011 fixes the HIP occupancy API gate and the clang CUDABlas template
+# mangling mismatch before this hipify step.
 ./tools/amd_build/build_amd.py
-# use any hip, correct CMAKE_MODULE_PATH
-sed -i -e 's@lib/cmake/hip@lib64/cmake/hip@' cmake/public/LoadHIP.cmake
-sed -i -e 's@HIP 1.0@HIP MODULE@'            cmake/public/LoadHIP.cmake
-# silence an assert
-# sed -i -e '/qvalue = std::clamp(qvalue, qmin, qmax);/d' aten/src/ATen/native/cuda/IndexKernel.cu
-
-# Append ROCm symbol bridge — see Source8 header for full context.
-# Without this, libtorch_hip.so dlopen fails on:
-#   undefined symbol: _ZNK2at10TensorBase14const_data_ptrI*Li0EEEPK*v
-cat %{SOURCE8} >> aten/src/ATen/core/Tensor.cpp
 %endif
-
-# moodycamel include path needs adjusting to use the system's
-sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/concurrentqueue@' cmake/Dependencies.cmake
 
 %generate_buildrequires
 # -R: only the wheel's build-backend deps (the stripped [build-system].requires);
@@ -590,9 +429,13 @@ sed -i -e 's@${PROJECT_SOURCE_DIR}/third_party/concurrentqueue@/usr/include/conc
 # the extras, not build dependencies.  Overrides the BuildSystem's default
 # %%pyproject_buildrequires, which runs with --generate-extras and would emit
 # unsatisfiable optional-extra deps.
+export PYTORCH_BUILD_VERSION=%{version}
+export PYTORCH_BUILD_NUMBER=1
 %pyproject_buildrequires -R
 
 %build -p
+export PYTORCH_BUILD_VERSION=%{version}
+export PYTORCH_BUILD_NUMBER=1
 # Control the number of jobs
 # The build can fail if too many threads exceed the physical memory
 # Run at least one thread, more if CPU & memory resources are available.
@@ -702,19 +545,28 @@ export ROCM_PATH=`hipconfig -R`
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 
+# The system clang used as the HIP device compiler does not auto-detect the
+# rocm-device-libs bitcode, which lives in clang's own resource dir under
+# amdgcn/bitcode.  Seed HIPFLAGS so both CMake's enable_language(HIP) compiler
+# probe and the real device compile get --rocm-device-lib-path (CMAKE_HIP_FLAGS
+# inherits HIPFLAGS via CMAKE_HIP_FLAGS_INIT); without it configure fails with
+# "cannot find ROCm device library".
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
+
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
 
 # export CMAKE_BUILD_TYPE=Debug
 %endif
 
-export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
-export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="/usr/include"
+export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="%{_includedir}"
+export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="%{_includedir}"
 
-export LDFLAGS="-fuse-ld=lld %{?__global_ldflags}"
-export CMAKE_LIBRARY_PATH=/usr/lib64
-export CMAKE_PREFIX_PATH="/usr:/usr/lib64/cmake:/usr/lib/python3.13/site-packages"
+export LDFLAGS="-fuse-ld=lld %{build_ldflags}"
+export CMAKE_LIBRARY_PATH=%{_libdir}
+export CMAKE_PREFIX_PATH="%{_prefix}:%{_libdir}/cmake:%{python3_sitearch}"
 
-# Opt into the CBLAS complex-dot path (Patch4).  Without this ATen's BLAS
+# Opt into the CBLAS complex-dot path (2001-force-cblas-complex-dot-for-openblas.patch).
+# Without this ATen's BLAS
 # ABI probe leaves AT_BLAS_USE_CBLAS_DOT=0 and torch.dot()/torch.vdot() on
 # complex tensors return 0.
 export PYTORCH_BLAS_USE_CBLAS_DOT=ON
@@ -729,27 +581,87 @@ export ROCM_PATH=`hipconfig -R`
 # pytorch uses clang, not hipcc
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
+export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
+%endif
+
+%install -a
+%if %{with rocm}
+# On the HIP build, ProcessGroupGloo{,Async}Test link the libc10d_hip_test.so
+# helper that the wheel does not install, leaving a dangling soname Requires
+# that makes the package uninstallable; they cannot run without it, so drop
+# them.  %%pyproject_save_files has already recorded them by name, so scrub the
+# generated manifest as well or 'Processing files' fails on the missing paths.
+rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
+      %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
+# Anchor to the bin paths: the c10d ProcessGroupGloo*.hpp headers stay packaged.
+sed -i '\#/torch/bin/ProcessGroupGlooTest$#d;\#/torch/bin/ProcessGroupGlooAsyncTest$#d' %{pyproject_files}
+%endif
+
+# Development SDK files belong to -devel, not the Python runtime package.
+sed -i '\#%{python3_sitearch}/torch/include/#d;\#%{python3_sitearch}/torch/share/cmake/#d' \
+    %{pyproject_files}
+
+%if %{with test}
+# Move the explicitly installed native tests and fixtures out of the runtime
+# manifest. Keep torch/bin/torch_shm_manager in the runtime package.
+sed -i \
+    -e '\#%{python3_sitearch}/torch/bin/\(FileStoreTest\|HashStoreTest\|ProcessGroupGlooAsyncTest\|ProcessGroupGlooTest\|TCPStoreTest\|test_aoti_abi_check\|test_api\|test_cpp_rpc\|test_dist_autograd\|test_jit\|test_lazy\|test_shim\)$#d' \
+    -e '\#%{python3_sitearch}/torch/bin/\(script_module_v4\.ptl\|test_interpreter_async\.pt\)$#d' \
+    -e '\#%{python3_sitearch}/torch/bin/upgrader_models#d' \
+    -e '\#%{python3_sitearch}/torch/lib/\(libaoti_custom_ops\|libbackend_with_compiler\|libjitbackend_test\|libtorchbind_test\)\.so$#d' \
+    -e '\#%{python3_sitearch}/torch/test/#d' \
+    -e '\#%{python3_sitearch}/torch/test$#d' \
+    %{pyproject_files}
 %endif
 
 %check -a
 %if %{with test}
 # The declarative import check (BuildOption(check)) only proves modules load.
-# Additionally run a small functional smoke (Source11) against the just-built
+# Additionally run a small functional smoke (Source1) against the just-built
 # tree: real matmul, autograd, a training step, and a guard that complex
 # torch.dot/torch.vdot do not collapse to 0 (the CBLAS complex-dot path forced
-# on by Patch4).  Other distros do not run PyTorch's own test/*.py suite at
+# on by 2001-force-cblas-complex-dot-for-openblas.patch).  Other distros do
+# not run PyTorch's own test/*.py suite at
 # build time either; a smoke is enough to catch a numerically broken build.
 PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
 PYTHONDONTWRITEBYTECODE=1 \
-%{__python3} -sP %{SOURCE11}
+%{__python3} -sP %{SOURCE1}
 %endif
 
 %files -f %{pyproject_files}
-%license LICENSE
-%doc README.md
+%doc README.md NOTICE
 # torchrun is a console_scripts entry point; %%pyproject_save_files captures the
 # importable modules under sitearch but not the bindir wrapper, so list it here.
 %{_bindir}/torchrun
+
+%files devel
+%{python3_sitearch}/torch/include/
+%{python3_sitearch}/torch/share/cmake/
+
+%if %{with test}
+%files test
+%{python3_sitearch}/torch/bin/FileStoreTest
+%{python3_sitearch}/torch/bin/HashStoreTest
+%if %{without rocm}
+%{python3_sitearch}/torch/bin/ProcessGroupGlooTest
+%endif
+%{python3_sitearch}/torch/bin/TCPStoreTest
+%{python3_sitearch}/torch/bin/script_module_v4.ptl
+%{python3_sitearch}/torch/bin/test_aoti_abi_check
+%{python3_sitearch}/torch/bin/test_api
+%{python3_sitearch}/torch/bin/test_cpp_rpc
+%{python3_sitearch}/torch/bin/test_dist_autograd
+%{python3_sitearch}/torch/bin/test_interpreter_async.pt
+%{python3_sitearch}/torch/bin/test_jit
+%{python3_sitearch}/torch/bin/test_lazy
+%{python3_sitearch}/torch/bin/test_shim
+%{python3_sitearch}/torch/bin/upgrader_models/
+%{python3_sitearch}/torch/lib/libaoti_custom_ops.so
+%{python3_sitearch}/torch/lib/libbackend_with_compiler.so
+%{python3_sitearch}/torch/lib/libjitbackend_test.so
+%{python3_sitearch}/torch/lib/libtorchbind_test.so
+%{python3_sitearch}/torch/test/
+%endif
 
 %changelog
 %autochangelog

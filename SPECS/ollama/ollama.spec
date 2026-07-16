@@ -23,20 +23,20 @@
 %global __requires_exclude libggml-.*\\.so(\\..*)?
 
 Name:           ollama
-Version:        0.31.1
+Version:        0.31.2
 Release:        %autorelease
 Summary:        Get up and running with OpenAI gpt-oss, DeepSeek-R1, Gemma 3 and other models.
 License:        MIT
 URL:            https://ollama.com/
 VCS:            git:https://github.com/ollama/ollama
-#!RemoteAsset:  sha256:bb2ce0462f956d44cd4bed39e3c772fcfd22f1b02217dc8dbc1375efeac9751f
+#!RemoteAsset:  sha256:76e53ea5401c881b394ed8da25af0f6aa6cbb6bb7d7abbca424249836bfc4aa2
 Source0:        https://github.com/ollama/ollama/archive/refs/tags/v%{version}.tar.gz
 Source1:        ollama.service
 Source2:        ollama.sysusers
-# Pinned llama.cpp commit (from LLAMA_CPP_VERSION); pre-downloaded for offline OBS build
-%global llama_cpp_commit 8c146a8366304c871efc26057cc90370ccf58dad
-#!RemoteAsset:  sha256:f45fd05086b1dbeeb431e3e72df5361e75fbcdcfaa8717bbcf3f9461a17ba4ad
-Source3:        https://github.com/ggml-org/llama.cpp/archive/%{llama_cpp_commit}.tar.gz#/llama.cpp-%{llama_cpp_commit}.tar.gz
+# Pinned llama.cpp release tag (from LLAMA_CPP_VERSION); pre-downloaded for offline OBS build
+%global llama_cpp_version b9888
+#!RemoteAsset:  sha256:84cc5f2478e8b8de9d302f64b00cb8c3da577210e45564f2584a6575aa7f1e6c
+Source3:        https://github.com/ggml-org/llama.cpp/archive/refs/tags/%{llama_cpp_version}.tar.gz#/llama.cpp-%{llama_cpp_version}.tar.gz
 BuildSystem:    golang
 
 BuildOption(prep):  -n %{_name}-%{version}
@@ -77,7 +77,6 @@ BuildRequires:  go(golang.org/x/image)
 BuildRequires:  go(golang.org/x/mod)
 BuildRequires:  go(golang.org/x/sync)
 BuildRequires:  go(golang.org/x/sys)
-BuildRequires:  go(golang.org/x/tools)
 BuildRequires:  go(gonum.org/v1/gonum)
 BuildRequires:  ninja
 BuildRequires:  systemd-rpm-macros
@@ -87,7 +86,6 @@ BuildRequires:  cmake(Clang)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(LLD)
 BuildRequires:  cmake(LLVM)
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocsolver)
@@ -130,7 +128,7 @@ and securely on their own devices.
 %prep -a
 # Pre-extract llama.cpp for offline OBS build (FetchContent/ExternalProject can't access network)
 tar xf %{SOURCE3} -C %{_builddir}
-ln -sf %{_builddir}/llama.cpp-%{llama_cpp_commit} %{_builddir}/llama.cpp-src
+ln -sf %{_builddir}/llama.cpp-%{llama_cpp_version} %{_builddir}/llama.cpp-src
 # Apply all ollama compat patches to the pre-extracted llama.cpp
 pushd %{_builddir}/llama.cpp-src
 for p in $(find %{_builddir}/%{_name}-%{version}/llama/compat -name '*.patch' | sort); do

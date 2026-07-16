@@ -21,8 +21,8 @@
 # This ROCm package is built with clang by default
 %global toolchain clang
 
-%global rocm_release 7.1
-%global rocm_patch 1
+%global rocm_release 7.2
+%global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 Name:           hipsparse
@@ -30,8 +30,8 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
 License:        MIT
-Url:            https://github.com/ROCm/hipSPARSE
-#!RemoteAsset:  sha256:b001834d8e65c3878d1a69d08803d5b6ce4fe623e78099fe51cb146d0ffa10e7
+URL:            https://github.com/ROCm/hipSPARSE
+#!RemoteAsset:  sha256:c6ba07bd940b2678ba8a087333f103c1846efb7ffffffc5ed9174aca78d9f090
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
@@ -41,9 +41,10 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang22
+BuildRequires:  clang22-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 %if %{with build_test}
@@ -53,14 +54,17 @@ BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  gcc-fortran
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld22
+BuildRequires:  llvm22
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %description
 hipSPARSE is a SPARSE marshalling library with multiple

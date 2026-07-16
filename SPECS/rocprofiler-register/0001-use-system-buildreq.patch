@@ -1,0 +1,42 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2fdf5c4..0aac139 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,7 +78,8 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${PROJECT_SOURCE_DIR}/cmake/Mo
+ include(GNUInstallDirs) # install directories
+ 
+ # ROCm does not use lib64
+-set(CMAKE_INSTALL_LIBDIR "lib")
++# But distributions use
++# set(CMAKE_INSTALL_LIBDIR "lib")
+ 
+ include(rocprofiler_register_utilities) # various functions/macros
+ include(rocprofiler_register_interfaces) # interface libraries
+@@ -113,6 +114,7 @@ if(ROCPROFILER_REGISTER_BUILD_SAMPLES)
+     add_subdirectory(samples)
+ endif()
+ 
+-include(rocprofiler_register_config_packaging)
++# packaging don't need cpack
++# include(rocprofiler_register_config_packaging)
+ 
+ rocprofiler_register_print_features()
+diff --git a/source/lib/rocprofiler-register/CMakeLists.txt b/source/lib/rocprofiler-register/CMakeLists.txt
+index e15fa88..6d9591e 100644
+--- a/source/lib/rocprofiler-register/CMakeLists.txt
++++ b/source/lib/rocprofiler-register/CMakeLists.txt
+@@ -20,10 +20,13 @@ target_include_directories(
+ target_link_libraries(
+     rocprofiler-register
+     PUBLIC rocprofiler-register::headers
+-    PRIVATE fmt::fmt glog::glog rocprofiler-register::build-flags
++    PRIVATE fmt glog rocprofiler-register::build-flags
+             rocprofiler-register::memcheck rocprofiler-register::stdcxxfs
+             rocprofiler-register::dl)
+ 
++target_compile_definitions(rocprofiler-register
++    PRIVATE GLOG_USE_GLOG_EXPORT)
++
+ set_target_properties(
+     rocprofiler-register
+     PROPERTIES OUTPUT_NAME rocprofiler-register

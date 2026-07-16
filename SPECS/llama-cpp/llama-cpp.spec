@@ -7,8 +7,6 @@
 # Originally extracted from Fedora Project
 # Authors: The Fedora Project Contributors
 
-%global toolchain clang
-
 # The default flavor builds the CPU backend. The "rocm" and "vulkan"
 # multibuild flavors select the corresponding GPU backend.
 %global flavor @BUILD_FLAVOR@%{nil}
@@ -25,6 +23,15 @@
 %endif
 %endif
 
+%global build_number 9948
+# These libraries implement internal CLI/server tools and do not expose a
+# supported ABI for third-party consumers.
+%global __provides_exclude ^libllama-.*-impl\\.so
+%global __requires_exclude ^libllama-.*-impl\\.so
+# Keep ctest to local parser/format tests.  The rest includes Hugging Face
+# downloads, model fixtures, Python helpers, backend operations, or GPU use.
+%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-gguf)$
+
 %if %{with rocm}
 Name:           llama-cpp-rocm
 %else
@@ -34,25 +41,39 @@ Name:           llama-cpp-vulkan
 Name:           llama-cpp-cpu
 %endif
 %endif
-Version:        b9859
+Version:        b%{build_number}
 Release:        %autorelease
 Summary:        LLM inference in C/C++
-License:        MIT AND Apache-2.0 AND LicenseRef-Fedora-Public-Domain
+License:        MIT AND Apache-2.0 AND Unlicense
 URL:            https://github.com/ggml-org/llama.cpp
 VCS:            git:https://github.com/ggml-org/llama.cpp.git
-#!RemoteAsset:  sha256:5d41eec5fe4bcdfe5a74c907380fa80fa145c791d1c323c5c1143a7e0fe4b5f8
+#!RemoteAsset:  sha256:ab2d4fc95692f4f712e4567585299be26611fc07b510c79f9e1cc288d30551cf
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
+%if %{with rocm}
+%ifarch riscv64
+# Match the openRuyi Ollama workaround for unstable riscv64 ROCm inference;
+# do not reduce the default batch size for x86_64 ROCm builds.
+# https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
+Patch0:         2000-limit-rocm-batch-size.patch
+%endif
+%endif
+
 BuildOption(prep):  -n llama.cpp-%{version}
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DLLAMA_BUILD_NUMBER=9859
+BuildOption(conf):  -DLLAMA_BUILD_NUMBER=%{build_number}
+# Source0 is an archive without .git; preserve the verified release tag commit.
+BuildOption(conf):  -DLLAMA_BUILD_COMMIT=074944998d3f25e7001ede30d152b59dff741c8c
 BuildOption(conf):  -DLLAMA_BUILD_EXAMPLES=OFF
-BuildOption(conf):  -DLLAMA_BUILD_TESTS=OFF
+BuildOption(conf):  -DLLAMA_BUILD_TESTS=ON
+BuildOption(conf):  -DLLAMA_TESTS_INSTALL=OFF
 # Building the Web UI downloads frontend assets, which is not allowed in OBS.
 BuildOption(conf):  -DLLAMA_BUILD_UI=OFF
 BuildOption(conf):  -DLLAMA_USE_PREBUILT_UI=OFF
 BuildOption(conf):  -DGGML_NATIVE=OFF
+BuildOption(conf):  -DGGML_CCACHE=OFF
+BuildOption(check):  --output-on-failure -R '%{ctest_parser_format_tests}'
 
 # Build for the x86-64 baseline rather than the OBS worker's CPU.
 %ifarch x86_64
@@ -79,26 +100,28 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
 
-BuildRequires:  clang
 BuildRequires:  cmake
-BuildRequires:  git
-BuildRequires:  libomp-devel
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openssl)
+Suggests:       ffmpeg
 
 %if %{with rocm}
+BuildRequires:  clang22
+BuildRequires:  clang22-devel
+BuildRequires:  clang22-tools-extra
+BuildRequires:  libomp22-devel
 BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(Clang)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(LLD)
-BuildRequires:  cmake(LLVM)
 BuildRequires:  cmake(rocblas)
-BuildRequires:  clang-tools-extra-devel
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt22
 BuildRequires:  hipcc
+BuildRequires:  lld22
+BuildRequires:  llvm22-devel
 BuildRequires:  rocm-llvm-macros
+%else
+BuildRequires:  libomp-devel
 %endif
 
 %if %{with vulkan}
@@ -140,13 +163,14 @@ Headers, shared-library links, pkg-config metadata, and CMake package files for
 developing applications against llama.cpp and ggml.
 
 %check -a
-# Backend execution requires a model and, for GPU flavors, suitable hardware.
-# This smoke test only verifies that the freshly linked CLI starts.
+# The declarative ctest invocation above is a positive whitelist.  In
+# particular, ROCm and Vulkan never run model, network, backend, or GPU tests.
+# This smoke test verifies that the freshly linked CLI starts.
 LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
     %{_vpath_builddir}/bin/llama-cli --version
 
 %files
-%license LICENSE
+%license LICENSE licenses/LICENSE-jsonhpp vendor/cpp-httplib/LICENSE
 %doc README.md
 %{_bindir}/llama*
 %{_libdir}/libggml*.so.*
