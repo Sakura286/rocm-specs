@@ -145,8 +145,10 @@ BuildRequires:  numactl-devel
 # PyTorch's ATen CPU vector headers include sleef.h
 BuildRequires:  cmake(sleef)
 # CPU torch (built --without rocm) keeps the CPU flavor free of any HIP/ROCm
-# build- or run-time dependency.
-BuildRequires:  python-torch
+# build- or run-time dependency.  -devel carries the headers and share/cmake
+# (TorchConfig.cmake) that find_package(Torch) needs since the python-torch
+# dev/test split; it Requires the base package transitively.
+BuildRequires:  python-torch-devel
 %endif
 
 # vLLM's "ninja" dependency is the PyPI wheel that bundles a ninja binary for
