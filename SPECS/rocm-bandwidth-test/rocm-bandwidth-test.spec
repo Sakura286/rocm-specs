@@ -72,6 +72,15 @@ BuildOption(conf):  -DAMD_WORK_BENCH_INCLUDE_PLUGINS=builtin
 # toolchain; upstream promotes warnings to errors by default.
 BuildOption(conf):  -DAMD_APP_TREAT_WARNINGS_AS_ERRORS=OFF
 
+# Upstream probes for ld.lld/ld.mold and, when found, forces the main executable
+# to link with -fuse-ld=lld (build_utils.cmake, no option to disable the lld
+# branch). Base's lld22 ships only the versioned ld.lld-22 in /usr/bin -- gcc's
+# collect2 then fails with "cannot find 'ld'" whenever lld22 lands in the build
+# root (pulled in since the 2026-07 Base snapshot). Pre-seed both probe results
+# to empty so the link sticks to the default binutils ld.
+BuildOption(conf):  -DLD_LLD_PATH=
+BuildOption(conf):  -DLD_MOLD_PATH=
+
 %description
 ROCm Bandwidth Test is designed to capture the performance
 characteristics of buffer copying and kernel read and write
