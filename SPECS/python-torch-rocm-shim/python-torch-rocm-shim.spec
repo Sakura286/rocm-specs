@@ -20,7 +20,7 @@
 
 # Track the real torch version so version-bounded requires (>=1.7, >=2.0, ...)
 # are satisfied.
-%global torch_version 2.11.0
+%global torch_version 2.13.0
 
 Name:           python-torch-rocm-shim
 Version:        %{torch_version}
