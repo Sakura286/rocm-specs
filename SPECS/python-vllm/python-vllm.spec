@@ -47,29 +47,6 @@ Source1:        triton_kernels-stub.cmake
 Source2:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
 BuildSystem:    pyproject
 
-%if %{with rocm}
-# cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
-# cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
-Patch0:         0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
-%endif
-
-# Adjust dependencies and build configurations for openRuyi
-Patch1:         2002-Adjust-dependencies-for-openRuyi.patch
-# Fix spinloop x86intrin header include (x86-guarded, no-op on riscv64)
-Patch2:         2004-Fix-spinloop-x86intrin-header.patch
-
-%if %{with rocm}
-# Run find_package(hipsparselt) before find_package(Torch) for proper link target
-Patch3:         2003-ROCm-hipsparselt-ordering.patch
-%else
-# Adjust CPU backend for openRuyi's OpenMP path
-Patch4:         2001-CPU-backend-OpenMP-path.patch
-%endif
-
-# Single-process: fall back to a fake distributed backend when torch lacks
-# the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
-Patch5:         2005-CPU-single-process-fake-distributed-backend.patch
-
 BuildOption(install):  %{srcname}
 
 # --- Python build backend (build-system.requires from pyproject.toml) -------
@@ -176,6 +153,27 @@ Conflicts:      python-%{srcname}-cpu
 %else
 Conflicts:      python-%{srcname}-rocm
 %endif
+
+%patchlist
+%if %{with rocm}
+# cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
+# cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
+0001-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
+%endif
+# Adjust dependencies and build configurations for openRuyi
+2002-Adjust-dependencies-for-openRuyi.patch
+# Fix spinloop x86intrin header include (x86-guarded, no-op on riscv64)
+2004-Fix-spinloop-x86intrin-header.patch
+%if %{with rocm}
+# Run find_package(hipsparselt) before find_package(Torch) for proper link target
+2003-ROCm-hipsparselt-ordering.patch
+%else
+# Adjust CPU backend for openRuyi's OpenMP path
+2001-CPU-backend-OpenMP-path.patch
+%endif
+# Single-process: fall back to a fake distributed backend when torch lacks
+# the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
+2005-CPU-single-process-fake-distributed-backend.patch
 
 %description
 vLLM is a fast and easy-to-use library for LLM inference and serving, featuring
