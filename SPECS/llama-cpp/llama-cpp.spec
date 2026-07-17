@@ -29,9 +29,29 @@
 # dlopen()ed backend plugins under %%{_libdir}/ggml.
 %global __provides_exclude ^(libllama-.*-impl|libggml-cpu.*|libggml-hip|libggml-vulkan)\\.so
 %global __requires_exclude ^libllama-.*-impl\\.so
-# Keep ctest to local parser/format tests.  The rest includes Hugging Face
-# downloads, model fixtures, Python helpers, backend operations, or GPU use.
-%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-gguf|test-alloc)$
+# Run the full ctest suite and blacklist only the tests that cannot pass in
+# an offline OBS build: Hugging Face / network fetches, tests that require a
+# downloaded model, the python+jinja2 comparison variant (not BuildRequired),
+# and the unfiltered "test-backend-ops" ctest entry (its default invocation
+# skips the CPU backend and would otherwise probe whichever GPU backend is
+# compiled in; %%check -a below runs it directly with "-b CPU" instead).
+# test-llama-archs never calls ggml_backend_load_all(), so under
+# GGML_BACKEND_DL it enumerates zero devices and every arch check silently
+# reports SKIP; it "passes" without exercising any real computation, so
+# exclude it everywhere until upstream fixes that gap.
+%global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs)
+%if %{with rocm}
+# test-opt enumerates every registered ggml backend device with no CPU-only
+# filter; on the rocm/vulkan flavors that includes the real GPU backend,
+# which OBS build workers cannot initialize without hardware.
+%global ctest_exclude ^(%{ctest_exclude_common}|test-opt)$
+%else
+%if %{with vulkan}
+%global ctest_exclude ^(%{ctest_exclude_common}|test-opt)$
+%else
+%global ctest_exclude ^%{ctest_exclude_common}$
+%endif
+%endif
 
 %if %{with rocm}
 Name:           llama-cpp-rocm
@@ -85,7 +105,7 @@ BuildOption(conf):  -DGGML_BACKEND_DIR=%{_libdir}/ggml
 %ifarch x86_64
 BuildOption(conf):  -DGGML_CPU_ALL_VARIANTS=ON
 %endif
-BuildOption(check):  --output-on-failure -R '%{ctest_parser_format_tests}'
+BuildOption(check):  --output-on-failure --exclude-regex '%{ctest_exclude}'
 
 %if %{with rocm}
 BuildOption(conf):  -DGGML_HIP=ON
@@ -160,12 +180,12 @@ Headers, shared-library links, pkg-config metadata, and CMake package files for
 developing applications against llama.cpp and ggml.
 
 %check -a
-# The declarative ctest invocation above is a positive whitelist.  In
-# particular, ROCm and Vulkan never run model, network, Python, or GPU backend
-# tests.
-# test-alloc exercises the ggml allocator with an in-process dummy backend.
-# test-backend-ops is run directly because its default CTest invocation skips
-# the CPU backend; this bounded set has no model or network dependency.
+# The declarative ctest invocation above is a blacklist: everything runs
+# except %%{ctest_exclude} (network/model-fetch tests, the python+jinja2
+# variant, and, on ROCm/Vulkan, the tests that enumerate every backend device
+# with no CPU-only filter).  test-backend-ops is excluded there and run
+# directly below instead, filtered to "-b CPU" so it never probes a GPU
+# backend that OBS build workers cannot initialize without hardware.
 LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
     %{_vpath_builddir}/bin/test-backend-ops -b CPU \
     -o ADD,MUL_MAT,SOFT_MAX,RMS_NORM,ROPE -j 1
