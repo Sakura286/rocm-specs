@@ -24,16 +24,6 @@ Source1:        https://github.com/apache/parquet-testing/archive/%{parquet_test
 Source2:        https://github.com/apache/arrow-testing/archive/%{arrow_test_commit}/arrow-testing.tar.gz
 BuildSystem:    cmake
 
-# use system mimalloc
-Patch0:         0001-use-system-mimalloc-shared-library.patch
-# riscv64: relax quantile test precision (IEEE 754 strict, no extended intermediates)
-%ifarch riscv64
-Patch1:         0002-test-use-approximate-comparison-for-quantile.patch
-%endif
-# riscv64: keep all-NaN MinMax (GH-46063) correct under GCC RVV auto-vectorization
-# (source-guarded by __riscv, so it is a no-op on other arches)
-Patch2:         0003-riscv-disable-vectorization-of-minmax-reduction.patch
-
 BuildOption(conf):  -DARROW_BUILD_STATIC:BOOL=OFF
 BuildOption(conf):  -DARROW_BUILD_SHARED:BOOL=ON
 BuildOption(conf):  -DARROW_DEPENDENCY_SOURCE:STRING=SYSTEM
@@ -79,6 +69,17 @@ BuildRequires:  pkgconfig(gflags)
 BuildRequires:  pkgconfig(gtest)
 BuildRequires:  pkgconfig(gmock)
 BuildRequires:  python-unversioned-command
+
+%patchlist
+# use system mimalloc
+0001-use-system-mimalloc-shared-library.patch
+%ifarch riscv64
+# riscv64: relax quantile test precision (IEEE 754 strict, no extended intermediates)
+0002-test-use-approximate-comparison-for-quantile.patch
+%endif
+# riscv64: keep all-NaN MinMax (GH-46063) correct under GCC RVV auto-vectorization
+# (source-guarded by __riscv, so it is a no-op on other arches)
+0003-riscv-disable-vectorization-of-minmax-reduction.patch
 
 %description
 Apache Arrow is a universal columnar format and multi-language toolbox for fast
