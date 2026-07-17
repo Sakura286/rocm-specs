@@ -22,6 +22,9 @@ Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
 Source1:        https://raw.githubusercontent.com/ROCm/rocm-libraries/develop/shared/origami/LICENSE.md
 BuildSystem:    cmake
 
+# Build from a release tarball without requiring unavailable Git metadata.
+Patch1:         2000-rocm-origami-use-system-build-dependencies.patch
+
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
@@ -63,10 +66,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep -a
 # License file is not in the tarball
 cp %{SOURCE1} .
-# Use system rocm-cmake, no downloading
-sed -i -e 's@if(NOT ROCM_FOUND)@if(FALSE)@' cmake/dependencies.cmake
-# We are building from a tarball, not a git repo
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/dependencies.cmake
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
