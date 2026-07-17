@@ -40,17 +40,13 @@
 # reports SKIP; it "passes" without exercising any real computation, so
 # exclude it everywhere until upstream fixes that gap.
 %global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs)
-%if %{with rocm}
+%if %{with rocm} || %{with vulkan}
 # test-opt enumerates every registered ggml backend device with no CPU-only
 # filter; on the rocm/vulkan flavors that includes the real GPU backend,
 # which OBS build workers cannot initialize without hardware.
 %global ctest_exclude ^(%{ctest_exclude_common}|test-opt)$
 %else
-%if %{with vulkan}
-%global ctest_exclude ^(%{ctest_exclude_common}|test-opt)$
-%else
 %global ctest_exclude ^%{ctest_exclude_common}$
-%endif
 %endif
 
 %if %{with rocm}
