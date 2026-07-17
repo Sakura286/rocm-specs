@@ -22,17 +22,15 @@ Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
 Source1:        https://raw.githubusercontent.com/ROCm/rocm-libraries/develop/shared/origami/LICENSE.md
 BuildSystem:    cmake
 
+# Work around the missing exported origami target in hipBLASLt consumers.
+# https://github.com/ROCm/rocm-libraries/issues/2422
+Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 # Build from a release tarball without requiring unavailable Git metadata.
 Patch1:         2000-rocm-origami-use-system-build-dependencies.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-
-# Workaround hipblaslt build issue:
-#   origami::origami target is missing
-# https://github.com/ROCm/rocm-libraries/issues/2422
-Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 
 BuildRequires:  clang22
 BuildRequires:  cmake
