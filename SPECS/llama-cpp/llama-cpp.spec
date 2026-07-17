@@ -13,14 +13,12 @@
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
 %bcond vulkan 0
-%else
-%if "%{flavor}" == "vulkan"
+%elif "%{flavor}" == "vulkan"
 %bcond rocm 0
 %bcond vulkan 1
 %else
 %bcond rocm 0
 %bcond vulkan 0
-%endif
 %endif
 
 %global build_number 9948
@@ -51,12 +49,10 @@
 
 %if %{with rocm}
 Name:           llama-cpp-rocm
-%else
-%if %{with vulkan}
+%elif %{with vulkan}
 Name:           llama-cpp-vulkan
 %else
 Name:           llama-cpp-cpu
-%endif
 %endif
 Version:        b%{build_number}
 Release:        %autorelease
