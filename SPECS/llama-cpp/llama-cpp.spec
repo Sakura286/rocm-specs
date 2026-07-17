@@ -31,7 +31,7 @@
 %global __requires_exclude ^libllama-.*-impl\\.so
 # Keep ctest to local parser/format tests.  The rest includes Hugging Face
 # downloads, model fixtures, Python helpers, backend operations, or GPU use.
-%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-gguf)$
+%global ctest_parser_format_tests ^(test-grammar-parser|test-grammar-integration|test-llama-grammar|test-chat|test-chat-peg-parser|test-jinja|test-chat-auto-parser|test-chat-template|test-log|test-peg-parser|test-gguf|test-alloc)$
 
 %if %{with rocm}
 Name:           llama-cpp-rocm
@@ -161,7 +161,14 @@ developing applications against llama.cpp and ggml.
 
 %check -a
 # The declarative ctest invocation above is a positive whitelist.  In
-# particular, ROCm and Vulkan never run model, network, backend, or GPU tests.
+# particular, ROCm and Vulkan never run model, network, Python, or GPU backend
+# tests.
+# test-alloc exercises the ggml allocator with an in-process dummy backend.
+# test-backend-ops is run directly because its default CTest invocation skips
+# the CPU backend; this bounded set has no model or network dependency.
+LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
+    %{_vpath_builddir}/bin/test-backend-ops -b CPU \
+    -o ADD,MUL_MAT,SOFT_MAX,RMS_NORM,ROPE -j 1
 # This smoke test verifies that the freshly linked CLI starts.
 LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
     %{_vpath_builddir}/bin/llama-cli --version
