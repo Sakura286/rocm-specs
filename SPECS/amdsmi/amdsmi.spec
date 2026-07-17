@@ -40,16 +40,6 @@ Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
 BuildSystem:    cmake
 
-# Support libdrm 2.4.130+
-# https://github.com/ROCm/amdsmi/pull/165
-Patch0:         0001-Fix-compilation-with-libdrm-2.4.130.patch
-# -DENABLE_ESMI_LIB=OFF is not enough.
-# Goamdshim references CPU/ESMI-only APIs; only build it when ESMI is on
-Patch1:         2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
-# Without ESMI (non-x86_64) libamd_smi.so omits the CPU API; let the ctypesgen
-# wrapper tolerate the missing symbols so `import amdsmi` still works
-Patch2:         2002-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
-
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
