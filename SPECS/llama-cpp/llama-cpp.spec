@@ -25,8 +25,9 @@
 
 %global build_number 9948
 # These libraries implement internal CLI/server tools and do not expose a
-# supported ABI for third-party consumers.
-%global __provides_exclude ^libllama-.*-impl\\.so
+# supported ABI for third-party consumers.  The libggml-* entries are the
+# dlopen()ed backend plugins under %%{_libdir}/ggml.
+%global __provides_exclude ^(libllama-.*-impl|libggml-cpu.*|libggml-hip|libggml-vulkan)\\.so
 %global __requires_exclude ^libllama-.*-impl\\.so
 # Keep ctest to local parser/format tests.  The rest includes Hugging Face
 # downloads, model fixtures, Python helpers, backend operations, or GPU use.
@@ -73,22 +74,18 @@ BuildOption(conf):  -DLLAMA_BUILD_UI=OFF
 BuildOption(conf):  -DLLAMA_USE_PREBUILT_UI=OFF
 BuildOption(conf):  -DGGML_NATIVE=OFF
 BuildOption(conf):  -DGGML_CCACHE=OFF
-BuildOption(check):  --output-on-failure -R '%{ctest_parser_format_tests}'
-
-# Build for the x86-64 baseline rather than the OBS worker's CPU.
+# Build the ggml backends as runtime-loaded plugins.  On x86_64 this builds
+# every CPU ISA variant (x86-64 baseline up to AVX-512/AMX) and picks the
+# best one for the executing CPU at startup, instead of pinning the whole
+# build to the baseline.  riscv64 keeps the single default backend: the
+# ALL_VARIANTS riscv64_v variant is plain rv64gc_v and would lose the
+# zfh/zvfh extensions of the default march string.
+BuildOption(conf):  -DGGML_BACKEND_DL=ON
+BuildOption(conf):  -DGGML_BACKEND_DIR=%{_libdir}/ggml
 %ifarch x86_64
-BuildOption(conf):  -DGGML_SSE42=OFF
-BuildOption(conf):  -DGGML_AVX=OFF
-BuildOption(conf):  -DGGML_AVX_VNNI=OFF
-BuildOption(conf):  -DGGML_AVX2=OFF
-BuildOption(conf):  -DGGML_BMI2=OFF
-BuildOption(conf):  -DGGML_AVX512=OFF
-BuildOption(conf):  -DGGML_AVX512_VBMI=OFF
-BuildOption(conf):  -DGGML_AVX512_VNNI=OFF
-BuildOption(conf):  -DGGML_AVX512_BF16=OFF
-BuildOption(conf):  -DGGML_FMA=OFF
-BuildOption(conf):  -DGGML_F16C=OFF
+BuildOption(conf):  -DGGML_CPU_ALL_VARIANTS=ON
 %endif
+BuildOption(check):  --output-on-failure -R '%{ctest_parser_format_tests}'
 
 %if %{with rocm}
 BuildOption(conf):  -DGGML_HIP=ON
@@ -173,6 +170,7 @@ LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
 %license LICENSE licenses/LICENSE-jsonhpp vendor/cpp-httplib/LICENSE
 %doc README.md
 %{_bindir}/llama*
+%{_libdir}/ggml/
 %{_libdir}/libggml*.so.*
 %{_libdir}/libllama-*-impl.so
 %{_libdir}/libllama*.so.*
