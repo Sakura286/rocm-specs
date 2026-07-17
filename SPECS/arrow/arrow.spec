@@ -14,13 +14,13 @@ Summary:        Apache Arrow is a universal columnar format and multi-language t
 License:        Apache-2.0
 URL:            https://arrow.apache.org
 VCS:            git:https://github.com/apache/arrow
-#!RemoteAsset
+#!RemoteAsset:  sha256:9a9a057bba3aa7080abc2ba8e7a079effa74626a4f308ac56bfce035d31ef1ac
 Source0:        https://github.com/apache/arrow/archive/apache-arrow-%{version}/%{name}-%{version}.tar.gz
 # parquet-testing data submodule, pinned to the commit used by arrow %%{version}
-#!RemoteAsset
+#!RemoteAsset:  sha256:67571290d5547892982c98ea430a4c095c846bded945244aed7363ed30cd27fb
 Source1:        https://github.com/apache/parquet-testing/archive/%{parquet_test_commit}/parquet-testing.tar.gz
 # arrow-testing data submodule, pinned to the commit used by arrow %%{version}
-#!RemoteAsset
+#!RemoteAsset:  sha256:9570df97f05aa426e456f4c403377812483a1abe6ad407fc443900d12f2ec43d
 Source2:        https://github.com/apache/arrow-testing/archive/%{arrow_test_commit}/arrow-testing.tar.gz
 BuildSystem:    cmake
 
@@ -146,4 +146,4 @@ export ARROW_TEST_DATA=%{_builddir}/arrow-testing/data
 %{_libdir}/pkgconfig/parquet.pc
 
 %changelog
-%{?autochangelog}
+%autochangelog
