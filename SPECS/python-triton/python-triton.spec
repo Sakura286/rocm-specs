@@ -28,16 +28,6 @@ VCS:            git:%{url}.git
 #!RemoteAsset:  sha256:21cab714d4fc9579b728f4d597660c9598fbbd52c1154896c71d2d42f9b61626
 Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
 
-# These openRuyi-specific patches are rebased from the successful
-# home:nekorouter/triton-llvm22 OBS build and openRuyi PR #861.
-Patch0:         2000-Use-system-build-tools.patch
-Patch1:         2001-Adjust-for-MLIR-22-API.patch
-Patch2:         2002-Link-dynamically-against-system-LLVM.patch
-Patch3:         2003-Build-only-the-AMD-backend.patch
-# Keep the pure-Python descriptor types imported by the common native
-# specialization code; this does not restore the NVIDIA codegen backend.
-Patch4:         2004-Retain-NVIDIA-Gluon-descriptor-types.patch
-
 BuildSystem:    pyproject
 BuildOption(install):  %{srcname}
 # MLIR helper shared libraries are not Python extension modules.
@@ -84,6 +74,17 @@ Requires:       rocm-device-libs
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
+
+# These openRuyi-specific patches are rebased from the successful
+# home:nekorouter/triton-llvm22 OBS build and openRuyi PR #861.
+%patchlist
+2000-Use-system-build-tools.patch
+2001-Adjust-for-MLIR-22-API.patch
+2002-Link-dynamically-against-system-LLVM.patch
+2003-Build-only-the-AMD-backend.patch
+# Keep the pure-Python descriptor types imported by the common native
+# specialization code; this does not restore the NVIDIA codegen backend.
+2004-Retain-NVIDIA-Gluon-descriptor-types.patch
 
 %description
 Triton is a language and compiler for writing highly efficient custom
