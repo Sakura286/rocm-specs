@@ -66,6 +66,19 @@ BuildRequires:  pkgconfig(python3)
 
 Requires:       python3dist(pyyaml)
 
+%patchlist
+# Support libdrm 2.4.130+
+# https://github.com/ROCm/amdsmi/pull/165
+0001-Fix-compilation-with-libdrm-2.4.130.patch
+# -DENABLE_ESMI_LIB=OFF is not enough.
+# Goamdshim references CPU/ESMI-only APIs; only build it when ESMI is on
+2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
+%ifnarch x86_64
+# Without ESMI (non-x86_64) libamd_smi.so omits the CPU API; let the ctypesgen
+# wrapper tolerate the missing symbols so `import amdsmi` still works
+2002-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
+%endif
+
 %description
 The AMD System Management Interface Library, or AMD SMI library, is a C
 library for Linux that provides a user space interface for applications
@@ -86,12 +99,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 
 %prep
-%autosetup -p1 -N -n %{name}
-%patch 0 -p1
-%patch 1 -p1
-%ifnarch x86_64
-%patch 2 -p1
-%endif
+%autosetup -p1 -n %{name}
 
 # ESMI - EPYC System Management Interface
 # esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
