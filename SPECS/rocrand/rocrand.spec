@@ -4,10 +4,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# rocRAND's test client is HIP device-test code: it compiles on a GPU-less
-# builder but needs a GPU to run. Build and package the test binaries so
-# packagers can run them on hardware; keep the run behind run_test (default
-# off) so OBS never executes device tests. cf. hiprand/rocfft.
+# rocRAND's test client is HIP device-test code,
+# which needs GPU to run
 %bcond run_test 0
 
 %global rocm_release 7.2
@@ -15,9 +13,6 @@
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global llvm_maj_ver 22
-
-# rocm builds with clang
-%global toolchain clang
 
 Name:           rocrand
 Version:        %{rocm_version}
@@ -33,6 +28,7 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
@@ -77,9 +73,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 
-# rocRAND registers its gtest binaries as ctest tests, so the buildsystem's
-# default %%check would run them and fail on a GPU-less builder. Only run when
-# a packager opts in with run_test.
+# rocRAND registers its gtest binaries as ctest tests
 %check
 %if %{with run_test}
 export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
