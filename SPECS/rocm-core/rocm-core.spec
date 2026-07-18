@@ -32,7 +32,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %install -a
 rm -rvf %{buildroot}/%{_exec_prefix}/.info
-rm -rvf %{buildroot}/%{_exec_prefix}/libexec/rocm-core
+rm -f %{buildroot}/%{_exec_prefix}/libexec/rocm-core/runpath_to_rpath.py
 rm -rvf %{buildroot}/%{_exec_prefix}/share/doc/*/LICENSE.md
 rm -rvf %{buildroot}/%{_libdir}/rocmmod
 
@@ -41,6 +41,7 @@ rm -rvf %{buildroot}/%{_libdir}/rocmmod
 %license LICENSE.md
 %{_libdir}/librocm-core.so.*
 %{_bindir}/rdhc
+%{_libexecdir}/rocm-core/
 %{_datadir}/rdhc/
 
 %files devel
