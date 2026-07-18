@@ -14,9 +14,6 @@
 
 %global llvm_maj_ver 22
 
-# rocm stack builds with clang
-%global toolchain clang
-
 Name:           miopen
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -34,18 +31,16 @@ BuildOption(conf):  -DMIOPEN_BUILD_DRIVER=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_KERNEL_TUNING=OFF
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 %if %{with test}
 BuildOption(conf):  -DBUILD_TESTING=ON
 BuildOption(conf):  -DMIOPEN_TEST_ALL=ON
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 %else
 BuildOption(conf):  -DBUILD_TESTING=OFF
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 %endif
 # Disable optional backends not yet packaged on openRuyi
 BuildOption(conf):  -DMIOPEN_USE_COMPOSABLEKERNEL=OFF
 BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
-BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
 BuildRequires:  cmake
