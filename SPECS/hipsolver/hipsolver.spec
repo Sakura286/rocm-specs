@@ -24,9 +24,6 @@
 
 %global llvm_maj_ver 22
 
-# rocm stack builds with clang
-%global toolchain clang
-
 # Fortran is only used in testing
 # clang and gfortran fedora toolchain args do not mix
 %global build_fflags %{nil}
@@ -45,6 +42,7 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
