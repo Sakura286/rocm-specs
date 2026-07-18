@@ -11,6 +11,8 @@
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%global llvm_maj_ver 22
+
 # rocm stack builds with clang
 %global toolchain clang
 
@@ -33,8 +35,8 @@ BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
 BuildRequires:  boost-devel
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
@@ -43,9 +45,9 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocfft)
 BuildRequires:  cmake(rocrand)
-BuildRequires:  compiler-rt22
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  rocm-cmake
