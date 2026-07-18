@@ -75,13 +75,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{summary}
 
-%prep -a
-# CMake Error at clients/tests/CMakeLists.txt:87 (find_package):
-#   No "FindHIP.cmake" found in CMAKE_MODULE_PATH.
-# Remove MODULE
-sed -i -e 's@find_package( HIP MODULE REQUIRED )@find_package( HIP REQUIRED )@' \
-    clients/tests/CMakeLists.txt
-
 %install -a
 rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
 
