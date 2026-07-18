@@ -12,6 +12,8 @@
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%global llvm_maj_ver 22
+
 # rocm stack builds with clang
 %global toolchain clang
 
@@ -56,14 +58,14 @@ BuildRequires:  cmake(rocrand)
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
-BuildRequires:  compiler-rt22
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  half
 BuildRequires:  hipcc
 BuildRequires:  hipblas-common-devel
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(bzip2)
 BuildRequires:  pkgconfig(libzstd)
