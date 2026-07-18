@@ -18,8 +18,7 @@ URL:            https://icl.utk.edu/magma/
 VCS:            git:https://github.com/icl-utk-edu/magma.git
 #!RemoteAsset:  sha256:26347adbccbe7a6693d6b3f3c0ab5620037eb3a62b5ef69d05e40289472a82a4
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
-# Template for magma's own make.inc build config; GPU_TARGET is filled in
-# at %conf time from rocm-llvm-macros' %{rocm_gpu_list_default}.
+# Template for magma's own make.inc build config
 Source1:        make.inc
 BuildSystem:    cmake
 
