@@ -11,9 +11,6 @@
 
 %global llvm_maj_ver 22
 
-# rocm stack builds with clang
-%global toolchain clang
-
 # riscv64 build workers OOM in the AMDGPU device-side LTO link (amdgcn-link) when
 # it runs one codegen partition per core: even on an 84 GB worker with 4 cores,
 # --lto-partitions=4 is killed by systemd-oomd. Cap the partition count there to
@@ -46,6 +43,7 @@ BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
