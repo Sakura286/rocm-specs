@@ -5,10 +5,9 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# rocm toolchain uses the hipcc wrapper of clang
-%global toolchain clang
-
 %bcond test 0
+
+%global llvm_maj_ver 22
 
 Name:           magma
 Version:        2.10.0
@@ -21,10 +20,27 @@ VCS:            git:https://github.com/icl-utk-edu/magma.git
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
 BuildSystem:    cmake
 
+%patchlist
 # Upstream installs the shared libraries unversioned; version them so the
 # runtime library and the -devel .so symlink can live in separate packages.
 # https://bitbucket.org/icl/magma/issues/77/versioning-so
-Patch2000:      2000-version-shared-libraries.patch
+2000-version-shared-libraries.patch
+# Add newer gfx targets to Makefile's valid arch whitelist
+# https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
+2001-add-newer-gfx-targets.patch
+# Change the bin,lib install locations
+2002-fix-install-destination-dirs.patch
+# python to python3, need env to find local bits like magmasubs.py
+2003-python3-shebangs.patch
+# ICS, Copy of strlcpy - just use strlcpy
+2004-drop-bundled-strlcpy.patch
+%if %{with test}
+# Remove a test that fails to link (undefined magma_generate_matrix)
+2005-remove-broken-test.patch
+%else
+# Disable building tests
+2006-disable-tests-cmake.patch
+%endif
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBLA_VENDOR=OpenBLAS
@@ -32,20 +48,22 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DMAGMA_ENABLE_HIP=ON
 BuildOption(conf):  -DUSE_FORTRAN=OFF
 BuildOption(conf):  -DMAGMA_SO_VERSION=%{version}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
 BuildRequires:  hipcc
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openblas)
 BuildRequires:  python3
@@ -82,41 +100,13 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 
 %prep -a
-# Add newer gfx targets to Makefile's valid arch whitelist
-# https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
-sed -i -e 's@1032 1033@1032 1033 1100 1101 1102 1103 1150 1151 1152 1153 1200 1201@' Makefile
-
-%if %{with test}
-# Remove a test that fails to link (undefined magma_generate_matrix)
-sed -i -e '/testing_zgenerate.cpp/d' testing/Makefile.src
-%else
-# Disable building tests
-sed -i -e 's@include_directories( testing )@#include_directories( testing )@' CMakeLists.txt
-sed -i -e 's@foreach( filename ${testing_all} )@foreach( filename ${no_testing_all} )@' CMakeLists.txt
-sed -i -e 's@add_custom_target( testing DEPENDS ${testing} )@#add_custom_target( testing DEPENDS ${testing} )@' CMakeLists.txt
-sed -i -e 's@foreach( TEST ${sparse_testing_all} )@foreach( TEST ${no_sparse_testing_all} )@' CMakeLists.txt
-sed -i -e 's@add_custom_target( sparse-testing DEPENDS ${sparse-testing} )@#add_custom_target( sparse-testing DEPENDS ${sparse-testing} )@' CMakeLists.txt
-%endif
-
-# Change the bin,lib install locations
-sed -i -e 's@DESTINATION lib@DESTINATION ${CMAKE_INSTALL_LIBDIR}@' CMakeLists.txt
-sed -i -e 's@DESTINATION bin@DESTINATION ${CMAKE_INSTALL_BINDIR}@' CMakeLists.txt
-
-# python to python3, need env to find local bits like magmasubs.py
-sed -i -e 's@env python@env python3@' tools/checklist_run_tests.py
-sed -i -e 's@env python@env python3@' tools/check-style.py
-sed -i -e 's@env python@env python3@' tools/parse-magma.py
-
-# Remove some files we do not need to similify licenses
+# Remove some files we do not need to simplify licenses
 # GPL, results for cuda
 rm -rf results/*
-# ICS, Copy of strlcpy - just use strlcpy
-sed -i -e '/strlcpy/d' control/Makefile.src
-sed -i -e '/strlcpy/d' include/magma_auxiliary.h
-sed -i -e 's@magma_strlcpy@strlcpy@' control/trace.cpp
-rm control/strlcpy.cpp
 
 %conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 echo "BACKEND = hip"                          > make.inc
 echo "FORT = false"                          >> make.inc
 echo "GPU_TARGET = gfx1100;gfx1200;gfx1201"  >> make.inc

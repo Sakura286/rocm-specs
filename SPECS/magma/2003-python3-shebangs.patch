@@ -1,0 +1,31 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 21:01:00 +0800
+Subject: Use python3 in the maintainer tool scripts
+
+These tools invoke a bare "env python", which does not exist on
+openRuyi (python2 is not packaged); point them at python3.
+
+--- a/tools/checklist_run_tests.py	2026-07-18 21:00:27.485961342 +0800
++++ b/tools/checklist_run_tests.py	2026-07-18 21:00:34.651662538 +0800
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ #
+ # Compares testing/Makefile.src and testing/run_tests.py
+ # to ensure that all routines are being tested.
+--- a/tools/check-style.py	2026-07-18 21:00:27.493280992 +0800
++++ b/tools/check-style.py	2026-07-18 21:00:34.652731564 +0800
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ #
+ # Rejects commits that don't follow certain stylistic rules.
+ # see https://bitbucket.org/icl/style/wiki/ICL_C_CPP_Coding_Style_Guide
+--- a/tools/parse-magma.py	2026-07-18 21:00:27.500314784 +0800
++++ b/tools/parse-magma.py	2026-07-18 21:00:34.653697397 +0800
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ #
+ # Parses output from testers into Python numpy arrays or Matlab arrays.
+ # Replaces words and "---" with NAN.

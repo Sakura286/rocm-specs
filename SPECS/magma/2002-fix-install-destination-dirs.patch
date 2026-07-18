@@ -1,0 +1,32 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 21:00:30 +0800
+Subject: Install into the platform-specific lib/bin directories
+
+Upstream hardcodes DESTINATION lib / bin, which is wrong on
+multilib/riscv64 systems where the library directory is not simply
+"lib". Use the standard GNUInstallDirs cache variables instead.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -616,9 +616,9 @@
+ # ----------------------------------------
+ # what to install
+ install( TARGETS magma magma_sparse
+-         RUNTIME DESTINATION bin
+-         LIBRARY DESTINATION lib
+-         ARCHIVE DESTINATION lib )
++         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} )
+ if (MAGMA_ENABLE_CUDA)
+     file( GLOB headers include/*.h sparse/include/*.h "${CMAKE_BINARY_DIR}/include/*.h" )
+ else()
+@@ -654,7 +654,7 @@
+ set( MAGMA_REQUIRED "" )
+ configure_file( "${pkgconfig}.in" "${pkgconfig}" @ONLY )
+ install( FILES "${CMAKE_BINARY_DIR}/${pkgconfig}"
+-         DESTINATION lib/pkgconfig )
++         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig )
+ 
+ # ----------------------------------------
+ get_directory_property( compile_definitions COMPILE_DEFINITIONS )
