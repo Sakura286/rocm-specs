@@ -9,6 +9,8 @@
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%global llvm_maj_ver 22
+
 %global toolchain clang
 
 %global tensile_version 4.33.0
@@ -63,8 +65,8 @@ BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
@@ -73,12 +75,12 @@ BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocsparse)
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
-BuildRequires:  libomp22-devel
+BuildRequires:  libomp-devel(major) = %{llvm_maj_ver}
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(msgpack)
 BuildRequires:  pkgconfig(python3)
