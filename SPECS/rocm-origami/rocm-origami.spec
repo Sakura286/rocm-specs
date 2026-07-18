@@ -9,6 +9,8 @@
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%global llvm_maj_ver 22
+
 Name:           rocm-origami
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -32,11 +34,11 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang22
+BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  cmake(hip)
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  ninja
