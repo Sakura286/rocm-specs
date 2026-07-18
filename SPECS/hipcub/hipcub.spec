@@ -11,8 +11,6 @@
 # off) so OBS never executes device tests. cf. hiprand/rocfft.
 %bcond run_test 0
 
-%global toolchain clang
-
 %global rocm_release 7.2
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -33,6 +31,7 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
