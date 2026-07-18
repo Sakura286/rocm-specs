@@ -17,9 +17,6 @@
 
 %global llvm_maj_ver 22
 
-# rocm builds with clang
-%global toolchain clang
-
 Name:           rocthrust
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -48,6 +45,7 @@ BuildOption(conf):  -DBUILD_TEST=ON
 # network-isolated OBS builder cannot fetch. cf. rocfft.
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
