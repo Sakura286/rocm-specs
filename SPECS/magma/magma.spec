@@ -18,6 +18,9 @@ URL:            https://icl.utk.edu/magma/
 VCS:            git:https://github.com/icl-utk-edu/magma.git
 #!RemoteAsset:  sha256:26347adbccbe7a6693d6b3f3c0ab5620037eb3a62b5ef69d05e40289472a82a4
 Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.gz
+# Template for magma's own make.inc build config; GPU_TARGET is filled in
+# at %conf time from rocm-llvm-macros' %{rocm_gpu_list_default}.
+Source1:        make.inc
 BuildSystem:    cmake
 
 %patchlist
@@ -106,10 +109,10 @@ rm -rf results/*
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
+export MAGMA_GPU_TARGET=%{rocm_gpu_list_default}
 
-echo "BACKEND = hip"                          > make.inc
-echo "FORT = false"                          >> make.inc
-echo "GPU_TARGET = gfx1100;gfx1200;gfx1201"  >> make.inc
+cp %{SOURCE1} make.inc
+sed -i "s/@GPU_TARGET@/$MAGMA_GPU_TARGET/" make.inc
 
 make generate
 
