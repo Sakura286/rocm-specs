@@ -49,6 +49,11 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 
+%patchlist
+# Disable RPATH
+# https://github.com/ROCm-Developer-Tools/hipamd/issues/22
+2000-drop-install-rpath.patch
+
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
@@ -73,10 +78,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-
-%prep -a
-# Remove RPATH
-sed -i '/INSTALL_RPATH/d' CMakeLists.txt
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
