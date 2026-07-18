@@ -17,6 +17,8 @@
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%global llvm_maj_ver 22
+
 Name:           hipcub
 Version:        %{rocm_version}
 Release:        %autorelease
@@ -32,17 +34,17 @@ BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 
-BuildRequires:  clang22
-BuildRequires:  clang22-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocprim)
-BuildRequires:  compiler-rt22
-BuildRequires:  lld22
-BuildRequires:  llvm22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
