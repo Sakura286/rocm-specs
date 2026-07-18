@@ -1,0 +1,26 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 17:34:00 +0800
+Subject: [PATCH] Use raw string for bdf_regex to silence SyntaxWarning
+
+amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
+`\\.` inside a plain (non-raw) Python string literal is not a
+recognized escape sequence, so Python warns on every `import amdsmi_cli`.
+Mark the literal as a raw string so the backslash reaches the regex
+engine unmodified, without the warning.
+---
+ amdsmi_cli/BDF.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/amdsmi_cli/BDF.py b/amdsmi_cli/BDF.py
+index 1111111..2222222 100644
+--- a/amdsmi_cli/BDF.py
++++ b/amdsmi_cli/BDF.py
+@@ -121,7 +121,7 @@
+         """Overrided the 'in' comparator in python"""
+         passed_bdf = str(BDF(passed_bdf))
+ 
+-        bdf_regex = "(?:[0-6]?[0-9a-fA-F]{1,4}:)?[0-2]?[0-9a-fA-F]{1,2}:[0-9a-fA-F]{1,2}\\.[0-7]"
++        bdf_regex = r"(?:[0-6]?[0-9a-fA-F]{1,4}:)?[0-2]?[0-9a-fA-F]{1,2}:[0-9a-fA-F]{1,2}\\.[0-7]"
+         for match in re.findall(bdf_regex, passed_bdf):
+             if self == match:
+                 return True

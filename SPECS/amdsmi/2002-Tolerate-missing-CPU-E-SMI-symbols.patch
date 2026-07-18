@@ -1,9 +1,9 @@
 From 41740f15ede6e04e46ff736bcc85ca8fd1aae641 Mon Sep 17 00:00:00 2001
 From: Sakura286 <sakura286@outlook.com>
 Date: Sat, 6 Jun 2026 21:55:37 +0800
-Subject: [PATCH 2/2] Tolerate missing CPU/E-SMI symbols on non-x86_64
+Subject: [PATCH 2/2] Tolerate missing CPU/E-SMI symbols
 
-With ENABLE_ESMI_LIB=OFF (non-x86_64), libamd_smi.so omits the CPU API,
+With ENABLE_ESMI_LIB=OFF, libamd_smi.so omits the CPU API,
 but the ctypesgen wrapper binds every symbol at import time, so the
 missing CPU symbols make `import amdsmi` fail with AttributeError.
 

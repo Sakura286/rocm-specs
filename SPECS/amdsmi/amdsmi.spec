@@ -24,18 +24,17 @@ Name:           amdsmi
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        AMD System Management Interface
-License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 # Main license is MIT
 #
-# This file is GPL-2.0:
 # include/amd_smi/impl/amd_hsmp.h
 # esmi_ib_library/include/asm/amd_hsmp.h
 # Both carry: SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# NCSA covers the bundled esmi_ib_library
-URL:            https://github.com/ROCm/rocm-systems
-#!RemoteAsset:  sha256:e1b7afe0ba9b12dc0ea9f3a49c381ff65363344b33ac435f7bbcc0ab1e4c8ff6
-Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
+# Bundled esmi_ib_library is NCSA
+License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
+URL:            https://github.com/ROCm/amdsmi
+#!RemoteAsset:  sha256:1075067f450860313445edc97026ba430c33e93c18a9c1b1440d71a1f210d1cb
+Source0:        %{url}/archive/rocm-%{version}.tar.gz
 #!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
 BuildSystem:    cmake
@@ -60,14 +59,14 @@ Requires:       python3dist(pyyaml)
 # Support libdrm 2.4.130+
 # https://github.com/ROCm/amdsmi/pull/165
 0001-Fix-compilation-with-libdrm-2.4.130.patch
-# -DENABLE_ESMI_LIB=OFF is not enough.
-# Goamdshim references CPU/ESMI-only APIs; only build it when ESMI is on
+# -DENABLE_ESMI_LIB=OFF is not enough
+# Goamdshim calls CPU/ESMI-only APIs; skip building it when ESMI is off
 2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
-%ifnarch x86_64
-# Without ESMI (non-x86_64) libamd_smi.so omits the CPU API; let the ctypesgen
-# wrapper tolerate the missing symbols so `import amdsmi` still works
-2002-Tolerate-missing-CPU-E-SMI-symbols-on-non-x86_64.patch
-%endif
+# libamd_smi.so may lack ESMI symbols; the generated ctypesgen wrapper
+# binds them eagerly at import — patch it to lazy-load them instead
+2002-Tolerate-missing-CPU-E-SMI-symbols.patch
+# amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
+2003-Use-raw-string-for-bdf_regex-to-silence-SyntaxWarning.patch
 
 %description
 The AMD System Management Interface Library, or AMD SMI library, is a C
@@ -89,7 +88,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 
 %prep
-%autosetup -p1 -n %{name}
+%autosetup -p1 -C
 
 # ESMI - EPYC System Management Interface
 # esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
@@ -101,9 +100,6 @@ mv esmi_ib_library/License.txt esmi_ib_library_License.txt
 # Just inject in the tag that we've pulled into the version check:
 sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
 %endif
-
-# /usr/libexec/amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
-sed -i -e 's@bdf_regex = "@bdf_regex = r"@' amdsmi_cli/BDF.py
 
 # Fix script shebang
 sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
@@ -119,16 +115,16 @@ strip %{buildroot}%{python3_sitearch}/amdsmi/*.so
 # E: non-executable-script .../amdsmi_cli/amdsmi_cli_exceptions.py 644 /usr/bin/env python3
 chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
 
-rm -rf %{buildroot}%{_datadir}/example
-rm -rf %{buildroot}%{_datadir}/amd_smi/example
 rm -f %{buildroot}%{_datadir}/_version.py
 rm -f %{buildroot}%{_datadir}/amd_smi/_version.py
-rm -f %{buildroot}%{_datadir}/setup.py
+rm -rf %{buildroot}%{_datadir}/amd_smi/example
 rm -f %{buildroot}%{_datadir}/amd_smi/setup.py
-rm -f %{buildroot}%{_docdir}/amd_smi-asan/LICENSE.txt
+rm -rf %{buildroot}%{_datadir}/example
+rm -f %{buildroot}%{_datadir}/setup.py
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/LICENSE.txt
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/README.md
 rm -rf %{buildroot}%{_docdir}/amd-smi-lib/copyright
+rm -f %{buildroot}%{_docdir}/amd_smi-asan/LICENSE.txt
 
 # The declarative buildsystem forces SHARE_INSTALL_PREFIX=/usr/share, so amdSMI's
 # tests install to %{_datadir}/tests; relocate them under the package's own
