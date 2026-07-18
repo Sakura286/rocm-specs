@@ -27,6 +27,7 @@ Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 Patch0:         0001-cmake-use-gnu-installdirs.patch
+Patch1:         2000-relax-sqlite-version-requirement.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -81,10 +82,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{summary}
-
-%prep -a
-# Do not care so much about the sqlite version
-sed -i -e 's@SQLite3 3.50.2 @SQLite3 @' cmake/sqlite.cmake
 
 %install -a
 # we don't need the rocfft_rtc_helper binary and client-info file
