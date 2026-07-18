@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# Tests require an AMD GPU; keep the bcond for packagers with hardware.
+# Need GPU to run tests
 %bcond test 0
 
 %global rocm_release 7.2
@@ -38,7 +38,7 @@ BuildOption(conf):  -DMIOPEN_TEST_ALL=ON
 %else
 BuildOption(conf):  -DBUILD_TESTING=OFF
 %endif
-# Disable optional backends not yet packaged on openRuyi
+# Disable optional backends(CK) not yet packaged
 BuildOption(conf):  -DMIOPEN_USE_COMPOSABLEKERNEL=OFF
 BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
 
@@ -69,8 +69,6 @@ BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-# roctracer uses find_path/find_library rather than find_package; no cmake()/pkgconfig() provided
-# FIXME
 BuildRequires:  roctracer-devel
 
 Requires:       cmake(hip)
@@ -79,6 +77,12 @@ Requires:       gcc-c++
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
+
+%patchlist
+2001-disable-clang-tidy.patch
+2002-workaround-half-float-expr-deduction.patch
+2003-disable-fno-offload-uniform-block.patch
+2004-fix-clang-rel-path.patch
 
 %description
 AMD's library for high performance machine learning primitives.
@@ -102,12 +106,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep -a
-# clang-tidy is brittle and not needed when rebuilding from a tarball
-sed -i -e 's@clang-tidy@true@' cmake/ClangTidy.cmake
-
-# half_float::detail::expr is not present in all half versions
-sed -i -e 's@std::is_same_v<T, half_float::detail::expr>@0@' test/verify.hpp
-
 # MIOpen tries to download googletest; disable when not needed
 %if %{without test}
 sed -i -e 's@add_subdirectory(test)@#add_subdirectory(test)@' CMakeLists.txt
@@ -116,12 +114,6 @@ sed -i -e 's@add_subdirectory(speedtests)@#add_subdirectory(speedtests)@' CMakeL
 
 # Use the standard data directory for the MIOpen kernel database
 sed -i -e 's@GetLibPath().parent_path() / "share/miopen/db"@"%{_datadir}/miopen/db"@' src/db_path.cpp.in
-
-# -fno-offload-uniform-block is unsupported on this ROCm version
-sed -i -e 's@opts.push_back("-fno-offload-uniform-block");@//opts.push_back("-fno-offload-uniform-block");@' src/comgr.cpp
-
-# Fix the path used to locate the ROCm clang binary at build time
-sed -i -e 's@llvm/bin/clang@bin/clang@' src/hip/hip_build_utils.cpp
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/miopen-hip/LICENSE.md

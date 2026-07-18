@@ -1,0 +1,20 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 20:15:00 +0800
+Subject: Fix the path used to locate the ROCm clang binary at build time
+
+--- a/src/hip/hip_build_utils.cpp
++++ b/src/hip/hip_build_utils.cpp
+@@ -47,10 +47,10 @@
+ // for each Compiler Flags from ROCM Install Path
+ // This flag Paths are expected to be deprecated/modified
+ // in upcoming MAJOR Releases.
+-#define MIOPEN_CLANG_REL_PATH "llvm/bin/clang"
++#define MIOPEN_CLANG_REL_PATH "bin/clang"
+ #define MIOPEN_OCL_REL_PATH "bin/clang"
+-#define MIOPEN_CPPCLANG_REL_PATH "llvm/bin/clang++"
+-#define MIOPEN_OFFLOADBUNDLER_REL_PATH "llvm/bin/clang-offload-bundler"
++#define MIOPEN_CPPCLANG_REL_PATH "bin/clang++"
++#define MIOPEN_OFFLOADBUNDLER_REL_PATH "bin/clang-offload-bundler"
+ 
+ // Function to generate the MIOPEN Compiler Path Value using
+ // ROCm Base Install Path fetched using getROCmInstallPath()

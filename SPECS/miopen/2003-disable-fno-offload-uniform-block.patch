@@ -1,0 +1,17 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 20:15:00 +0800
+Subject: Disable -fno-offload-uniform-block
+
+-fno-offload-uniform-block is unsupported on this ROCm version's clang.
+
+--- a/src/comgr.cpp
++++ b/src/comgr.cpp
+@@ -954,7 +954,7 @@
+         opts.push_back("-fno-gpu-rdc");
+         opts.push_back("-O3");
+ #if WORKAROUND_SWDEV_413293
+-        opts.push_back("-fno-offload-uniform-block");
++        //opts.push_back("-fno-offload-uniform-block");
+ #endif
+         if(std::none_of(opts.begin(), opts.end(), [](const std::string& s) {
+                return StartsWith(s, "--std=") || StartsWith(s, "-std=");
