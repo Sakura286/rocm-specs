@@ -18,9 +18,6 @@
 # keep the test cases for packagers who have a GPU.
 %bcond run_test 0
 
-# This ROCm package is built with clang by default
-%global toolchain clang
-
 %global rocm_release 7.2
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
@@ -44,6 +41,7 @@ BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
