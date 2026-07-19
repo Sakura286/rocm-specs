@@ -194,8 +194,8 @@ mkdir -p %{buildroot}%{_var}/lib/ollama
 %systemd_postun_with_restart ollama.service
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %dir %{_exec_prefix}/lib/ollama
 %attr(0755,ollama,ollama) %dir %{_var}/lib/ollama/
 %{_bindir}/ollama
