@@ -33,8 +33,8 @@ Requires:       go(golang.org/x/sys)
 coninput is a Go package for reading Windows console input events.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
