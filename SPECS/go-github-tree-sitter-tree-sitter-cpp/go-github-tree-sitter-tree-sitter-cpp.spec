@@ -29,8 +29,8 @@ Provides:       go(github.com/tree-sitter/tree-sitter-cpp/bindings/go) = %{versi
 Tree-sitter grammar for C++.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/github.com/tree-sitter/tree-sitter-cpp
 
 %changelog
