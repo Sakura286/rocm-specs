@@ -113,9 +113,9 @@ export PARQUET_TEST_DATA=%{_builddir}/parquet-testing/data
 export ARROW_TEST_DATA=%{_builddir}/arrow-testing/data
 
 %files
-%license %{_datadir}/doc/arrow/LICENSE.txt
 %doc %{_datadir}/doc/arrow/NOTICE.txt
 %doc %{_datadir}/doc/arrow/README.md
+%license %{_datadir}/doc/arrow/LICENSE.txt
 %{_libdir}/libarrow.so.*
 %{_libdir}/libarrow_acero.so.*
 %{_libdir}/libarrow_compute.so.*
