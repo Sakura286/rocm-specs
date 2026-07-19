@@ -277,8 +277,8 @@ export MAX_JOBS=$compile_jobs
 # packaged on openRuyi, and needs a GPU runtime.
 
 %files -f %{pyproject_files}
-%license LICENSE
 %doc README.md
+%license LICENSE
 %{_bindir}/vllm
 
 %changelog
