@@ -32,8 +32,8 @@ the ROCm software stack.
 rm -f %{buildroot}%{_datadir}/doc/half/LICENSE.txt
 
 %files
-%license LICENSE.txt
 %doc README.txt
+%license LICENSE.txt
 %{_includedir}/half/
 
 %changelog
