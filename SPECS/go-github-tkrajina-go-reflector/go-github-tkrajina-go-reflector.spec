@@ -29,8 +29,8 @@ Provides:       go(github.com/tkrajina/go-reflector) = %{version}
 Go reflection utilities for inspecting and manipulating struct fields.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
