@@ -186,8 +186,8 @@ LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
     %{_vpath_builddir}/bin/llama-cli --version
 
 %files
-%license LICENSE licenses/LICENSE-jsonhpp vendor/cpp-httplib/LICENSE
 %doc README.md
+%license LICENSE licenses/LICENSE-jsonhpp vendor/cpp-httplib/LICENSE
 %{_bindir}/llama*
 %{_libdir}/ggml/
 %{_libdir}/libggml*.so.*
