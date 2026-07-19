@@ -27,8 +27,8 @@ Provides:       go(github.com/mattn/go-pointer) = %{version}
 pointer is a Go library for dealing with Go pointers to C.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
