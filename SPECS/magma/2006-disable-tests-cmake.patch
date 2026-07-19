@@ -4,10 +4,12 @@ Subject: Disable building the test/sparse-test targets
 
 Testers require a GPU to run; when tests are disabled, skip building
 them entirely instead of only skipping %check, so a plain build does
-not need the testing sources to link.
+not need the testing sources to link. Rebased on top of the
+version-shared-libraries patch, which inserts lines right after the
+sparse-testing custom target this patch also touches.
 
---- a/CMakeLists.txt	2026-07-18 21:00:42.987181044 +0800
-+++ b/CMakeLists.txt	2026-07-18 21:00:42.994565391 +0800
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -539,7 +539,7 @@
      include_directories( sparse_hip/include )
      include_directories( sparse_hip/control )
@@ -51,5 +53,5 @@ not need the testing sources to link.
 -add_custom_target( sparse-testing DEPENDS ${sparse-testing} )
 +#add_custom_target( sparse-testing DEPENDS ${sparse-testing} )
  
- 
- # ----------------------------------------
+ # openRuyi: give the shared libraries a SONAME/version so the runtime
+ # and devel sub-packages can be split (upstream ships them unversioned).
