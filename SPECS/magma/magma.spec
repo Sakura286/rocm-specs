@@ -22,28 +22,6 @@ Source0:        https://github.com/icl-utk-edu/%{name}/archive/v%{version}.tar.g
 Source1:        make.inc
 BuildSystem:    cmake
 
-%patchlist
-# Upstream installs the shared libraries unversioned; version them so the
-# runtime library and the -devel .so symlink can live in separate packages.
-# https://bitbucket.org/icl/magma/issues/77/versioning-so
-2000-version-shared-libraries.patch
-# Add newer gfx targets to Makefile's valid arch whitelist
-# https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
-2001-add-newer-gfx-targets.patch
-# Change the bin,lib install locations
-2002-fix-install-destination-dirs.patch
-# python to python3, need env to find local bits like magmasubs.py
-2003-python3-shebangs.patch
-# ICS, Copy of strlcpy - just use strlcpy
-2004-drop-bundled-strlcpy.patch
-%if %{with test}
-# Remove a test that fails to link (undefined magma_generate_matrix)
-2005-remove-broken-test.patch
-%else
-# Disable building tests
-2006-disable-tests-cmake.patch
-%endif
-
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBLA_VENDOR=OpenBLAS
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -72,6 +50,28 @@ BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
+
+%patchlist
+# Upstream installs the shared libraries unversioned; version them so the
+# runtime library and the -devel .so symlink can live in separate packages.
+# https://bitbucket.org/icl/magma/issues/77/versioning-so
+2000-version-shared-libraries.patch
+# Add newer gfx targets to Makefile's valid arch whitelist
+# https://bitbucket.org/icl/magma/issues/76/a-few-new-rocm-gpus
+2001-add-newer-gfx-targets.patch
+# Change the bin,lib install locations
+2002-fix-install-destination-dirs.patch
+# python to python3, need env to find local bits like magmasubs.py
+2003-python3-shebangs.patch
+# ICS, Copy of strlcpy - just use strlcpy
+2004-drop-bundled-strlcpy.patch
+%if %{with test}
+# Remove a test that fails to link (undefined magma_generate_matrix)
+2005-remove-broken-test.patch
+%else
+# Disable building tests
+2006-disable-tests-cmake.patch
+%endif
 
 %description
 Matrix Algebra on GPU and Multi-core Architectures (MAGMA) is a collection
