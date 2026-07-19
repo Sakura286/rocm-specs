@@ -90,8 +90,8 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 rm -f %{buildroot}%{_prefix}/share/doc/rocsolver/LICENSE.md
 
 %files
-%license LICENSE.md
 %doc README.md
+%license LICENSE.md
 %{_libdir}/librocsolver.so.0{,.*}
 
 %files devel
