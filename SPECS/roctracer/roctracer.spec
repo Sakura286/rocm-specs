@@ -90,8 +90,8 @@ rm -f %{buildroot}%{_datadir}/doc/%{name}/LICENSE.md
 rm -rf %{buildroot}%{_datadir}/doc/%{name}-asan
 
 %files
-%license LICENSE.md
 %doc README.md
+%license LICENSE.md
 %{_libdir}/libroctracer64.so.*
 %{_libdir}/libroctx64.so.*
 %{_libdir}/roctracer/
