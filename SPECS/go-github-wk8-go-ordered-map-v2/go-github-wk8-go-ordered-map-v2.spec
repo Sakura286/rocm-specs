@@ -37,8 +37,8 @@ A Go library for ordered maps that maintains insertion order, similar to
 Python's collections.OrderedDict.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
