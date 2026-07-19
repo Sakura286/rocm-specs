@@ -35,8 +35,8 @@ Requires:       go(github.com/mattn/go-pointer)
 Go bindings for tree-sitter, the incremental parsing library.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
