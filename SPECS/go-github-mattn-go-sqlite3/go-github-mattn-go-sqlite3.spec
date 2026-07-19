@@ -32,8 +32,8 @@ Requires:       pkgconfig(sqlite3)
 sqlite3 driver conforming to the built-in database/sql interface.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
