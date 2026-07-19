@@ -32,8 +32,8 @@ Requires:       go(github.com/tkrajina/go-reflector)
 A Go library that converts Go structs to TypeScript interfaces/classes.
 
 %files
-%license LICENSE*
 %doc README*
+%license LICENSE*
 %{go_sys_gopath}/%{go_import_path}
 
 %changelog
