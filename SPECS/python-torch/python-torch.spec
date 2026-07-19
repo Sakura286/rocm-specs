@@ -9,6 +9,7 @@
 
 %global srcname torch
 
+# PyTorch upstream use clang as default toolchain
 %global toolchain clang
 
 %global miniz_version 3.0.2
@@ -27,8 +28,7 @@
 # runtime package and are intended for post-install checks on suitable hosts.
 %bcond test 1
 
-# The default flavor builds a CPU-only torch; the "rocm" multibuild flavor
-# builds the ROCm backend.  Local builds can also force ROCm with --with rocm.
+# The default flavor builds a CPU-only torch
 %global flavor @BUILD_FLAVOR@%{nil}
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
@@ -70,68 +70,59 @@ Name:           python-%{srcname}
 Version:        2.13.0
 Release:        %autorelease
 Summary:        PyTorch AI/ML framework
-# This is upstream's PEP 639 expression for the installed distribution; the
-# build prunes unused third-party trees before constructing the wheel.
+# From pyproject.toml
 License:        Apache-2.0 AND (Apache-2.0 WITH LLVM-exception) AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 URL:            https://pytorch.org/
 VCS:            git:https://github.com/pytorch/pytorch.git
-# PyTorch publishes only wheels on PyPI.  The GitHub tag archive excludes
-# submodules, but the official release asset includes the third_party C++
-# sources needed for a distro source build.
+# Only wheels(binary package) on PyPI
+# The GitHub tag archive excludes submodules
+# The official release asset includes the third_party C++ sources needed for a distro source build
 #!RemoteAsset:  sha256:66614a19060f69cfd63cd0295f65a1241bd15df2fa65c60ae51066c11c2ce812
 Source0:        https://github.com/pytorch/pytorch/releases/download/v%{version}/pytorch-v%{version}.tar.gz
-
-# googletest is provided by the system gtest-devel (openRuyi package) when
-# BUILD_TEST=ON; see 2004-use-system-googletest.patch.
-
 # Functional smoke test for the just-built torch, run by the check phase.
 Source1:        pytorch-smoke-test.py
-
 BuildSystem:    pyproject
+
 BuildOption(prep):  -n pytorch-v%{version}
-# Save every importable torch* top-level (torch, torchgen, functorch) plus the
-# torchrun entrypoint; -l records the PEP 639 license files in the generated
-# manifest consumed by %%files -f %%{pyproject_files}.
+# packages: torch, torchgen, functorch, torchrun
 BuildOption(install):  -l '*torch*'
-# The declarative check phase runs %%pyproject_check_import on the saved module
-# list; exclude the entries that cannot be imported in the build chroot:
-#  - torch.lib.lib*: C++ shared libs in torch/lib (libtorch, libc10, libtorch_cpu,
-#    the ROCm-only libtorch_hip, ...) shipped for rpath only -- no PyInit_ symbol.
-#  - torchgen.static_runtime.gen_static_runtime_ops: imports Meta-internal libfb;
-#    a build-time codegen tool, not part of the installed runtime.
-#  - torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi.
+#- torch.lib.lib*: C++ shared libs
+#- torchgen.static_runtime.gen_static_runtime_ops: imports non-opensource Meta-internal libfb;
+#- torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi.
 BuildOption(check):  -e 'torch.lib.lib*'
 BuildOption(check):  -e 'torchgen.static_runtime.gen_static_runtime_ops'
 BuildOption(check):  -e 'torch.utils.tensorboard*'
 
+BuildRequires:  clang
+BuildRequires:  clang-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(concurrentqueue)
+BuildRequires:  cmake(fmt)
+BuildRequires:  cmake(LLVM)
+BuildRequires:  cmake(ONNX)
+BuildRequires:  cmake(onnxruntime)
 BuildRequires:  cmake(sleef)
+BuildRequires:  cmake(zlib)
+BuildRequires:  compiler-rt
 BuildRequires:  cpuinfo
-# Although eigen3 enabled on openruyi, it cannot be detected during conf
-# TODO: Fix this
 BuildRequires:  eigen3
 BuildRequires:  foxi-devel
+BuildRequires:  fp16-devel
+BuildRequires:  fxdiv-devel
 BuildRequires:  libomp-devel
+BuildRequires:  libstdc++-devel
+BuildRequires:  lld
 BuildRequires:  ninja
-BuildRequires:  cmake(fmt)
 BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(openblas64)
 BuildRequires:  pkgconfig(protobuf)
-# The system protobuf's cmake config does find_package(ZLIB), which imports the
-# ZLIB::ZLIBSTATIC target referencing %%{_libdir}/libz.a; cmake configure aborts
-# if that static lib is absent. Pull it in (provided by zlib-ng-compat-static).
-BuildRequires:  zlib-ng-compat-static
+BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(valgrind)
 BuildRequires:  pocketfft-devel
 BuildRequires:  pthreadpool-devel
-BuildRequires:  fp16-devel
-BuildRequires:  fxdiv-devel
 BuildRequires:  psimd-devel
-BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
 BuildRequires:  pyproject-rpm-macros
-BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(filelock)
 BuildRequires:  python3dist(fsspec)
 BuildRequires:  python3dist(jinja2)
@@ -144,35 +135,20 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(sympy)
 BuildRequires:  python3dist(typing-extensions)
+BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
 
 %if %{with system_httplib}
 BuildRequires:  cmake(httplib)
 %endif
-
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
-BuildRequires:  libstdc++-devel
-BuildRequires:  compiler-rt
-BuildRequires:  cmake(LLVM)
-BuildRequires:  lld
-
-BuildRequires:  cmake(ONNX)
-BuildRequires:  cmake(onnxruntime)
 
 %if %{with mpi}
 BuildRequires:  openmpi-devel
 %endif
 
 %if %{with test}
-# System googletest for BUILD_TEST=ON (see 2004-use-system-googletest.patch).
-# cmake(GTest) brings
-# gtest-devel (which carries the gtest/gmock cmake config and gtest headers);
-# gmock's headers ship in the separate gmock-devel package, which
-# gtest-devel only runtime-Requires (not -devel), so pull it in explicitly.
-BuildRequires:  cmake(GTest)
-BuildRequires:  gmock-devel
+BuildRequires:  pkgconfig(gmock)
+BuildRequires:  pkgconfig(gtest)
 # urllib3 is needed by torch.distributed.elastic.rendezvous.etcd_rendezvous_backend
-# (optional etcd backend, shipped in the package); python-urllib3 is in openRuyi.
 BuildRequires:  python3dist(urllib3)
 %endif
 
@@ -181,6 +157,9 @@ BuildRequires:  pkgconfig(flatbuffers)
 %endif
 
 %if %{with rocm}
+BuildRequires:  cmake(amd_comgr)
+BuildRequires:  cmake(amd_smi)
+BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hipblaslt)
 BuildRequires:  cmake(hipcub)
@@ -189,21 +168,18 @@ BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(hipsparselt)
 BuildRequires:  cmake(hipsolver)
-BuildRequires:  cmake(miopen)
-BuildRequires:  cmake(rocblas)
-BuildRequires:  cmake(rocrand)
-BuildRequires:  cmake(rocfft)
-BuildRequires:  cmake(rccl)
-BuildRequires:  cmake(rocprim)
-BuildRequires:  cmake(amd_comgr)
-BuildRequires:  cmake(rocm-core)
-BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  cmake(rocsolver)
+BuildRequires:  cmake(miopen)
+BuildRequires:  cmake(rccl)
+BuildRequires:  cmake(rocblas)
+BuildRequires:  cmake(rocfft)
+BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(rocm_smi)
+BuildRequires:  cmake(rocprim)
+BuildRequires:  cmake(rocrand)
+BuildRequires:  cmake(rocsolver)
 BuildRequires:  cmake(rocthrust)
 BuildRequires:  pkgconfig(magma)
-BuildRequires:  amdsmi-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
@@ -211,24 +187,17 @@ BuildRequires:  roctracer-devel
 
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
-# torch links -fopenmp with the unversioned SONAME libomp.so; the auto-generated
-# soname dep is satisfied by bare libomp22/libomp23 whose real runtime lives
-# outside the loader path, so require the llvm-defaults libomp symlink package
-# explicitly (our fixed rebuild wins in-project; see SPECS/llvm-defaults).
+# TODO: Remove this after https://github.com/openRuyi-Project/openRuyi/pull/967 merged
 Requires:       libomp
 %if %{with rocm}
 Requires:       amdsmi
 %endif
 
-# The canonical torch names resolve to the CPU build; CPU and ROCm are mutually
-# exclusive.  The ROCm flavor drops the auto-generated python3dist(torch) provide
-# so the generic torch identity stays unambiguously CPU -- ROCm consumers ask for
-# python-torch-rocm by name.
-# Both flavors satisfy "any torch backend" for backend-agnostic consumers.
-Provides:       python-torch-backend = %{version}-%{release}
+
+# python3dist(torch) and python-torch provided default by CPU flavor
 %if %{with rocm}
 %global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
-# CPU flavor now carries the bare python-torch name (masks base's python-torch).
+Provides:       pytorch-rocm = %{version}-%{release}
 Conflicts:      python-%{srcname}
 %else
 Provides:       python-%{srcname} = %{version}-%{release}
