@@ -65,8 +65,8 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' library/CM
 rm -f %{buildroot}%{_prefix}/share/doc/hipblas/LICENSE.md
 
 %files
-%license LICENSE.md
 %doc README.md
+%license LICENSE.md
 %{_libdir}/libhipblas.so.3{,.*}
 
 %files devel
