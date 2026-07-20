@@ -1,108 +1,91 @@
-# openRuyi: relax/trim vLLM runtime deps to versions the distro ships (build-system + requirements/{common,rocm,cpu}.txt).
-#
---- a/pyproject.toml	2026-07-12 11:50:06.402726428 +0800
-+++ b/pyproject.toml	2026-07-12 11:50:25.620279018 +0800
-@@ -1,10 +1,8 @@
- [build-system]
- # Should be mirrored in requirements/build/cuda.txt
- requires = [
+diff -N -a -r -U 0 a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml	2026-07-20 23:29:49.843043026 +0800
++++ b/pyproject.toml	2026-07-20 23:29:49.844319712 +0800
+@@ -4,2 +3,0 @@
 -    "cmake>=3.26.1",
 -    "ninja",
-     "packaging>=24.2",
+@@ -7 +5 @@
 -    "setuptools>=77.0.3,<81.0.0",
 +    "setuptools",
-     "setuptools-scm>=8.0",
-     "setuptools-rust>=1.9.0",
-     "torch == 2.11.0",
---- a/requirements/common.txt	2026-07-12 11:50:06.403852048 +0800
-+++ b/requirements/common.txt	2026-07-12 11:51:40.865668871 +0800
-@@ -10,22 +10,19 @@
- transformers >= 5.5.3
- tokenizers >= 0.21.1  # Required for fast incremental detokenization.
- safetensors >= 0.6.2  # MXFP4/MXFP6 dtype support (F8_E8M0, F4) added in 0.6.0: https://github.com/huggingface/safetensors/pull/611
+@@ -10 +7,0 @@
+-    "torch == 2.11.0",
+diff -N -a -r -U 0 a/requirements/common.txt b/requirements/common.txt
+--- a/requirements/common.txt	2026-07-20 23:29:49.843684113 +0800
++++ b/requirements/common.txt	2026-07-20 23:29:49.844925570 +0800
+@@ -13,3 +13,3 @@
 -protobuf >= 5.29.6, !=6.30.*, !=6.31.*, !=6.32.*, !=6.33.0.*, !=6.33.1.*, !=6.33.2.*, !=6.33.3.*, !=6.33.4.* # Required by LlamaTokenizer, gRPC. CVE-2026-0994
 -fastapi[standard] >= 0.133.0, < 0.137.0 # First version supporting Starlette 1.0; < 0.137.0 avoids route-tree change that breaks model-hosting-container-standards handler overrides.
 -starlette >= 1.0.1 # CVE-2026-48710: Host header injection in < 1.0.1
 +protobuf >= 5.29.6, !=6.30.*, !=6.31.*, !=6.32.*, !=6.33.0.*, !=6.33.1.*, !=6.33.3.*, !=6.33.4.* # Required by LlamaTokenizer, gRPC. CVE-2026-0994
 +fastapi >= 0.133.0, < 0.137.0 # First version supporting Starlette 1.0; < 0.137.0 avoids route-tree change that breaks model-hosting-container-standards handler overrides.
 +starlette >= 1.0.0 # CVE-2026-48710: Host header injection in < 1.0.1
- aiohttp >= 3.13.3
- openai >= 2.0.0  # For Responses API with reasoning content
- pydantic >= 2.12.0
- prometheus_client >= 0.18.0
- pillow  # Required for image processing
+@@ -21 +21 @@
 -prometheus-fastapi-instrumentator >= 8.0.0 # v8 unblocks starlette >= 1.0
 +prometheus-fastapi-instrumentator >= 7.1.0 # v8 unblocks starlette >= 1.0
- tiktoken >= 0.6.0  # Required for DBRX tokenizer
- lm-format-enforcer == 0.11.3
- llguidance >= 1.7.0, < 1.8.0; platform_machine == "x86_64" or platform_machine == "arm64" or platform_machine == "aarch64" or platform_machine == "ppc64le"
+@@ -25,4 +25 @@
 -outlines_core == 0.2.14
 -# required for outlines backend disk cache
 -diskcache == 5.6.3
 -lark == 1.2.2
 +lark
- xgrammar >= 0.2.1, < 1.0.0; platform_machine == "x86_64" or platform_machine == "aarch64" or platform_machine == "arm64" or platform_machine == "s390x" or platform_machine == "ppc64le"
- typing_extensions >= 4.10
- filelock >= 3.16.1 # need to contain https://github.com/tox-dev/filelock/pull/317
-@@ -33,27 +30,24 @@
- jsonschema >= 4.23.0 # required for MiniMax M3 tool schema validation
- pyzmq >= 25.0.0
- msgspec
+@@ -36,2 +33,2 @@
 -mistral_common[image] >= 1.11.5
 -opencv-python-headless >= 4.13.0    # required for video IO
 +mistral_common >= 1.11.2
 +opencv >= 4.13.0    # required for video IO
- pyyaml
- six>=1.16.0; python_version > '3.11' # transitive dependency of pandas that needs to be the latest version for python 3.12
+@@ -40 +37 @@
 -setuptools>=77.0.3,<81.0.0; python_version > '3.11' # Setuptools is used by triton, we need to ensure a modern version is installed for 3.12+ so that it does not try to import distutils, which was removed in 3.12
 +setuptools>=77.0.3; python_version > '3.11' # Setuptools is used by triton, we need to ensure a modern version is installed for 3.12+ so that it does not try to import distutils, which was removed in 3.12
- einops # Required for Qwen2-VL.
+@@ -42 +39 @@
 -compressed-tensors == 0.17.0 # required for compressed-tensors
 +compressed-tensors >= 0.15.0.1 # required for compressed-tensors
- depyf==0.20.0 # required for profiling and debugging with compilation config
- cloudpickle # allows pickling lambda functions in model_executor/models/registry.py
- watchfiles # required for http server to monitor the updates of TLS files
- python-json-logger # Used by logging as per examples/features/logging_configuration.md
+@@ -47 +43,0 @@
 -ninja # Required for xgrammar, rocm, tpu, xpu
- pybase64 # fast base64 implementation
- cbor2 # Required for cross-language serialization of hashable objects
- ijson # Required for mistral streaming tool parser
- setproctitle # Used to set process names for better debugging and monitoring
+@@ -52 +47,0 @@
 -openai-harmony >= 0.0.3  # Required for gpt-oss
- anthropic >= 0.71.0
- model-hosting-container-standards >= 0.1.14, < 1.0.0
- mcp
- opentelemetry-sdk >= 1.27.0
- opentelemetry-api >= 1.27.0
+@@ -58 +52,0 @@
 -opentelemetry-exporter-otlp >= 1.27.0
- opentelemetry-semantic-conventions-ai >= 0.4.1
---- a/requirements/rocm.txt	2026-07-12 11:50:06.403889945 +0800
-+++ b/requirements/rocm.txt	2026-07-12 11:51:56.329952771 +0800
-@@ -2,28 +2,17 @@
- -r common.txt
- 
- # The version of gRPC libraries should be consistent with each other
+diff -N -a -r -U 0 a/requirements/cpu.txt b/requirements/cpu.txt
+--- a/requirements/cpu.txt	2026-07-20 23:29:49.843699577 +0800
++++ b/requirements/cpu.txt	2026-07-20 23:29:49.844939824 +0800
+@@ -4 +4 @@
+-setuptools==77.0.3 # this version can reuse CMake build dir
++setuptools # this version can reuse CMake build dir
+@@ -6 +5,0 @@
+-numba == 0.65.0; platform_machine != "s390x" # Required for N-gram speculative decoding
+@@ -9,2 +8,2 @@
+-torch==2.11.0+cpu; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
+-torch==2.11.0; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
++torch; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
++torch; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
+@@ -13 +11,0 @@
+-torchaudio; platform_machine != "s390x" and platform_machine != "riscv64"
+@@ -18,3 +15,0 @@
+-# required for the torchcodec video decoding backend
+-torchcodec >= 0.14; platform_machine != "s390x" and platform_machine != "riscv64" and platform_machine != "ppc64le"
+-
+@@ -22 +16,0 @@
+-intel-openmp==2024.2.1; platform_machine == "x86_64"
+diff -N -a -r -U 0 a/requirements/rocm.txt b/requirements/rocm.txt
+--- a/requirements/rocm.txt	2026-07-20 23:29:49.843708910 +0800
++++ b/requirements/rocm.txt	2026-07-20 23:29:49.844950562 +0800
+@@ -5,2 +5,2 @@
 -grpcio==1.78.0
 -grpcio-reflection==1.78.0
 +grpcio
 +grpcio-reflection
- 
+@@ -8 +7,0 @@
 -numba == 0.65.0 # Required for N-gram speculative decoding
- 
- # Dependencies for AMD GPUs
- datasets
- peft
- pytest-asyncio
+@@ -14 +13 @@
 -tensorizer==2.10.1
 +tensorizer
- packaging>=24.2
+@@ -16 +15 @@
 -setuptools>=77.0.3,<80.0.0
 +setuptools>=77.0.3
- setuptools-scm>=8
- setuptools-rust>=1.9.0
+@@ -19,2 +17,0 @@
 -runai-model-streamer[s3,gcs,azure]==0.15.7
 -conch-triton-kernels==1.2.1
- timm>=1.0.17
+@@ -22,8 +18,0 @@
 -# amd-quark: required for Quark quantization on ROCm
 -# To be consistent with test_quark.py
 -amd-quark>=0.8.99
@@ -111,34 +94,3 @@
 -apache-tvm-ffi==0.1.10 
 -# Required for faster safetensors model loading
 -fastsafetensors >= 0.3.2
---- a/requirements/cpu.txt	2026-07-12 11:50:06.403914820 +0800
-+++ b/requirements/cpu.txt	2026-07-12 11:52:03.331081300 +0800
-@@ -1,25 +1,19 @@
- # Common dependencies
- -r common.txt
- 
--setuptools==77.0.3 # this version can reuse CMake build dir
-+setuptools # this version can reuse CMake build dir
- 
--numba == 0.65.0; platform_machine != "s390x" # Required for N-gram speculative decoding
- 
- # Dependencies for CPUs
--torch==2.11.0+cpu; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
--torch==2.11.0; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
-+torch; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
-+torch; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
- 
- # required for the image processor of minicpm-o-2_6, this must be updated alongside torch
--torchaudio; platform_machine != "s390x" and platform_machine != "riscv64"
- 
- # required for the image processor of phi3v, this must be updated alongside torch
- torchvision; platform_machine != "s390x"  and platform_machine != "riscv64"
- 
--# required for the torchcodec video decoding backend
--torchcodec >= 0.14; platform_machine != "s390x" and platform_machine != "riscv64" and platform_machine != "ppc64le"
--
- # Intel Extension for PyTorch, only for x86_64 CPUs
--intel-openmp==2024.2.1; platform_machine == "x86_64"
- 
- # Use this to gather CPU info and optimize based on ARM Neoverse cores
- py-cpuinfo; platform_machine == "aarch64"
