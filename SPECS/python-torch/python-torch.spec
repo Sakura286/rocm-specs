@@ -181,6 +181,7 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
 %endif
 
+Requires:       libomp
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
 %if %{with rocm}
