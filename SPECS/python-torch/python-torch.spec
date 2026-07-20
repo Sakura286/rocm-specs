@@ -183,16 +183,11 @@ BuildRequires:  roctracer-devel
 
 Requires:       python3dist(dill)
 Requires:       python3dist(pyyaml)
-# TODO: Remove this after https://github.com/openRuyi-Project/openRuyi/pull/967 merged
-Requires:       libomp
 %if %{with rocm}
 Requires:       amdsmi
 %endif
 
-
-# python3dist(torch) and python-torch provided default by CPU flavor
 %if %{with rocm}
-%global __provides_exclude ^python3(\\.[0-9]+)?dist\\(torch\\)
 Provides:       pytorch-rocm = %{version}-%{release}
 Conflicts:      python-%{srcname}
 %else
