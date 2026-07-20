@@ -220,50 +220,36 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %patchlist
-# Backport google/benchmark PR #2108 so clang 22 does not fail BUILD_TEST=ON on
-# a -Wc2y-extensions diagnostic from benchmark's __COUNTER__ preprocessor check.
+# Clang fails on a -Wc2y-extensions diagnostic from benchmark's __COUNTER__ preprocessor check.
 1000-benchmark-silence-c2y-counter-warning.patch
-# Disable PyTorch's ROCm aotriton ExternalProject hook; openRuyi builds with
-# USE_FLASH_ATTENTION=OFF / USE_MEM_EFF_ATTENTION=OFF and must not download
-# aotriton artifacts during CMake configure/build.
-2000-disable-aotriton-download.patch
-# torch.dot()/torch.vdot() on complex tensors return 0 because ATen's
-# BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface; force
-# the CBLAS complex-dot path (see %build: PYTORCH_BLAS_USE_CBLAS_DOT=ON).
+# Add gfx1100/gfx1101/gfx1151 to getHipblasltPreferredArchs()
+# On gfx1100 rocBLAS fp16 GEMM has no Tensile solution for some shapes and fails with
+# HIPBLAS_STATUS_INTERNAL_ERROR; default to hipBLASLt there
+# https://github.com/pytorch/pytorch/commit/10a5f2ff7c90d8c84938b0e789ab2f4145f90b5d
+1001-default-to-hipblaslt-on-gfx110x.patch
+# In pytorch-smoke-test.py, torch.dot()/torch.vdot() on complex tensors return 0
+# because ATen's BLAS ABI probe misdetects OpenBLAS's cblas_*dot*_sub interface
+# force the CBLAS complex-dot path
+# There is similar solution in downstream:
+# https://github.com/conda-forge/pytorch-cpu-feedstock/issues/180
+# https://github.com/conda-forge/pytorch-cpu-feedstock/blob/main/recipe/patches/0004-Use-BLAS_USE_CBLAS_DOT-for-OpenBLAS-builds.patch
 2001-force-cblas-complex-dot-for-openblas.patch
-# Default to hipBLASLt on gfx1100: upstream lists gfx1100 only as a hipBLASLt-
-# supported arch, not a preferred one, so torch defaults to rocBLAS -- whose fp16
-# GEMM has no Tensile solution for some shapes on gfx1100, failing with
-# HIPBLAS_STATUS_INTERNAL_ERROR.  hipBLASLt handles every shape.
-2003-default-to-hipblaslt-on-gfx1100.patch
-# Use the system googletest (openRuyi gtest-devel) instead of the vendored
-# submodule when BUILD_TEST=ON.  Upstream hardcodes
-# add_subdirectory(third_party/googletest) and the test CMakeLists link the
-# bare target names gtest / gtest_main / gmock / gmock_main; switch to
-# find_package(GTest) and alias the GTest:: targets to those bare names so
-# the distro's shared gtest/gmock are used and not statically vendored.
-2004-use-system-googletest.patch
-# Use the system fmt instead of vendored third_party/fmt.
-2006-use-system-fmt.patch
-# Skip PreBuildSteps.cmake submodule sanity checks for vendored directories the
-# openRuyi build intentionally prunes because system libraries or disabled
-# features are used.
-2007-skip-unused-submodule-prebuild-checks.patch
-# Work around a system llvm22 AMDGPU SelectionDAG codegen bug: Loss.hip
-# miscompiles for gfx11xx (S_ADD_U64_PSEUDO reaches MC unexpanded; reproduces at
-# -O3 and -O1 alike).  Build only that one TU at -O0, switching it to GlobalISel.
-# ROCm-only (the changed block is inside if(USE_ROCM)); no-op for cpu.
-2008-loss-hip-O0-workaround-llvm22-codegen.patch
-# Use satisfiable distro build-backend requirements while preserving PEP 639.
-2009-use-system-pyproject-build-dependencies.patch
-# Use packaged concurrentqueue and link the ROCm RSMI dependency.
-2010-use-system-cmake-dependencies.patch
+# Build against openRuyi's system copies instead of the vendored submodules
+2002-use-system-googletest.patch
+2003-use-system-fmt.patch
+2004-use-system-pyproject-build-dependencies.patch
+2005-use-system-cmake-dependencies.patch
+# Remove git submodule checks
+2006-skip-unused-submodule-prebuild-checks.patch
+# Workaround for system llvm22 AMDGPU codegen bug
+# Should Drop this if llvm 23.1.0 enabled
+2007-loss-hip-O0-workaround-llvm22-codegen.patch
 # Adapt shared CUDA/HIP declarations to the ROCm 7.2 clang ABI.
-2011-fix-rocm-compatibility.patch
-# Configure bundled benchmark for the non-executable OBS probe environment.
-2012-configure-benchmark-for-obs.patch
-# Install the CPU ProcessGroupGloo native test when tests are enabled.
-2013-install-cpu-gloo-test.patch
+2008-fix-rocm-compatibility.patch
+# Skip try-run phase of cmake for bundled 'benchmark'
+2009-skip-benchmark-try-run.patch
+# Install the GLOO test
+2010-install-cpu-gloo-test.patch
 
 %description
 PyTorch is a Python package that provides two high-level features:
@@ -293,7 +279,7 @@ echo "%{version}" > version.txt
 rm -rf %{srcname}.egg-info
 
 # GPU-arch / default-BLAS-backend handling is done in
-# 2003-default-to-hipblaslt-on-gfx1100.patch.  The arch
+# 1001-default-to-hipblaslt-on-gfx110x.patch.  The arch
 # lists moved from Blas.cpp to CUDAHooks.cpp in torch 2.11, so the old in-place
 # seds here silently became no-ops; a patch fails the build loudly if upstream
 # moves them again.
@@ -305,10 +291,10 @@ rm -rf %{srcname}.egg-info
 # 82.x.  Drop those from the [build-system] table (only there, not the identical
 # [dependency-groups] copy) so only satisfiable backend deps are generated -- the
 # real build deps come from the static BuildRequires above.
-# Applied by 2009-use-system-pyproject-build-dependencies.patch.
+# Applied by 2004-use-system-pyproject-build-dependencies.patch.
 
-# System CMake dependencies and fmt compatibility are applied by patches 2006
-# and 2010. The other historical edits in this block no longer match 2.13.0 or
+# System CMake dependencies and fmt compatibility are applied by patches 2003
+# and 2005. The other historical edits in this block no longer match 2.13.0 or
 # are disabled by the configured feature set, so they have been removed.
 
 # Release comes fully loaded with third party src
@@ -370,12 +356,12 @@ mv gloo third_party
 
 %if %{with test}
 # googletest is provided by the system gtest-devel (openRuyi package) instead
-# of the vendored submodule -- see 2004-use-system-googletest.patch, which makes
+# of the vendored submodule -- see 2002-use-system-googletest.patch, which makes
 # PyTorch's cmake call find_package(GTest) and alias the GTest:: targets to the
 # bare names the test CMakeLists link against.
 mv benchmark third_party
 
-# Benchmark configuration is applied by patch 2012.
+# Benchmark configuration is applied by patch 2009.
 %endif
 
 # Fake out pocketfft, and system header will be used
@@ -387,7 +373,7 @@ mkdir third_party/valgrind-headers
 cp %{_includedir}/valgrind/* third_party/valgrind-headers
 
 %if %{with rocm}
-# Patch 2011 fixes the HIP occupancy API gate and the clang CUDABlas template
+# Patch 2008 fixes the HIP occupancy API gate and the clang CUDABlas template
 # mangling mismatch before this hipify step.
 ./tools/amd_build/build_amd.py
 %endif
