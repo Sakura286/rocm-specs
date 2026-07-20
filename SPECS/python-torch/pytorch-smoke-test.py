@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-License-Identifier: MIT
+#
 # Functional smoke test for the built python-torch, run in the %check phase
 # against the just-built tree in the buildroot.  Unlike the import check (which
 # only proves modules load), this exercises real kernels: matmul, autograd, a
