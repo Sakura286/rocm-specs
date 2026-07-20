@@ -55,6 +55,7 @@ BuildRequires:  python3dist(setuptools-scm)
 BuildRequires:  python3dist(setuptools-rust)
 BuildRequires:  python3dist(packaging)
 BuildRequires:  python3dist(jinja2)
+BuildRequires:  libomp
 BuildRequires:  pkgconfig(protobuf)
 BuildRequires:  python3dist(numpy)
 BuildRequires:  cmake
