@@ -14,9 +14,7 @@
 
 %global miniz_version 3.0.2
 
-# LibTorch and the installed native-test helpers live below Python's private
-# module directory. Do not expose their SONAMEs as system-wide capabilities,
-# and suppress only the matching in-package requirements.
+# Do not expose private LibTorch and the installed native-test helpers as system-wide capabilities
 %global torch_privlibs libaoti_custom_ops|libbackend_with_compiler|libc10|libc10_hip
 %global torch_privlibs %{torch_privlibs}|libcaffe2_nvrtc|libjitbackend_test|libshm
 %global torch_privlibs %{torch_privlibs}|libtorch|libtorch_cpu|libtorch_global_deps
@@ -24,8 +22,6 @@
 %global __provides_exclude_from ^%{python3_sitearch}/torch/lib/.*\\.so$
 %global __requires_exclude ^(%{torch_privlibs})\\.so
 
-# Build the installed native-test payload. These tests are split from the
-# runtime package and are intended for post-install checks on suitable hosts.
 %bcond test 1
 
 # The default flavor builds a CPU-only torch
@@ -74,7 +70,7 @@ Summary:        PyTorch AI/ML framework
 License:        Apache-2.0 AND (Apache-2.0 WITH LLVM-exception) AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 URL:            https://pytorch.org/
 VCS:            git:https://github.com/pytorch/pytorch.git
-# Only wheels(binary package) on PyPI
+# The PyPI package is wheels-only(binary package)
 # The GitHub tag archive excludes submodules
 # The official release asset includes the third_party C++ sources needed for a distro source build
 #!RemoteAsset:  sha256:66614a19060f69cfd63cd0295f65a1241bd15df2fa65c60ae51066c11c2ce812
@@ -86,9 +82,9 @@ BuildSystem:    pyproject
 BuildOption(prep):  -n pytorch-v%{version}
 # packages: torch, torchgen, functorch, torchrun
 BuildOption(install):  -l '*torch*'
-#- torch.lib.lib*: C++ shared libs
-#- torchgen.static_runtime.gen_static_runtime_ops: imports non-opensource Meta-internal libfb;
-#- torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi.
+# torch.lib.lib*: C++ shared libs
+# torchgen.static_runtime.gen_static_runtime_ops: imports non-opensource Meta-internal libfb;
+# torch.utils.tensorboard*: needs tensorboard, not yet packaged in openRuyi.
 BuildOption(check):  -e 'torch.lib.lib*'
 BuildOption(check):  -e 'torchgen.static_runtime.gen_static_runtime_ops'
 BuildOption(check):  -e 'torch.utils.tensorboard*'
@@ -234,7 +230,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # https://github.com/conda-forge/pytorch-cpu-feedstock/issues/180
 # https://github.com/conda-forge/pytorch-cpu-feedstock/blob/main/recipe/patches/0004-Use-BLAS_USE_CBLAS_DOT-for-OpenBLAS-builds.patch
 2001-force-cblas-complex-dot-for-openblas.patch
-# Build against openRuyi's system copies instead of the vendored submodules
 2002-use-system-googletest.patch
 2003-use-system-fmt.patch
 2004-use-system-pyproject-build-dependencies.patch
@@ -271,31 +266,11 @@ validation of %{name}. This is not the complete upstream Python test suite.
 %endif
 
 %prep -a
-
 # GitHub release tarballs identify the version as an alpha, so replace that
 echo "%{version}" > version.txt
 
 # Remove bundled egg-info
 rm -rf %{srcname}.egg-info
-
-# GPU-arch / default-BLAS-backend handling is done in
-# 1001-default-to-hipblaslt-on-gfx110x.patch.  The arch
-# lists moved from Blas.cpp to CUDAHooks.cpp in torch 2.11, so the old in-place
-# seds here silently became no-ops; a patch fails the build loudly if upstream
-# moves them again.
-
-# %%pyproject_buildrequires (run by BuildSystem: pyproject) turns pyproject.toml's
-# build-system.requires into RPM BuildRequires.  On openRuyi cmake/ninja are
-# system packages, not python3dist(...); requests/six are not needed for the
-# --no-build-isolation wheel build; and setuptools<82 conflicts with the distro's
-# 82.x.  Drop those from the [build-system] table (only there, not the identical
-# [dependency-groups] copy) so only satisfiable backend deps are generated -- the
-# real build deps come from the static BuildRequires above.
-# Applied by 2004-use-system-pyproject-build-dependencies.patch.
-
-# System CMake dependencies and fmt compatibility are applied by patches 2003
-# and 2005. The other historical edits in this block no longer match 2.13.0 or
-# are disabled by the configured feature set, so they have been removed.
 
 # Release comes fully loaded with third party src
 # Remove what we can
@@ -373,19 +348,14 @@ mkdir third_party/valgrind-headers
 cp %{_includedir}/valgrind/* third_party/valgrind-headers
 
 %if %{with rocm}
-# Patch 2008 fixes the HIP occupancy API gate and the clang CUDABlas template
-# mangling mismatch before this hipify step.
 ./tools/amd_build/build_amd.py
 %endif
 
 %generate_buildrequires
-# -R: only the wheel's build-backend deps (the stripped [build-system].requires);
-# skip torch's large runtime requirement set -- those are the static Requires and
-# the extras, not build dependencies.  Overrides the BuildSystem's default
-# %%pyproject_buildrequires, which runs with --generate-extras and would emit
-# unsatisfiable optional-extra deps.
+# We use a git tarball instead of PyPI version
 export PYTORCH_BUILD_VERSION=%{version}
 export PYTORCH_BUILD_NUMBER=1
+# Too much extra packages for PyTorch, use '-R' to skip them
 %pyproject_buildrequires -R
 
 %build -p
@@ -416,11 +386,6 @@ if [ "$COMPILE_JOBS" -lt 2 ]; then
 fi
 export MAX_JOBS=$COMPILE_JOBS
 
-# cmake's ABI detection fails with clang 21 (Detecting CXX compiler ABI info - failed),
-# leaving CMAKE_SIZEOF_VOID_P unset.  All openRuyi targets are 64-bit; set it explicitly
-# so gloo (and anything else that checks sizeof(void*)) works without patching each guard.
-export CMAKE_SIZEOF_VOID_P=8
-
 # For verbose cmake output
 # export VERBOSE=ON
 # For verbose linking
@@ -435,8 +400,7 @@ export BUILD_TEST=OFF
 %if %{with test}
 export BUILD_TEST=ON
 %endif
-# Use Release instead of RelWithDebInfo to reduce compile time and memory
-# for huge generated files like TraceType/VariableType (saves ~30% compile time)
+# Use Release instead of RelWithDebInfo to reduce compile time and memory usage
 export CMAKE_BUILD_TYPE=Release
 export CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON
 export CAFFE2_LINK_LOCAL_PROTOBUF=OFF
@@ -500,30 +464,18 @@ export ROCM_PATH=`hipconfig -R`
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 
-# The system clang used as the HIP device compiler does not auto-detect the
-# rocm-device-libs bitcode, which lives in clang's own resource dir under
-# amdgcn/bitcode.  Seed HIPFLAGS so both CMake's enable_language(HIP) compiler
-# probe and the real device compile get --rocm-device-lib-path (CMAKE_HIP_FLAGS
-# inherits HIPFLAGS via CMAKE_HIP_FLAGS_INIT); without it configure fails with
-# "cannot find ROCm device library".
+# The system clang does not auto-detect the rocm-device-libs bitcode
+# Without HIPFLAGS configure fails with "cannot find ROCm device library".
 export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
 
 export CMAKE_NO_SYSTEM_FROM_IMPORTED=ON
-
-# export CMAKE_BUILD_TYPE=Debug
 %endif
-
-export CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES="%{_includedir}"
-export CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES="%{_includedir}"
 
 export LDFLAGS="-fuse-ld=lld %{build_ldflags}"
 export CMAKE_LIBRARY_PATH=%{_libdir}
 export CMAKE_PREFIX_PATH="%{_prefix}:%{_libdir}/cmake:%{python3_sitearch}"
 
-# Opt into the CBLAS complex-dot path (2001-force-cblas-complex-dot-for-openblas.patch).
-# Without this ATen's BLAS
-# ABI probe leaves AT_BLAS_USE_CBLAS_DOT=0 and torch.dot()/torch.vdot() on
-# complex tensors return 0.
+# See 2001-force-cblas-complex-dot-for-openblas.patch
 export PYTORCH_BLAS_USE_CBLAS_DOT=ON
 
 %install -p
@@ -541,24 +493,19 @@ export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resour
 
 %install -a
 %if %{with rocm}
-# On the HIP build, ProcessGroupGloo{,Async}Test link the libc10d_hip_test.so
-# helper that the wheel does not install, leaving a dangling soname Requires
-# that makes the package uninstallable; they cannot run without it, so drop
-# them.  %%pyproject_save_files has already recorded them by name, so scrub the
-# generated manifest as well or 'Processing files' fails on the missing paths.
+# Gloo is for CPU backend
+# During PyTorch ROCm building, Gloo tests link the uninstalled libc10d_hip_test.so
 rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
       %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
-# Anchor to the bin paths: the c10d ProcessGroupGloo*.hpp headers stay packaged.
 sed -i '\#/torch/bin/ProcessGroupGlooTest$#d;\#/torch/bin/ProcessGroupGlooAsyncTest$#d' %{pyproject_files}
 %endif
 
-# Development SDK files belong to -devel, not the Python runtime package.
+# Development SDK files belong to -devel, not the main package.
 sed -i '\#%{python3_sitearch}/torch/include/#d;\#%{python3_sitearch}/torch/share/cmake/#d' \
     %{pyproject_files}
 
 %if %{with test}
-# Move the explicitly installed native tests and fixtures out of the runtime
-# manifest. Keep torch/bin/torch_shm_manager in the runtime package.
+# Test files belong to -test, not the main package
 sed -i \
     -e '\#%{python3_sitearch}/torch/bin/\(FileStoreTest\|HashStoreTest\|ProcessGroupGlooAsyncTest\|ProcessGroupGlooTest\|TCPStoreTest\|test_aoti_abi_check\|test_api\|test_cpp_rpc\|test_dist_autograd\|test_jit\|test_lazy\|test_shim\)$#d' \
     -e '\#%{python3_sitearch}/torch/bin/\(script_module_v4\.ptl\|test_interpreter_async\.pt\)$#d' \
@@ -571,13 +518,11 @@ sed -i \
 
 %check -a
 %if %{with test}
-# The declarative import check (BuildOption(check)) only proves modules load.
-# Additionally run a small functional smoke (Source1) against the just-built
-# tree: real matmul, autograd, a training step, and a guard that complex
-# torch.dot/torch.vdot do not collapse to 0 (the CBLAS complex-dot path forced
-# on by 2001-force-cblas-complex-dot-for-openblas.patch).  Other distros do
-# not run PyTorch's own test/*.py suite at
-# build time either; a smoke is enough to catch a numerically broken build.
+# Default %check only checks imports
+# Additionally run a small functional smoke against the just-built tree:
+# real matmul, autograd, a training step, and a complex dot/vdot guard
+# Fedora/Debian/Arch do not run PyTorch's own test/*.py suite at build time either;
+# A smoke is enough to catch base functionality
 PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
 PYTHONDONTWRITEBYTECODE=1 \
 %{__python3} -sP %{SOURCE1}
@@ -585,8 +530,6 @@ PYTHONDONTWRITEBYTECODE=1 \
 
 %files -f %{pyproject_files}
 %doc README.md NOTICE
-# torchrun is a console_scripts entry point; %%pyproject_save_files captures the
-# importable modules under sitearch but not the bindir wrapper, so list it here.
 %{_bindir}/torchrun
 
 %files devel
