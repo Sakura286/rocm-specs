@@ -26,19 +26,10 @@ Name:           python-%{srcname}
 Version:        0.25.0
 Release:        %autorelease
 Summary:        A high-throughput and memory-efficient inference and serving engine for LLMs
-%if %{with rocm}
-# The vendored triton_kernels (vllm/third_party/triton_kernels) is MIT.
-License:        Apache-2.0 AND MIT
-%else
 License:        Apache-2.0
-%endif
 URL:            https://github.com/vllm-project/vllm
 #!RemoteAsset:  sha256:7e04e2b37164de8c4012f27f75af6c4768039b32610865e9b6fb8c49c34a84aa
 Source0:        https://files.pythonhosted.org/packages/source/v/%{srcname}/%{srcname}-%{version}.tar.gz
-# triton_kernels fetched by cmake/external_projects/triton_kernels.cmake at configure time
-# There is no AITER on openRuyi's ROCm, so triton-kernel is needed for gpt-oss/MXFP4 MoE
-#!RemoteAsset:  sha256:03d7c41f6f2dc1dfa3445776c4a893dc34b1e0ece42b953f036c071ff6409b80
-Source1:        https://github.com/triton-lang/triton/archive/refs/tags/v3.5.1.tar.gz
 #!RemoteAsset:  sha256:ba5834a1fdbb6d1c1b1c065dfd789438e7aa42c03fc52d92c02af85d78d1c75c
 Source2:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
 BuildSystem:    pyproject
@@ -106,6 +97,11 @@ Requires:       ninja
 %if %{with rocm}
 Requires:       python-torch-rocm
 Requires:       python3dist(triton)
+# NOTE: deliberately no Requires on python-triton-kernels yet.  vLLM 0.25.0
+# (like upstream main) imports the triton_kernels API from triton <= 3.6
+# (matmul_ogs, routing); triton 3.7.x restructured it (matmul), so installing
+# the 3.7.1 kernels would disable the gpt-oss/MXFP4 triton paths anyway --
+# cleaner to leave triton_kernels absent and let vLLM take its fallbacks.
 Requires:       amdsmi
 %else
 Requires:       python3dist(torch)
@@ -143,6 +139,9 @@ Conflicts:      python-%{srcname}-rocm
 # cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
 2006-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
+# triton_kernels.cmake otherwise git-clones the triton repo at configure time
+# (no network on OBS); vLLM only uses the bundled copy as an import fallback.
+2007-Skip-triton_kernels-bundling-via-env.patch
 %endif
 
 %description
@@ -151,11 +150,6 @@ PagedAttention for efficient management of attention key/value memory,
 continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
-%if %{with rocm}
-tar -xzf %{SOURCE1}
-cp -f triton-3.5.1/LICENSE LICENSE.triton_kernels
-%endif
-
 %if %{without rocm}
 # OneDNN is used when building CPU backend
 tar -xzf %{SOURCE2}
@@ -179,7 +173,10 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
-export TRITON_KERNELS_SRC_DIR="$PWD/triton-3.5.1/python/triton_kernels/triton_kernels"
+# Do not bundle triton_kernels into vllm/third_party (2007): the bundled copy
+# is only an import fallback, and the triton 3.7.x triton_kernels layout is
+# incompatible with this vLLM anyway (see the Requires note above).
+export VLLM_SKIP_TRITON_KERNELS=1
 # --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
 # in its own resource dir, but rocm-device-libs installs it under
 # %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
@@ -215,9 +212,6 @@ export MAX_JOBS=$compile_jobs
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
-%if %{with rocm}
-%license LICENSE.triton_kernels
-%endif
 %{_bindir}/vllm
 
 %changelog

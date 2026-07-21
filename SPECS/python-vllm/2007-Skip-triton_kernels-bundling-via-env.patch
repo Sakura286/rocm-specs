@@ -1,0 +1,27 @@
+Skip bundling triton_kernels when VLLM_SKIP_TRITON_KERNELS is set
+
+cmake/external_projects/triton_kernels.cmake otherwise FetchContent-git-clones
+the triton repo at configure time, which fails on network-isolated OBS
+workers.  vLLM prefers a site-packages triton_kernels at runtime and only
+falls back to the bundled vllm/third_party copy, so the bundling step is
+optional.
+
+Generated with diff -Naur against vllm 0.25.0 CMakeLists.txt.
+
+--- a/CMakeLists.txt	2026-07-21 12:14:18.542870644 +0800
++++ b/CMakeLists.txt	2026-07-21 12:14:18.559657723 +0800
+@@ -1387,8 +1387,13 @@
+ endif()
+ 
+ # For CUDA and HIP builds also build the triton_kernels external package.
++# openRuyi: VLLM_SKIP_TRITON_KERNELS opts out of bundling triton_kernels into
++# vllm/third_party (vLLM imports a site-packages triton_kernels first and only
++# uses the bundled copy as a fallback).
+ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+-    include(cmake/external_projects/triton_kernels.cmake)
++    if(NOT DEFINED ENV{VLLM_SKIP_TRITON_KERNELS})
++        include(cmake/external_projects/triton_kernels.cmake)
++    endif()
+ endif()
+ 
+ # For CUDA we also build and ship some external projects.
