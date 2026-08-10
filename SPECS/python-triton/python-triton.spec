@@ -25,12 +25,8 @@ License:        MIT AND BSD-3-Clause
 URL:            https://github.com/triton-lang/triton
 VCS:            git:%{url}.git
 
-# Use the git tag tarball, not the release sdist: the sdist is MANIFEST.in
-# pruned and drops python/triton_kernels, which the -kernels subpackage
-# builds.  The trees are otherwise identical (the sdist freezes the version
-# string in setup.py, but the suffix is empty outside a git checkout).
-#!RemoteAsset:  sha256:7d998625d1035ac496d06a81117727647169422ee67b8889609f06fd5367c491
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{srcname}-%{version}.tar.gz
+#!RemoteAsset:  sha256:21cab714d4fc9579b728f4d597660c9598fbbd52c1154896c71d2d42f9b61626
+Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
 
 BuildSystem:    pyproject
 BuildOption(install):  %{srcname}
@@ -43,9 +39,6 @@ BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)
-# Build and install the triton_kernels sub-package wheel.
-BuildRequires:  python3dist(build)
-BuildRequires:  python3dist(installer)
 BuildRequires:  python3dist(pybind11)
 BuildRequires:  pkgconfig(pybind11)
 BuildRequires:  python3dist(numpy)
@@ -92,9 +85,6 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 # Keep the pure-Python descriptor types imported by the common native
 # specialization code; this does not restore the NVIDIA codegen backend.
 2004-Retain-NVIDIA-Gluon-descriptor-types.patch
-# pytest is a test-only dependency of triton_kernels; keep it out of the
-# generated runtime Requires of the -kernels subpackage.
-2005-Drop-pytest-from-triton_kernels-runtime-deps.patch
 
 %description
 Triton is a language and compiler for writing highly efficient custom
@@ -103,19 +93,6 @@ environment to write fast code at higher productivity than CUDA, but also
 with higher flexibility than other existing DSLs.
 
 This build ships the AMD ROCm (HIP) backend.
-
-%package kernels
-Summary:        Device-independent kernels for the Triton compiler
-# The upstream wheel carries version 1.0.0 (python/triton_kernels has its own
-# pyproject.toml); the RPM subpackage follows the triton release version.
-# triton_kernels JIT-compiles through the triton package at runtime.
-Requires:       %{name}%{?_isa} = %{version}-%{release}
-
-%description kernels
-A collection of device-independent kernels written in Triton, including
-matmul_ogs, routing and swiglu used by vLLM's gpt-oss MoE path.  The sources
-live in python/triton_kernels of the triton repository but form a separate
-Python distribution that the main triton wheel does not include.
 
 %generate_buildrequires
 %pyproject_buildrequires
@@ -139,27 +116,9 @@ export CXXFLAGS="${CXXFLAGS} -fuse-ld=lld"
 export LDFLAGS="${LDFLAGS} -fuse-ld=lld"
 export TRITON_APPEND_CMAKE_ARGS="-DTRITON_BUILD_EXAMPLES=OFF -DTRITON_BUILD_TOOLS=OFF -DTRITON_BUILD_UT=OFF -DLLVM_LINK_LLVM_DYLIB=ON -DMLIR_LINK_MLIR_DYLIB=ON -DCMAKE_BUILD_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib -DCMAKE_INSTALL_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
 
-%build -a
-# The generated %%build only builds the top-level triton wheel.  Also build
-# the bundled triton_kernels distribution (a pure-Python sub-project with its
-# own pyproject.toml) for the -kernels subpackage.
-pushd python/triton_kernels
-%{__python3} -m build --wheel --no-isolation --outdir dist .
-popd
-
-%install -a
-%{__python3} -m installer --destdir %{buildroot} python/triton_kernels/dist/triton_kernels-*.whl
-
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
-
-%files kernels
-%license LICENSE
-# triton_kernels is pure Python and builds a py3-none-any wheel, so installer
-# places it in purelib -- unlike the arch-specific main triton package.
-%{python3_sitelib}/triton_kernels/
-%{python3_sitelib}/triton_kernels-1.0.0.dist-info/
 
 %changelog
 %autochangelog
