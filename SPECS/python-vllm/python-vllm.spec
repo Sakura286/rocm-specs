@@ -97,11 +97,11 @@ Requires:       ninja
 %if %{with rocm}
 Requires:       python-torch-rocm
 Requires:       python3dist(triton)
-# NOTE: deliberately no Requires on python-triton-kernels yet.  vLLM 0.25.0
-# (like upstream main) imports the triton_kernels API from triton <= 3.6
-# (matmul_ogs, routing); triton 3.7.x restructured it (matmul), so installing
-# the 3.7.1 kernels would disable the gpt-oss/MXFP4 triton paths anyway --
-# cleaner to leave triton_kernels absent and let vLLM take its fallbacks.
+# NOTE: no Requires on triton_kernels -- openRuyi does not package it.  It is
+# a separate pure-Python distribution living in the triton repo, versioned on
+# its own tag rather than the compiler's, and the tag matching triton 3.7.x no
+# longer provides the API vLLM imports.  vLLM detects its absence and runs the
+# gpt-oss/MXFP4 MoE through Mxfp4MoeBackend.EMULATION instead.
 Requires:       amdsmi
 %else
 Requires:       python3dist(torch)
@@ -173,9 +173,9 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
-# Do not bundle triton_kernels into vllm/third_party (2007): the bundled copy
-# is only an import fallback, and the triton 3.7.x triton_kernels layout is
-# incompatible with this vLLM anyway (see the Requires note above).
+# Do not bundle triton_kernels into vllm/third_party (2007): openRuyi ships no
+# triton_kernels at all (see the Requires note above), and the cmake module
+# would need network access to fetch it.
 export VLLM_SKIP_TRITON_KERNELS=1
 # --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
 # in its own resource dir, but rocm-device-libs installs it under
