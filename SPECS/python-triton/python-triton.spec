@@ -156,8 +156,10 @@ popd
 
 %files kernels
 %license LICENSE
-%{python3_sitearch}/triton_kernels/
-%{python3_sitearch}/triton_kernels-1.0.0.dist-info/
+# triton_kernels is pure Python and builds a py3-none-any wheel, so installer
+# places it in purelib -- unlike the arch-specific main triton package.
+%{python3_sitelib}/triton_kernels/
+%{python3_sitelib}/triton_kernels-1.0.0.dist-info/
 
 %changelog
 %autochangelog
