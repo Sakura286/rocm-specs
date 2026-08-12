@@ -1,5 +1,5 @@
-From 41740f15ede6e04e46ff736bcc85ca8fd1aae641 Mon Sep 17 00:00:00 2001
-From: Sakura286 <sakura286@outlook.com>
+From 3e87e3b6763d294f5596421762cbdfdad481a6ea Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Sat, 6 Jun 2026 21:55:37 +0800
 Subject: [PATCH 2/2] Tolerate missing CPU/E-SMI symbols
 
@@ -17,10 +17,10 @@ itself so callers hooking ctypes.CDLL keep working.
  1 file changed, 37 insertions(+), 1 deletion(-)
 
 diff --git a/py-interface/amdsmi_wrapper.py b/py-interface/amdsmi_wrapper.py
-index 99ed017..0626b72 100644
+index 6f152486..8b892f8d 100644
 --- a/py-interface/amdsmi_wrapper.py
 +++ b/py-interface/amdsmi_wrapper.py
-@@ -176,6 +176,42 @@ from pathlib import Path
+@@ -180,6 +180,42 @@ from pathlib import Path
  # 3. Relative to amdsmi_wrapper.py
  #    - parent directory
  #    - current directory
@@ -63,7 +63,7 @@ index 99ed017..0626b72 100644
  def find_smi_library():
      err = OSError("Could not load libamd_smi.so")
      possible_locations = []
-@@ -194,7 +230,7 @@ def find_smi_library():
+@@ -201,7 +237,7 @@ def find_smi_library():
      for location in possible_locations:
          try:
              lib = ctypes.CDLL(location)
