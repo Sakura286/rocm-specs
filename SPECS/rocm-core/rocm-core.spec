@@ -20,15 +20,19 @@ BuildOption(conf):  -DROCM_VERSION=%{version}
 
 BuildRequires:  cmake
 
+%global _description %{expand:
+A utility to get the ROCm release version
+}
+
 %description
-%{summary}
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %install -a
 rm -rvf %{buildroot}/%{_exec_prefix}/.info
