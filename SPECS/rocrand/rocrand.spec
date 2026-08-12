@@ -48,13 +48,17 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 The rocRAND project provides functions that generate pseudo-random and
 quasi-random numbers.
 
 The rocRAND library is implemented in the HIP programming language and
 optimized for AMD's latest discrete GPUs. It is designed to run on top of AMD's
 Radeon Open Compute ROCm runtime, but it also works on CUDA enabled GPUs.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The rocRAND development package
@@ -68,7 +72,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
