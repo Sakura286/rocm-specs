@@ -45,6 +45,7 @@ BuildRequires:  cmake
 BuildRequires:  lld22
 BuildRequires:  lld22-devel
 BuildRequires:  llvm22-devel
+BuildRequires:  llvm22-static
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libelf)
