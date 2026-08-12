@@ -106,10 +106,14 @@ BuildRequires:  pkgconfig(gmock)
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipSPARSELt is a SPARSE marshaling library that provides general sparse
 matrix-matrix multiplication using structured sparsity. It offers a flexible
 API and supports multiple backends.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The hipSPARSELt development package
@@ -124,7 +128,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %prep
