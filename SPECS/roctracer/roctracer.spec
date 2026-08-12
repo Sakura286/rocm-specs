@@ -55,10 +55,14 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 roctracer is a callback and activity tracing library for ROCm. It provides
 function call tracing for HIP and other ROCm runtimes, activity (asynchronous)
 tracing, and ROCTx user-defined event markers.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The roctracer development package
@@ -73,7 +77,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %prep -a
