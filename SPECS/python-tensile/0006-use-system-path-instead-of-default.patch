@@ -1,5 +1,5 @@
-From dfefd5482684998206290e2e62dc0c84dcc7d64e Mon Sep 17 00:00:00 2001
-From: Sakura286 <chenxuan@iscas.ac.cn>
+From 0c7b4dd700e47c43ff2c9593a6ccd726e67aa0d3 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Fri, 6 Mar 2026 16:49:43 +0800
 Subject: [PATCH 6/6] use system path instead of default
 
@@ -13,10 +13,10 @@ Subject: [PATCH 6/6] use system path instead of default
  6 files changed, 11 insertions(+), 12 deletions(-)
 
 diff --git a/Tensile/Common.py b/Tensile/Common.py
-index 90c579e..3589e01 100644
+index 1a8ff7fe..e0c87d32 100644
 --- a/Tensile/Common.py
 +++ b/Tensile/Common.py
-@@ -2415,7 +2415,7 @@ def assignGlobalParameters( config, capabilitiesCache: Optional[dict] = None ):
+@@ -2416,7 +2416,7 @@ def assignGlobalParameters( config, capabilitiesCache: Optional[dict] = None ):
    if "KeepBuildTmp" in config:
      globalParameters["KeepBuildTmp"] = config["KeepBuildTmp"]
  
@@ -26,7 +26,7 @@ index 90c579e..3589e01 100644
      globalParameters["ROCmPath"] = os.environ.get("ROCM_PATH")
    if "TENSILE_ROCM_PATH" in os.environ:
 diff --git a/Tensile/Source/CMakeLists.txt b/Tensile/Source/CMakeLists.txt
-index b96e308..c756756 100644
+index b96e308b..c7567567 100644
 --- a/Tensile/Source/CMakeLists.txt
 +++ b/Tensile/Source/CMakeLists.txt
 @@ -26,7 +26,7 @@ cmake_minimum_required(VERSION 3.13)
@@ -48,7 +48,7 @@ index b96e308..c756756 100644
  
  if(TENSILE_USE_OPENMP)
 diff --git a/Tensile/Source/FindHIP.cmake b/Tensile/Source/FindHIP.cmake
-index d299357..ba8597f 100644
+index d299357e..ba8597ff 100644
 --- a/Tensile/Source/FindHIP.cmake
 +++ b/Tensile/Source/FindHIP.cmake
 @@ -79,7 +79,7 @@ else()
@@ -70,7 +70,7 @@ index d299357..ba8597f 100644
            /bin
        )
 diff --git a/Tensile/Source/cmake/FindROCmSMI.cmake b/Tensile/Source/cmake/FindROCmSMI.cmake
-index 0498766..071232a 100644
+index 04987663..071232a0 100644
 --- a/Tensile/Source/cmake/FindROCmSMI.cmake
 +++ b/Tensile/Source/cmake/FindROCmSMI.cmake
 @@ -24,7 +24,7 @@
@@ -83,7 +83,7 @@ index 0498766..071232a 100644
          set(ROCM_DIR "${ROCM_DIR}/../../..")
      endif()
 diff --git a/Tensile/Tests/hipModuleLoad_timing/Makefile b/Tensile/Tests/hipModuleLoad_timing/Makefile
-index 671167d..2177143 100644
+index 671167d2..21771436 100644
 --- a/Tensile/Tests/hipModuleLoad_timing/Makefile
 +++ b/Tensile/Tests/hipModuleLoad_timing/Makefile
 @@ -22,10 +22,10 @@
@@ -101,7 +101,7 @@ index 671167d..2177143 100644
  hipModuleLoadTiming.out: hipModuleLoadTiming.o
  	$(CXX) -o $@ $(LIBFLAGS) $^
 diff --git a/Tensile/Utilities/Toolchain.py b/Tensile/Utilities/Toolchain.py
-index e3de82b..e6ee7f3 100644
+index e3de82b5..e6ee7f31 100644
 --- a/Tensile/Utilities/Toolchain.py
 +++ b/Tensile/Utilities/Toolchain.py
 @@ -29,8 +29,8 @@ from subprocess import PIPE, run
@@ -124,5 +124,5 @@ index e3de82b..e6ee7f3 100644
      searchPaths.extend(
          [
 -- 
-2.51.0
+2.53.0
 

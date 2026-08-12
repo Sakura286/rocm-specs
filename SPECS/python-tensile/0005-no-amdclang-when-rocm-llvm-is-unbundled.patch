@@ -1,5 +1,5 @@
-From 746af14c11ee1b455f1adbab8bf6bc3c93fb3fde Mon Sep 17 00:00:00 2001
-From: Sakura286 <chenxuan@iscas.ac.cn>
+From 694baeb6bdec613d00ab8f9a81b3a4d18175e68b Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Fri, 6 Mar 2026 16:45:10 +0800
 Subject: [PATCH 5/6] no amdclang when rocm-llvm is unbundled
 
@@ -9,7 +9,7 @@ Subject: [PATCH 5/6] no amdclang when rocm-llvm is unbundled
  2 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/Tensile/Common.py b/Tensile/Common.py
-index 376afc4..90c579e 100644
+index 7d5c3ca0..1a8ff7fe 100644
 --- a/Tensile/Common.py
 +++ b/Tensile/Common.py
 @@ -269,7 +269,7 @@ globalParameters["DictLibraryLogic"] = False
@@ -31,7 +31,7 @@ index 376afc4..90c579e 100644
  globalParameters["Architecture"] = "all"
  
 diff --git a/Tensile/Utilities/Toolchain.py b/Tensile/Utilities/Toolchain.py
-index ee9cbee..e3de82b 100644
+index ee9cbeee..e3de82b5 100644
 --- a/Tensile/Utilities/Toolchain.py
 +++ b/Tensile/Utilities/Toolchain.py
 @@ -106,10 +106,10 @@ def _posixSearchPaths() -> List[Path]:
@@ -67,5 +67,5 @@ index ee9cbee..e3de82b 100644
  
  def supportedOffloadBundler(bundler: str) -> bool:
 -- 
-2.51.0
+2.53.0
 

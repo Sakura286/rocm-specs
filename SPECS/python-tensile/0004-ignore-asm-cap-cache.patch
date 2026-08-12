@@ -1,5 +1,5 @@
-From 5e9b360710400fcace517f055edf54da2ff0e076 Mon Sep 17 00:00:00 2001
-From: Sakura286 <chenxuan@iscas.ac.cn>
+From 84da4118277fdf383eb0c9da82c18bfa790f3a41 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Fri, 6 Mar 2026 16:41:52 +0800
 Subject: [PATCH 4/6] ignore asm cap cache
 
@@ -8,7 +8,7 @@ Subject: [PATCH 4/6] ignore asm cap cache
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/Tensile/Common.py b/Tensile/Common.py
-index 86c6c57..376afc4 100644
+index 9370c3ef..7d5c3ca0 100644
 --- a/Tensile/Common.py
 +++ b/Tensile/Common.py
 @@ -307,7 +307,7 @@ globalParameters["SeparateArchitectures"] = False # write Tensile library metada
@@ -21,5 +21,5 @@ index 86c6c57..376afc4 100644
  globalParameters["ExperimentalLogicDir"] = "/experimental/"
  
 -- 
-2.51.0
+2.53.0
 
