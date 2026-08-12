@@ -66,7 +66,7 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipSPARSE is a SPARSE marshalling library with multiple
 supported backends. It sits between your application and
 a 'worker' SPARSE library, where it marshals inputs to
@@ -75,20 +75,24 @@ application. hipSPARSE exports an interface that doesn't
 require the client to change, regardless of the chosen
 backend. Currently, hipSPARSE supports rocSPARSE and
 cuSPARSE backends.
+}
+
+%description
+%{_description}
 
 %package        benchmark
 Summary:        Benchmark for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    benchmark
-%{summary}
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %if %{with build_test}
 %package        test
@@ -96,7 +100,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %install -a
