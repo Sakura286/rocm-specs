@@ -55,10 +55,14 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipFFT is a FFT marshalling library. Currently, hipFFT supports either
 rocFFT or cuFFT as backends. hipFFT exports an interface that does not
 require the client to change, regardless of the chosen backend.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The hipFFT development package
@@ -73,7 +77,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %install -a
 rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
