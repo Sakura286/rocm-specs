@@ -90,10 +90,14 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  rocminfo
 %endif
 
-%description
+%global _description %{expand:
 rocBLAS is the AMD library for Basic Linear Algebra Subprograms
 (BLAS) on the ROCm platform. It is implemented in the HIP
 programming language and optimized for AMD GPUs.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
@@ -101,7 +105,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       rocm-hip-devel
 
 %description    devel
-%{summary}
+%{_description}
 
 %if %{with test}
 %package        test
@@ -110,7 +114,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       diffutils
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %conf -p
