@@ -70,7 +70,7 @@ Requires:       %{name}-data = %{version}-%{release}
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 RCCL (pronounced "Rickle") is a stand-alone library of standard
 collective communication routines for GPUs, implementing all-reduce,
 all-gather, reduce, broadcast, reduce-scatter, gather, scatter, and
@@ -86,6 +86,10 @@ The collective operations are implemented using ring and tree
 algorithms and have been optimized for throughput and latency. For
 best performance, small operations can be either batched into
 larger operations or aggregated through the API.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Headers and libraries for %{name}
@@ -107,7 +111,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %prep -a
 # Do not force install
