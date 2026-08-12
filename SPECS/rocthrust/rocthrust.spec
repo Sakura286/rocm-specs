@@ -65,23 +65,27 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 Thrust is a parallel algorithm library. This library has been
 ported to HIP/ROCm platform, which uses the rocPRIM library.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %prep -a
 # ROCMExportTargetsHeaderOnly.cmake hardcodes 'lib' as the library directory.
