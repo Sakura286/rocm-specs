@@ -66,16 +66,20 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 
-%description
+%global _description %{expand:
 rocSOLVER is a work-in-progress implementation of a subset
 of LAPACK functionality on the ROCm platform.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %if %{with test}
 %package        test
@@ -83,7 +87,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %install -a
