@@ -1,16 +1,17 @@
-From 85aee3e710288343eca393272a418483ac547b83 Mon Sep 17 00:00:00 2001
-From: Sakura286 <chenxuan@iscas.ac.cn>
+From fe614b211d06da9d81c57c1e5ffbf754328deccf Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Tue, 24 Mar 2026 10:11:07 +0800
-Subject: [PATCH] limit batch size to stablize
+Subject: [PATCH 2/2] limit batch size to stablize
 
 ---
  api/types.go | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/api/types.go b/api/types.go
+index ad50fa6f..a15c4665 100644
 --- a/api/types.go
 +++ b/api/types.go
-@@ -1108,7 +1108,7 @@ func DefaultOptions() Options {
+@@ -1138,7 +1138,7 @@ func DefaultOptions() Options {
  		Runner: Runner{
  			// options set when the model is loaded
  			NumCtx:          int(envconfig.ContextLength()),
@@ -19,5 +20,6 @@ diff --git a/api/types.go b/api/types.go
  			NumGPU:          -1, // -1 here indicates that NumGPU should be set dynamically
  			NumThread:       0,  // let the runtime decide
  			DraftNumPredict: 4,
---
+-- 
 2.53.0
+
