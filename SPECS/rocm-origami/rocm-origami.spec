@@ -46,7 +46,7 @@ BuildRequires:  ninja
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 The name "origami" still evokes the elegance of transforming
 a flat (2-D) sheet into intricate higher dimensional
 structures. In this context, however, Origami has evolved
@@ -55,13 +55,17 @@ Inspired by the art of paper folding, the library now enables
 users to explore a range of tiling and mapping configurations
 and to make informed decisions on data and computation mapping
 for high-performance GEMM operations.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %prep -a
 # License file is not in the tarball
