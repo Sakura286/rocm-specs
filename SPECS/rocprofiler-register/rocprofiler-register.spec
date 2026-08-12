@@ -29,7 +29,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  pkgconfig(fmt)
 BuildRequires:  pkgconfig(gflags)
 
-%description
+%global _description %{expand:
 The rocprofiler-register library is a helper library that coordinates
 the modification of the intercept API table(s) of the HSA/HIP/ROCTx
 runtime libraries by the ROCprofiler (v2) library. The purpose of this
@@ -50,13 +50,17 @@ rocprofiler_configure function (again, provided by a tool) returns
 effectively tells rocprofiler which behaviors it wants to be notified
 about, features it wants to use (e.g. API tracing, kernel dispatch
 timing), etc.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The development package for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %install -a
 # Do not install the test source etc
