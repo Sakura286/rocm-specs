@@ -57,12 +57,16 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipRAND is a RAND marshalling library, with multiple supported backends. It
 sits between the application and the backend RAND library, marshalling inputs
 into the backend and results back to the application. hipRAND exports an
 interface that does not require the client to change, regardless of the chosen
 backend. Currently, hipRAND supports either rocRAND or cuRAND.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The hipRAND development package
@@ -77,7 +81,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
