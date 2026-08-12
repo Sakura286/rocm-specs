@@ -84,17 +84,21 @@ export PATH=%{rocmllvm_bindir}:$PATH
 2003-disable-fno-offload-uniform-block.patch
 2004-fix-clang-rel-path.patch
 
-%description
+%global _description %{expand:
 AMD's library for high performance machine learning primitives.
 MIOpen supports convolution, batch normalization, activation, pooling,
 RNN/LSTM/GRU, and attention/transformer operations for the HIP backend.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %if %{with test}
 %package        test
@@ -102,7 +106,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %prep -a
