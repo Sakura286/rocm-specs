@@ -204,10 +204,18 @@ Summary:        Development files for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       cmake(concurrentqueue)
 
+%description devel
+Headers and CMake metadata for building C++ and HIP extensions against the
+matching %{name} runtime.
+
 %if %{with test}
 %package test
 Summary:        Installed native test payload for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description test
+Native test programs, helper libraries, and fixtures for post-install
+validation of %{name}. This is not the complete upstream Python test suite.
 %endif
 
 %patchlist
@@ -249,16 +257,6 @@ PyTorch is a Python package that provides two high-level features:
 
 You can reuse your favorite Python packages such as NumPy, SciPy,
 and Cython to extend PyTorch when needed.
-
-%description devel
-Headers and CMake metadata for building C++ and HIP extensions against the
-matching %{name} runtime.
-
-%if %{with test}
-%description test
-Native test programs, helper libraries, and fixtures for post-install
-validation of %{name}. This is not the complete upstream Python test suite.
-%endif
 
 %prep -a
 # GitHub release tarballs identify the version as an alpha, so replace that
