@@ -63,10 +63,14 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 rocFFT is a software library for computing fast Fourier transforms (FFTs) written
 in HIP. It is part of AMD's software ecosystem based on ROCm. In addition to
 AMD GPU hardware, rocFFT also works on CPU devices to facilitate testing.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The rocFFT development package
@@ -81,7 +85,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %install -a
 # we don't need the rocfft_rtc_helper binary and client-info file
