@@ -51,17 +51,21 @@ BuildRequires:  rocm-llvm-macros
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipCUB is a thin header-only wrapper library on top of rocPRIM which enables
 developers to render portable HIP code. Existing CUDA CUB source code can
 be recompiled in HIP using hipCUB.
+}
+
+%description
+%{_description}
 
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %prep -a
 # Fix cmake install lib directory
