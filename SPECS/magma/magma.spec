@@ -73,7 +73,7 @@ BuildRequires:  rocm-llvm-macros
 2006-disable-tests-cmake.patch
 %endif
 
-%description
+%global _description %{expand:
 Matrix Algebra on GPU and Multi-core Architectures (MAGMA) is a collection
 of next-generation linear algebra libraries for heterogeneous computing.
 The MAGMA package supports interfaces for current linear algebra packages
@@ -93,13 +93,17 @@ added and further enhanced to provide high-performance data analytics,
 including functionalities for machine learning applications that use MAGMA
 as their computational back end. The MAGMA Sparse and MAGMA Batched
 packages have been included since MAGMA 1.6.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %prep -a
 # Remove some files we do not need to simplify licenses
