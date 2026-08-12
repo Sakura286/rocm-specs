@@ -70,12 +70,16 @@ BuildRequires:  pkgconfig(openblas)
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
-%description
+%global _description %{expand:
 hipSOLVER is a LAPACK marshalling library, with multiple supported backends.
 It sits between the application and a "worker" SOLVER library, marshalling
 inputs into the backend library and results back to the application. hipSOLVER
 exports an interface that does not require the client to change, regardless of
 the chosen backend.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        The hipSOLVER development package
@@ -93,7 +97,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %install -a
