@@ -68,24 +68,28 @@ Requires:       python3dist(pyyaml)
 # amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
 2003-Use-raw-string-for-bdf_regex-to-silence-SyntaxWarning.patch
 
-%description
+%global _description %{expand:
 The AMD System Management Interface Library, or AMD SMI library, is a C
 library for Linux that provides a user space interface for applications
 to monitor and control AMD devices.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 
 %prep
 %autosetup -p1 -C
