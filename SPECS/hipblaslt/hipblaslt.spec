@@ -107,19 +107,23 @@ BuildRequires:  cmake(GTest)
 # (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
 
-%description
+%global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix
 operations. It has a flexible API that extends functionalities
 beyond a traditional BLAS library, such as adding flexibility
 to matrix data layouts, input types, compute types, and
 algorithmic implementations and heuristics.
+}
+
+%description
+%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{summary}
+%{_description}
 
 %if %{with build_test}
 %package        test
@@ -127,7 +131,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{summary}
+%{_description}
 %endif
 
 %prep -a
