@@ -1,5 +1,5 @@
-From 9aa4664e02e27b50083be08e5b495cbef02d6f08 Mon Sep 17 00:00:00 2001
-From: Sakura286 <sakura286@outlook.com>
+From f23ecc7352d27dc5c3a4cb19e9113556b1be9d49 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Mon, 8 Jun 2026 09:00:08 +0800
 Subject: [PATCH] hipblaslt tensilelite use system nanobind
 
