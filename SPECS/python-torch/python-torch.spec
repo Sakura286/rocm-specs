@@ -131,7 +131,6 @@ BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(sympy)
 BuildRequires:  python3dist(typing-extensions)
-BuildRequires:  xnnpack-devel = 0+git20260211.312eb7e
 
 %if %{with system_httplib}
 BuildRequires:  cmake(httplib)
