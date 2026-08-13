@@ -89,7 +89,6 @@ rm -f %{buildroot}%{_bindir}/hipRAND/CTestTestfile.cmake
 
 %check
 %if %{with run_test}
-export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %ctest
 %endif
 
