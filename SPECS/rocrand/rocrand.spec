@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
 # SPDX-FileCopyrightText: (C) 2026 openRuyi Project Contributors
-# SPDX-FileContributor: Sakura286 <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
+# SPDX-FileContributor: Yifan Xu <xuyifan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
 # rocRAND's test client is HIP device-test code,
 # which needs GPU to run
-%bcond run_test 0
+%bcond test 0
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -45,9 +46,6 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %global _description %{expand:
 The rocRAND project provides functions that generate pseudo-random and
 quasi-random numbers.
@@ -74,13 +72,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{_description}
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 
-# rocRAND registers its gtest binaries as ctest tests
 %check
-%if %{with run_test}
-export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
+%if %{with test}
 %ctest
 %endif
 
