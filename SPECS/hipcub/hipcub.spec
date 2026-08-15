@@ -5,11 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# hipCUB's test client is HIP device-test code: it compiles on a GPU-less
-# builder but needs a GPU to run. Build and package the test binaries so
-# packagers can run them on hardware; keep the run behind run_test (default
-# off) so OBS never executes device tests. cf. hiprand/rocfft.
-%bcond run_test 0
+# hipCUB need GPU to run test
+%bcond test 0
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -48,9 +45,6 @@ BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %global _description %{expand:
 hipCUB is a thin header-only wrapper library on top of rocPRIM which enables
 developers to render portable HIP code. Existing CUDA CUB source code can
@@ -72,15 +66,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' \
     cmake/ROCMExportTargetsHeaderOnly.cmake
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %install -a
 rm -f %{buildroot}/%{_datadir}/doc/hipcub/LICENSE.txt
 
-# hipCUB registers its gtest binaries as ctest tests, so the buildsystem's
-# default %%check would run them and fail on a GPU-less builder. Define an
-# explicit %%check that only runs when a packager opts in with run_test.
+%if %{without test}
 %check
-%if %{with run_test}
-%ctest
 %endif
 
 %files
