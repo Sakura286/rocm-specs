@@ -1,12 +1,19 @@
-# ROCm: run find_package(hipsparselt) before find_package(Torch) so torch_hip's roc::hipsparselt link target exists (LoadHIP treats it as optional).
+# ROCm: run find_package(hipsparselt) before find_package(Torch) so the
+# roc::hipsparselt imported target exists when torch's exported
+# Caffe2Targets.cmake puts it in torch_hip's link interface.  torch's
+# LoadHIP.cmake only looks hipsparselt up as an optional component and
+# silently skips it; REQUIRED here turns a missing hipsparselt-devel into an
+# early configure-time error instead of a generate-time "target not found".
+# The config lives in CMake's default search path (%{_libdir}/cmake), so no
+# explicit PATHS is needed.
 #
---- a/CMakeLists.txt	2026-06-04 08:11:47.000000000 +0800
-+++ b/CMakeLists.txt	2026-06-17 11:13:40.083527987 +0800
-@@ -92,6 +92,7 @@
+--- a/CMakeLists.txt	2026-08-15 17:43:32.072075675 +0800
++++ b/CMakeLists.txt	2026-08-15 17:43:50.127802862 +0800
+@@ -100,6 +100,7 @@
  # so there is no need to do this explicitly with check_language/enable_language,
  # etc.
  #
-+find_package(hipsparselt CONFIG PATHS /usr/lib64/cmake/hipsparselt)
++find_package(hipsparselt CONFIG REQUIRED)
  find_package(Torch REQUIRED)
  
  # Supported NVIDIA architectures.
