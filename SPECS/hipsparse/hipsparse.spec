@@ -5,18 +5,10 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# hipSPARSE need to download about 19 testing matrix
+# hipSPARSE need GPU to run tests
+# Also, it need to download about 19 testing matrix
 # It is verbose to add them to SOURCE and %%prep section
-%bcond build_test 0
-%if %{with build_test}
-%global cmake_test ON
-%else
-%global cmake_test OFF
-%endif
-
-# hipSPARSE needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU.
-%bcond run_test 0
+%bcond test 0
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -39,7 +31,11 @@ BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+%if %{with test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=on
+%else
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=off
+%endif
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
@@ -47,7 +43,7 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with build_test}
+%if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  cmake(hip)
@@ -62,9 +58,6 @@ BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 hipSPARSE is a SPARSE marshalling library with multiple
@@ -94,7 +87,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{_description}
 
-%if %{with build_test}
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -103,14 +96,15 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 %endif
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
 
-%check -p
-export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
-
-%if %{without run_test}
 %check
+%if %{with test}
+%ctest
 %endif
 
 %files
@@ -126,7 +120,7 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/cmake/hipsparse/
 %{_libdir}/libhipsparse.so
 
-%if %{with build_test}
+%if %{with test}
 %files test
 %{_bindir}/hipsparse*
 %{_datadir}/hipsparse/
