@@ -6,9 +6,8 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 # HIP error 100: no ROCm-capable device is detected
-# hipRAND needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
-%bcond run_test 1
+# hipRAND needs a GPU to run tests
+%bcond test 0
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -54,9 +53,6 @@ BuildRequires:  rocm-llvm-macros
 # https://github.com/ROCm-Developer-Tools/hipamd/issues/22
 2000-drop-install-rpath.patch
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %global _description %{expand:
 hipRAND is a RAND marshalling library, with multiple supported backends. It
 sits between the application and the backend RAND library, marshalling inputs
@@ -83,12 +79,15 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{_description}
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hiprand/LICENSE.md
 rm -f %{buildroot}%{_bindir}/hipRAND/CTestTestfile.cmake
 
 %check
-%if %{with run_test}
+%if %{with test}
 %ctest
 %endif
 
