@@ -12,14 +12,8 @@
 %global llvm_maj_ver 22
 
 %global tensile_version 4.33.0
-%global tensile_verbose 1
 
-%bcond build_test 0
-%if %{with build_test}
-%global cmake_test ON
-%else
-%global cmake_test OFF
-%endif
+%bcond test 0
 
 Name:           hipsparselt
 Version:        %{rocm_version}
@@ -38,26 +32,28 @@ Source4:        0001-hipblaslt-find-origami-package.patch
 # Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
 # output the silent phase trips OBS's logidlelimit and times out on slow workers
 # (riscv64 emulation). Same fix as rocm-specs hipblaslt.
-Source5:        2002-tensilelite-add-heartbeat-during-parallel-map.patch
+Source5:        2000-tensilelite-add-heartbeat-during-parallel-map.patch
 # -mf16c is an x86-only clang flag (F16C intrinsics); guard it on x86 so the
 # hipSPARSELt library builds on non-x86 hosts like riscv64. cf. ollama PR #8129
-Patch0:         2001-hipsparselt-guard-mf16c-to-x86.patch
+Patch2000:      2000-hipsparselt-guard-mf16c-to-x86.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
-# HIPSPARSELT_ENABLE_CLIENT gates the clients/ subdir (benchmarks/samples nest
-# under it); default ON pulls in clients/CMakeLists.txt which fatally requires
-# LAPACK. Tie it to the test toggle like hipblaslt's HIPBLASLT_ENABLE_CLIENT.
-BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=%{cmake_test}
+%if %{with test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
+BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=ON
+%else
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
+BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=OFF
+%endif
 BuildOption(conf):  -DBUILD_VERBOSE=ON
 BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gcc-fortran
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS="gfx942;gfx950"
 BuildOption(conf):  -DTensile_COMPILER=clang++
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
-BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
+BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
@@ -96,15 +92,12 @@ BuildRequires:  rocminfo
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  roctracer-devel
 
-%if %{with build_test}
+%if %{with test}
 BuildRequires:  chrpath
 BuildRequires:  pkgconfig(openblas)
 BuildRequires:  pkgconfig(gtest)
 BuildRequires:  pkgconfig(gmock)
 %endif
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 hipSPARSELt is a SPARSE marshaling library that provides general sparse
@@ -122,7 +115,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 The hipSPARSELt development package.
 
-%if %{with build_test}
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -175,12 +168,15 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' hipblaslt/
 # Replace all mentions of 'amdclang' with 'clang' in Tensile Python files
 find hipblaslt/tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %build -p
 # Do a manual install of tensilelite instead of cmake's virtualenv, then point
 # Tensile at it for build-time kernel generation (same approach as hipblaslt)
 cd hipblaslt/tensilelite
 TL=$PWD
-python3 setup.py install --root $TL
+%__python3 setup.py install --root $TL
 cd ../..
 
 export PATH=%{_prefix}/bin:%{rocmllvm_bindir}:$PATH
@@ -212,7 +208,7 @@ chmod a+x %{buildroot}%{_libdir}/hipsparselt/library/Kernels*.hsaco
 %{_libdir}/cmake/hipsparselt/
 %{_libdir}/libhipsparselt.so
 
-%if %{with build_test}
+%if %{with test}
 %files test
 %{_bindir}/hipsparselt*
 %endif
