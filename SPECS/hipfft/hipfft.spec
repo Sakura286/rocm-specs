@@ -52,9 +52,6 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %global _description %{expand:
 hipFFT is a FFT marshalling library. Currently, hipFFT supports either
 rocFFT or cuFFT as backends. hipFFT exports an interface that does not
@@ -78,6 +75,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{_description}
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
 rm -f %{buildroot}/%{_datadir}/doc/hipfft/LICENSE.md
