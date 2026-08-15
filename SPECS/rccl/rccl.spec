@@ -11,10 +11,8 @@
 
 %global llvm_maj_ver 22
 
-# riscv64 build workers OOM in the AMDGPU device-side LTO link (amdgcn-link) when
-# it runs one codegen partition per core: even on an 84 GB worker with 4 cores,
-# --lto-partitions=4 is killed by systemd-oomd. Cap the partition count there to
-# bound peak link memory; other arches keep one partition per core for speed.
+# Linking AMD device libs code takes too much time
+# Set --lto-partitions can accelerate, but even --lto-partitions=4 is killed for OOM on riscv64
 %ifarch riscv64
 %global lto_partitions 2
 %else
@@ -25,12 +23,12 @@ Name:           rccl
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Communication Collectives Library
-License:        BSD-3-Clause AND MIT AND Apache-2.0
 # From License.txt the main license is BSD 3
 # Modifications from Microsoft is MIT
 # The NVIDIA based header files below are Apache-2.0
 #  src/include/nvtx3/nv*.h and similar
 # The URL for NVIDIA in the License.txt https://github.com/NVIDIA/NVTX is Apache-2.0
+License:        BSD-3-Clause AND MIT AND Apache-2.0
 URL:            https://github.com/ROCm/rccl
 #!RemoteAsset:  sha256:e8927c61f76e70801e660a3482d383b30159d6f2a9e0580e5cdf168f2503e8c7
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
@@ -61,14 +59,11 @@ BuildRequires:  hipify
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
-BuildRequires:  python3
+BuildRequires:  pkgconfig(python3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 
 Requires:       %{name}-data = %{version}-%{release}
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 RCCL (pronounced "Rickle") is a stand-alone library of standard
@@ -120,15 +115,20 @@ sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependen
 # --lto-partitions parallelizes the GPU LTO codegen (capped on riscv64, see lto_partitions above)
 sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%{lto_partitions}" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %build
-# AMDGPU device linker runs as a process that produces no stdout for many hours
-# on riscv64; with fewer LTO partitions the link is slower, so keep the heartbeat
-# alive long enough to cover it and avoid an OBS inactivity timeout.
+%ifarch riscv64
+# Prevent from being killed by build machine
 timeout 20h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
+%endif
 
 %cmake_build
 
+%ifarch riscv64
 kill $TIME_OUT 2>/dev/null || true
+%endif
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
