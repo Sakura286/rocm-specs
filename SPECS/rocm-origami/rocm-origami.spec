@@ -28,11 +28,14 @@ BuildSystem:    cmake
 # https://github.com/ROCm/rocm-libraries/issues/2422
 Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
 # Build from a release tarball without requiring unavailable Git metadata.
-Patch1:         2000-rocm-origami-use-system-build-dependencies.patch
+Patch2000:      2000-rocm-origami-use-system-build-dependencies.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+# GCC 16.2.0 fails to parse [[__gnu__::__noinline__]] in libstdc++ <format>;
+# use Clang for both C and C++ compilation.
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
@@ -42,9 +45,6 @@ BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  ninja
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 The name "origami" still evokes the elegance of transforming
@@ -70,6 +70,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %prep -a
 # License file is not in the tarball
 cp %{SOURCE1} .
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/origami/LICENSE.md
