@@ -4,19 +4,13 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# amdSMI's gtest client (amdsmitst) builds without a GPU but needs GPU/driver
-# access to run. Build and package it so packagers can run it on hardware; keep
-# the run behind run_test (default off) so OBS never executes device tests.
+# amdSMI's gtest client (amdsmitst) needs GPU/driver to run
 %bcond run_test 0
 
 %global rocm_release 7.2
 %global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-# esmi_ib_library is not suitable for packaging
-# https://github.com/amd/esmi_ib_library/issues/13
-# This tag was chosen by the amdsmi project because 4.0+ introduced variables
-# not found in the upstream kernel.
 %global esmi_ver 4.2
 %global pkg_library_version 26
 
@@ -121,28 +115,23 @@ chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
 
 rm -f %{buildroot}%{_datadir}/_version.py
 rm -f %{buildroot}%{_datadir}/amd_smi/_version.py
-rm -rf %{buildroot}%{_datadir}/amd_smi/example
+rm -rvf %{buildroot}%{_datadir}/amd_smi/example
 rm -f %{buildroot}%{_datadir}/amd_smi/setup.py
-rm -rf %{buildroot}%{_datadir}/example
+rm -rvf %{buildroot}%{_datadir}/example
 rm -f %{buildroot}%{_datadir}/setup.py
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/LICENSE.txt
 rm -f %{buildroot}%{_docdir}/amd-smi-lib/README.md
-rm -rf %{buildroot}%{_docdir}/amd-smi-lib/copyright
+rm -rvf %{buildroot}%{_docdir}/amd-smi-lib/copyright
 rm -f %{buildroot}%{_docdir}/amd_smi-asan/LICENSE.txt
 
-# The declarative buildsystem forces SHARE_INSTALL_PREFIX=/usr/share, so amdSMI's
-# tests install to %{_datadir}/tests; relocate them under the package's own
-# datadir so the -test payload is self-contained rather than in a generic path.
 if [ -e %{buildroot}%{_datadir}/tests ]; then
     mkdir -p %{buildroot}%{_datadir}/amdsmi
     mv %{buildroot}%{_datadir}/tests %{buildroot}%{_datadir}/amdsmi/tests
 fi
 
-# amdsmitst needs GPU/driver access to run; suppress any default run in the
-# GPU-less builder and only run when a packager opts in with run_test.
+# amdsmitst needs GPU/driver access to run
+%if %{without run_test}
 %check
-%if %{with run_test}
-%ctest
 %endif
 
 %files
@@ -152,7 +141,6 @@ fi
 %{_libdir}/libamd_smi.so.%{pkg_library_version}{,.*}
 %{_libexecdir}/amdsmi_cli
 %{python3_sitearch}/amdsmi
-
 %ifarch x86_64
 %license esmi_ib_library_License.txt
 %{_libdir}/libgoamdsmi_shim64.so.1{,.*}
@@ -162,7 +150,6 @@ fi
 %{_includedir}/amd_smi/
 %{_libdir}/cmake/amd_smi/
 %{_libdir}/libamd_smi.so
-
 %ifarch x86_64
 %{_includedir}/*.h
 %{_libdir}/libgoamdsmi_shim64.so
