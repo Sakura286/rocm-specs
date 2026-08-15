@@ -1,14 +1,18 @@
+From 335f56bf88524ba0613e5870a6dc839ea8f39862 Mon Sep 17 00:00:00 2001
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Date: Sat, 18 Jul 2026 21:02:00 +0800
-Subject: Remove a tester that fails to link
+Date: Sat, 18 Jul 2026 20:35:00 +0800
+Subject: [PATCH] Remove a test that fails to link (undefined
+ magma_generate_matrix)
 
-testing_zgenerate.cpp references magma_generate_matrix, which is not
-defined anywhere in this release; drop it from the test build so
-`%check` can link the rest of the testers.
+---
+ testing/Makefile.src | 1 -
+ 1 file changed, 1 deletion(-)
 
---- a/testing/Makefile.src	2026-07-18 21:00:42.982067610 +0800
-+++ b/testing/Makefile.src	2026-07-18 21:00:42.984042734 +0800
-@@ -61,7 +61,6 @@
+diff --git a/testing/Makefile.src b/testing/Makefile.src
+index 3cf9816..c2b863d 100644
+--- a/testing/Makefile.src
++++ b/testing/Makefile.src
+@@ -61,7 +61,6 @@ testing_src += \
  	$(cdir)/testing_constants.cpp	\
  	$(cdir)/testing_operators.cpp	\
  	$(cdir)/testing_parse_opts.cpp	\
@@ -16,3 +20,6 @@ defined anywhere in this release; drop it from the test build so
  
  # ----------
  # Cholesky, GPU interface
+-- 
+2.53.0
+

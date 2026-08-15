@@ -46,7 +46,7 @@ BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openblas)
-BuildRequires:  python3
+BuildRequires:  pkgconfig(python3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
