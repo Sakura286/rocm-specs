@@ -75,9 +75,6 @@ Requires:       cmake(hip)
 Requires:       cmake(rocrand)
 Requires:       gcc-c++
 
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
-
 %patchlist
 2001-disable-clang-tidy.patch
 2002-workaround-half-float-expr-deduction.patch
@@ -118,6 +115,9 @@ sed -i -e 's@add_subdirectory(speedtests)@#add_subdirectory(speedtests)@' CMakeL
 
 # Use the standard data directory for the MIOpen kernel database
 sed -i -e 's@GetLibPath().parent_path() / "share/miopen/db"@"%{_datadir}/miopen/db"@' src/db_path.cpp.in
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/miopen-hip/LICENSE.md
