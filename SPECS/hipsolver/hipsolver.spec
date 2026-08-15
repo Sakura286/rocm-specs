@@ -7,26 +7,14 @@
 
 # TODO: hipSOLVER need lapack to build test/benchmark/sample
 # But openblas on openRuyi does not provide this
-%bcond build_test 0
-%if %{with build_test}
-%global cmake_test ON
-%else
-%global cmake_test OFF
-%endif
-
-# hipSOLVER needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU.
-%bcond run_test 0
+# Also, it need GPU to run test
+%bcond test 0
 
 %global rocm_release 7.2
 %global rocm_patch   4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global llvm_maj_ver 22
-
-# Fortran is only used in testing
-# clang and gfortran fedora toolchain args do not mix
-%global build_fflags %{nil}
 
 Name:           hipsolver
 Version:        %{rocm_version}
@@ -39,8 +27,13 @@ Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{cmake_test}
+%if %{with test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
+%else
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
+BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=OFF
+%endif
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
@@ -61,14 +54,11 @@ BuildRequires:  ninja
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-%if %{with build_test}
+%if %{with test}
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  pkgconfig(openblas)
 %endif
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 hipSOLVER is a LAPACK marshalling library, with multiple supported backends.
@@ -91,7 +81,7 @@ Requires:       cmake(rocsparse)
 %description    devel
 The hipSOLVER development package.
 
-%if %{with build_test}
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -100,14 +90,15 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 %endif
 
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsolver/LICENSE.md
 
-%check -p
-export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
-
-%if %{without test}
 %check
+%if %{with test}
+%ctest
 %endif
 
 %files
@@ -122,7 +113,7 @@ export LD_LIBRARY_PATH=$PWD/%{__cmake_builddir}/library:$LD_LIBRARY_PATH
 %{_libdir}/libhipsolver_fortran.so
 %{_libdir}/cmake/hipsolver/
 
-%if %{with build_test}
+%if %{with test}
 %files test
 %{_datadir}/hipsolver/
 %{_bindir}/hipsolver*
