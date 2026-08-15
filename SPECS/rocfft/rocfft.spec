@@ -6,8 +6,7 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 # Without a GPU, the test cases will fail with `what():  hipGetDeviceCount failed`
-# rocFFT needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
+# rocFFT needs a GPU to run tests
 %bcond test 0
 
 %global rocm_release 7.2
@@ -27,7 +26,7 @@ Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 Patch0:         0001-cmake-use-gnu-installdirs.patch
-Patch1:         2000-relax-sqlite-version-requirement.patch
+Patch2000:      2000-relax-sqlite-version-requirement.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -54,14 +53,11 @@ BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
+BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(sqlite3)
-BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 rocFFT is a software library for computing fast Fourier transforms (FFTs) written
@@ -86,6 +82,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{_description}
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
 # we don't need the rocfft_rtc_helper binary and client-info file
