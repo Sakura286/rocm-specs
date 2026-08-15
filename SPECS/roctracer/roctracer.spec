@@ -5,14 +5,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# roctracer needs a GPU to run tests, but we could still
-# keep the test cases for packagers who have a GPU, so make it optional.
+# roctracer needs a GPU to run tests
 %bcond test 0
-%if %{with test}
-%global build_test ON
-%else
-%global build_test OFF
-%endif
 
 %global rocm_release 7.2
 %global rocm_patch   4
@@ -24,9 +18,8 @@ Name:           roctracer
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm Tracer Callback/Activity Library
-URL:            https://github.com/ROCm/roctracer
-VCS:            git:https://github.com/ROCm/roctracer.git
 License:        MIT
+URL:            https://github.com/ROCm/roctracer
 #!RemoteAsset:  sha256:dbae23414fdb186085072b025d6b233b8ece27dd6e58e4650f5fb1fa2fe1af2a
 Source:         %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
@@ -51,9 +44,6 @@ BuildRequires:  python3dist(cppheaderparser)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
-
-%conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
 
 %global _description %{expand:
 roctracer is a callback and activity tracing library for ROCm. It provides
@@ -81,13 +71,16 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep -a
-# No knob in cmake to turn off testing
+# No option in cmake to turn off testing
 %if %{without test}
 sed -i -e 's@add_subdirectory(test)@#add_subdirectory(test)@' CMakeLists.txt
 %else
 # Adjust test running script lib dir
 sed -i -e 's@../lib/@../%{_lib}/@' test/run.sh
 %endif
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/%{name}/LICENSE.md
