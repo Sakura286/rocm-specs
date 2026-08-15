@@ -11,12 +11,8 @@
 
 %global llvm_maj_ver 22
 
-%bcond build_test 0
-%if %{with build_test}
-%global cmake_test ON
-%else
-%global cmake_test OFF
-%endif
+# hipBLASlt needs GPU to run
+%bcond test 0
 
 %global tensile_version 4.33.0
 # The upstream hipBLASTLt project has a hard fork of the python-tensile package
@@ -26,8 +22,6 @@
 # https://github.com/ROCm/hipBLASLt/issues/535
 # The problem with the fork has been raised here.
 # https://github.com/ROCm/hipBLASLt/issues/908
-
-%global tensile_verbose 1
 
 Name:           hipblaslt
 Version:        %{rocm_version}
@@ -39,16 +33,21 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
 BuildSystem:    cmake
 
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{cmake_test}
+%if %{with test}
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
+BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=ON
+%else
+BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
+BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=OFF
+%endif
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=%{cmake_test}
 BuildOption(conf):  -DHIPBLASLT_ENABLE_MARKER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_ROCROLLER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_SAMPLES=OFF
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
-BuildOption(conf):  -DTensile_VERBOSE=%{tensile_verbose}
+BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
@@ -77,7 +76,6 @@ BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
 # https://github.com/ROCm/hipBLASLt/issues/1734
 BuildRequires:  python3dist(msgpack)
-# nanobind is used to build the rocisa native module (build-time only)
 BuildRequires:  python3dist(nanobind)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
@@ -87,19 +85,17 @@ BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 
-%if %{with build_test}
+%if %{with test}
 BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
 %endif
 
 %patchlist
-# yappi is used in tensilelite to generate profiling data, we are not using that in the build
-2003-hipblaslt-tensilelite-remove-yappi-dependency.patch
 # Patch from Fedora, change hard coded vendor paths
-2004-hipblaslt-tensilelite-use-system-paths.patch
+1000-hipblaslt-tensilelite-use-system-paths.patch
 # https://github.com/ROCm/rocm-libraries/issues/2422
-2005-hipblaslt-find-origami-package.patch
+1001-hipblaslt-find-origami-package.patch
 # use the distribution-provided nanobind instead of fetching/bundling it
 2001-hipblaslt-tensilelite-use-system-nanobind.patch
 # Heartbeat during tensilelite ParallelMap2 kernel generation: without periodic
@@ -125,7 +121,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{_description}
 
-%if %{with build_test}
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
@@ -136,13 +132,13 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %prep -a
 # Use PATH to find where TensileGetPath and other tensile bins are
-sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g'            tensilelite/Tensile/cmake/TensileConfig.cmake
+sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g' tensilelite/Tensile/cmake/TensileConfig.cmake
 
 # defer to cmdline
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' CMakeLists.txt
 
 # Do not use virtualenv_install
-sed -i -e 's@virtualenv_install@#virtualenv_install@'                          CMakeLists.txt
+sed -i -e 's@virtualenv_install@#virtualenv_install@' CMakeLists.txt
 
 # Disable trying to download rocm-cmake
 sed -i -e 's@if(NOT ROCmCMakeBuildTools_FOUND)@if(FALSE)@' cmake/dependencies.cmake
@@ -169,10 +165,9 @@ export PATH=%{rocmllvm_bindir}:$PATH
 cd tensilelite
 TL=$PWD
 
-python3 setup.py install --root $TL
+%__python3 setup.py install --root $TL
 cd ..
 
-# Should not have to do this
 CLANG_PATH=`hipconfig --hipclangpath`
 ROCM_CLANG=${CLANG_PATH}/clang
 RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
@@ -201,7 +196,7 @@ rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
 %{_libdir}/cmake/hipblaslt/
 %{_libdir}/libhipblaslt.so
 
-%if %{with build_test}
+%if %{with test}
 %files test
 %{_bindir}/hipblaslt*
 %{_bindir}/sequence.yaml

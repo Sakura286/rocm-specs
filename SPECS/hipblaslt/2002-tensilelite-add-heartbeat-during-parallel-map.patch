@@ -1,4 +1,6 @@
+From 2f324ae66e475cafd381844a45693e3c2869c7dd Mon Sep 17 00:00:00 2001
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Sat, 18 Jul 2026 20:00:00 +0800
 Subject: [PATCH] tensilelite: add heartbeat during parallel map to avoid OBS
  build timeout
 
@@ -13,10 +15,11 @@ the task and its arguments stay picklable for joblib's loky workers (wrapping it
 in a closure that captured the monitor raised "cannot pickle '_thread.lock'
 object" / PicklingError and broke kernel generation).
 ---
- tensilelite/Tensile/Common/Parallel.py | 64 +++++++++++++++++++++++++-
- 1 file changed, 63 insertions(+), 1 deletion(-)
+ tensilelite/Tensile/Common/Parallel.py | 67 +++++++++++++++++++++++---
+ 1 file changed, 59 insertions(+), 8 deletions(-)
 
 diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common/Parallel.py
+index 1a2bf9e..23ca705 100644
 --- a/tensilelite/Tensile/Common/Parallel.py
 +++ b/tensilelite/Tensile/Common/Parallel.py
 @@ -23,6 +23,7 @@
@@ -27,7 +30,7 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
  import itertools
  import os
  import sys
-@@ -197,6 +198,41 @@
+@@ -197,6 +198,41 @@ def ParallelMapReturnAsGenerator(function, objects, message="", enable=True, mul
              yield result.result()
  
  
@@ -69,7 +72,7 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
  def ParallelMap2(
      function, objects, message="", enable=True, multiArg=True, return_as="list", procs=None
  ):
-@@ -236,14 +272,29 @@
+@@ -236,14 +272,29 @@ def ParallelMap2(
      pcall = pcallWithGlobalParamsMultiArg if multiArg else pcallWithGlobalParamsSingleArg
      pargs = zip(objects, itertools.repeat(globalParameters))
  
@@ -107,3 +110,6 @@ diff --git a/tensilelite/Tensile/Common/Parallel.py b/tensilelite/Tensile/Common
  
      totalTime = time.time() - currentTime
      print("{0}Done. ({1:.1f} secs elapsed)".format(message, totalTime))
+-- 
+2.53.0
+
