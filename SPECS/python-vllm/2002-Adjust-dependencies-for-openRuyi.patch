@@ -1,6 +1,6 @@
 diff -N -a -r -U 0 a/pyproject.toml b/pyproject.toml
---- a/pyproject.toml	2026-07-20 23:29:49.843043026 +0800
-+++ b/pyproject.toml	2026-07-20 23:29:49.844319712 +0800
+--- a/pyproject.toml	2026-08-16 10:17:59.796656844 +0800
++++ b/pyproject.toml	2026-08-16 10:18:06.121740279 +0800
 @@ -4,2 +3,0 @@
 -    "cmake>=3.26.1",
 -    "ninja",
@@ -8,10 +8,10 @@ diff -N -a -r -U 0 a/pyproject.toml b/pyproject.toml
 -    "setuptools>=77.0.3,<81.0.0",
 +    "setuptools",
 @@ -10 +7,0 @@
--    "torch == 2.11.0",
+-    "torch == 2.13.0",
 diff -N -a -r -U 0 a/requirements/common.txt b/requirements/common.txt
---- a/requirements/common.txt	2026-07-20 23:29:49.843684113 +0800
-+++ b/requirements/common.txt	2026-07-20 23:29:49.844925570 +0800
+--- a/requirements/common.txt	2026-08-16 10:17:59.798691634 +0800
++++ b/requirements/common.txt	2026-08-16 10:19:21.128861953 +0800
 @@ -13,3 +13,3 @@
 -protobuf >= 5.29.6, !=6.30.*, !=6.31.*, !=6.32.*, !=6.33.0.*, !=6.33.1.*, !=6.33.2.*, !=6.33.3.*, !=6.33.4.* # Required by LlamaTokenizer, gRPC. CVE-2026-0994
 -fastapi[standard] >= 0.133.0, < 0.137.0 # First version supporting Starlette 1.0; < 0.137.0 avoids route-tree change that breaks model-hosting-container-standards handler overrides.
@@ -22,73 +22,73 @@ diff -N -a -r -U 0 a/requirements/common.txt b/requirements/common.txt
 @@ -21 +21 @@
 -prometheus-fastapi-instrumentator >= 8.0.0 # v8 unblocks starlette >= 1.0
 +prometheus-fastapi-instrumentator >= 7.1.0 # v8 unblocks starlette >= 1.0
-@@ -25,4 +25 @@
+@@ -25,2 +25 @@
 -outlines_core == 0.2.14
--# required for outlines backend disk cache
--diskcache == 5.6.3
 -lark == 1.2.2
 +lark
-@@ -36,2 +33,2 @@
--mistral_common[image] >= 1.11.5
+@@ -34,2 +33,2 @@
+-mistral_common[image] >= 1.11.6
 -opencv-python-headless >= 4.13.0    # required for video IO
 +mistral_common >= 1.11.2
 +opencv >= 4.13.0    # required for video IO
-@@ -40 +37 @@
+@@ -38 +37 @@
 -setuptools>=77.0.3,<81.0.0; python_version > '3.11' # Setuptools is used by triton, we need to ensure a modern version is installed for 3.12+ so that it does not try to import distutils, which was removed in 3.12
 +setuptools>=77.0.3; python_version > '3.11' # Setuptools is used by triton, we need to ensure a modern version is installed for 3.12+ so that it does not try to import distutils, which was removed in 3.12
-@@ -42 +39 @@
+@@ -40 +39 @@
 -compressed-tensors == 0.17.0 # required for compressed-tensors
 +compressed-tensors >= 0.15.0.1 # required for compressed-tensors
-@@ -47 +43,0 @@
+@@ -45 +43,0 @@
 -ninja # Required for xgrammar, rocm, tpu, xpu
-@@ -52 +47,0 @@
+@@ -50 +47,0 @@
 -openai-harmony >= 0.0.3  # Required for gpt-oss
-@@ -58 +52,0 @@
+@@ -56 +52,0 @@
 -opentelemetry-exporter-otlp >= 1.27.0
 diff -N -a -r -U 0 a/requirements/cpu.txt b/requirements/cpu.txt
---- a/requirements/cpu.txt	2026-07-20 23:29:49.843699577 +0800
-+++ b/requirements/cpu.txt	2026-07-20 23:29:49.844939824 +0800
-@@ -4 +4 @@
+--- a/requirements/cpu.txt	2026-08-16 10:17:59.800610182 +0800
++++ b/requirements/cpu.txt	2026-08-16 10:19:21.128861953 +0800
+@@ -4,3 +4 @@
 -setuptools==77.0.3 # this version can reuse CMake build dir
-+setuptools # this version can reuse CMake build dir
-@@ -6 +5,0 @@
+-
 -numba == 0.65.0; platform_machine != "s390x" # Required for N-gram speculative decoding
-@@ -9,2 +8,2 @@
--torch==2.11.0+cpu; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
--torch==2.11.0; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
++setuptools # this version can reuse CMake build dir
+@@ -9,5 +7,2 @@
+-torch==2.13.0+cpu; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
+-torch==2.13.0; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
+-
+-# required for the image processor of minicpm-o-2_6, this must be updated alongside torch
+-torchaudio; platform_machine != "s390x" and platform_machine != "riscv64"
 +torch; platform_machine == "x86_64" or platform_machine == "s390x" or platform_machine == "aarch64"
 +torch; platform_system == "Darwin" or platform_machine == "ppc64le" or platform_machine == "riscv64"
-@@ -13 +11,0 @@
--torchaudio; platform_machine != "s390x" and platform_machine != "riscv64"
-@@ -18,3 +15,0 @@
+@@ -17,6 +11,0 @@
+-
 -# required for the torchcodec video decoding backend
 -torchcodec >= 0.14; platform_machine != "s390x" and platform_machine != "riscv64" and platform_machine != "ppc64le"
 -
-@@ -22 +16,0 @@
+-# Intel Extension for PyTorch, only for x86_64 CPUs
 -intel-openmp==2024.2.1; platform_machine == "x86_64"
 diff -N -a -r -U 0 a/requirements/rocm.txt b/requirements/rocm.txt
---- a/requirements/rocm.txt	2026-07-20 23:29:49.843708910 +0800
-+++ b/requirements/rocm.txt	2026-07-20 23:29:49.844950562 +0800
-@@ -5,2 +5,2 @@
+--- a/requirements/rocm.txt	2026-08-16 10:17:59.802675020 +0800
++++ b/requirements/rocm.txt	2026-08-16 10:19:28.723983937 +0800
+@@ -5,4 +5,2 @@
 -grpcio==1.78.0
 -grpcio-reflection==1.78.0
+-
+-numba == 0.65.0 # Required for N-gram speculative decoding
 +grpcio
 +grpcio-reflection
-@@ -8 +7,0 @@
--numba == 0.65.0 # Required for N-gram speculative decoding
-@@ -14 +13 @@
+@@ -14 +12 @@
 -tensorizer==2.10.1
 +tensorizer
-@@ -16 +15 @@
+@@ -16 +14 @@
 -setuptools>=77.0.3,<80.0.0
 +setuptools>=77.0.3
-@@ -19,2 +17,0 @@
+@@ -19,2 +16,0 @@
 -runai-model-streamer[s3,gcs,azure]==0.15.7
 -conch-triton-kernels==1.2.1
-@@ -22,8 +18,0 @@
+@@ -22,8 +17,0 @@
 -# amd-quark: required for Quark quantization on ROCm
 -# To be consistent with test_quark.py
--amd-quark>=0.8.99
+-amd-quark==0.12.post1
 -tilelang==0.1.10
 -# Required apache-tvm-ffi matching tilelang version
 -apache-tvm-ffi==0.1.10 

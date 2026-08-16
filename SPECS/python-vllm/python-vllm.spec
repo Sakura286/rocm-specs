@@ -23,12 +23,12 @@ Name:           python-%{srcname}-rocm
 %else
 Name:           python-%{srcname}
 %endif
-Version:        0.25.0
+Version:        0.27.1
 Release:        %autorelease
 Summary:        A high-throughput and memory-efficient inference and serving engine for LLMs
 License:        Apache-2.0
 URL:            https://github.com/vllm-project/vllm
-#!RemoteAsset:  sha256:7e04e2b37164de8c4012f27f75af6c4768039b32610865e9b6fb8c49c34a84aa
+#!RemoteAsset:  sha256:eec2d54d137ac1e59cb4c39226dfee1943eefc8f4788f5821d7300d6acbdb646
 Source0:        https://files.pythonhosted.org/packages/source/v/%{srcname}/%{srcname}-%{version}.tar.gz
 #!RemoteAsset:  sha256:ba5834a1fdbb6d1c1b1c065dfd789438e7aa42c03fc52d92c02af85d78d1c75c
 Source2:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
@@ -97,11 +97,6 @@ Requires:       ninja
 %if %{with rocm}
 Requires:       python-torch-rocm
 Requires:       python3dist(triton)
-# NOTE: no Requires on triton_kernels -- openRuyi does not package it.  It is
-# a separate pure-Python distribution living in the triton repo, versioned on
-# its own tag rather than the compiler's, and the tag matching triton 3.7.x no
-# longer provides the API vLLM imports.  vLLM detects its absence and runs the
-# gpt-oss/MXFP4 MoE through Mxfp4MoeBackend.EMULATION instead.
 Requires:       amdsmi
 %else
 Requires:       python3dist(torch)
@@ -120,8 +115,6 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 
 %patchlist
-# Upstream PR #45532: clang requires mwaitxintrin.h via x86intrin.h.
-0001-Fix-clang-spinloop-mwaitx-include.patch
 %if %{without rocm}
 # Adjust CPU backend for openRuyi's OpenMP path
 2001-CPU-backend-OpenMP-path.patch
@@ -174,8 +167,8 @@ export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 # Do not bundle triton_kernels into vllm/third_party (2007): openRuyi ships no
-# triton_kernels at all (see the Requires note above), and the cmake module
-# would need network access to fetch it.
+# triton_kernels at all, and the cmake module would need network access to
+# fetch it.
 export VLLM_SKIP_TRITON_KERNELS=1
 # --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
 # in its own resource dir, but rocm-device-libs installs it under
