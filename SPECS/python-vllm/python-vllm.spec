@@ -115,6 +115,9 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 
 %patchlist
+# Backport #51099: fix riscv64 build — RISC-V FP32Vec copy ctors must not be
+# explicit (cpu_attn_vec.hpp copy-initialises them)
+1000-riscv-fp32vec-copy-ctors-non-explicit.patch
 # Ignore some version requirement; Tailor some packages
 2001-Adjust-dependencies-for-openRuyi.patch
 # Single-process: fall back to a fake distributed backend when torch lacks
@@ -189,8 +192,7 @@ export MAX_JOBS=$compile_jobs
 
 %check
 # importing vllm pulls its large runtime dependency stack that is not、packaged
-# on openRuyi, and needs a GPU runtime.
-# Temporarily skip them
+# on openRuyi, and needs a GPU runtime. Temporarily skip them
 
 %files -f %{pyproject_files}
 %doc README.md
