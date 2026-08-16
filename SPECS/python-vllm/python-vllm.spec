@@ -115,26 +115,23 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 
 %patchlist
-%if %{without rocm}
-# Adjust CPU backend for openRuyi's OpenMP path
-2001-CPU-backend-OpenMP-path.patch
-%endif
 # Ignore some version requirement; Tailor some packages
-2002-Adjust-dependencies-for-openRuyi.patch
+2001-Adjust-dependencies-for-openRuyi.patch
+# Single-process: fall back to a fake distributed backend when torch lacks
+# the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
+2002-CPU-single-process-fake-distributed-backend.patch
 %if %{with rocm}
 # Run find_package(hipsparselt) before find_package(Torch) for proper link target
 2003-ROCm-hipsparselt-ordering.patch
-%endif
-# Single-process: fall back to a fake distributed backend when torch lacks
-# the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
-2005-CPU-single-process-fake-distributed-backend.patch
-%if %{with rocm}
 # cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
 2006-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
 # triton_kernels.cmake otherwise git-clones the triton repo at configure time
 # (no network on OBS); vLLM only uses the bundled copy as an import fallback.
 2007-Skip-triton_kernels-bundling-via-env.patch
+%else
+# Adjust CPU backend for openRuyi's OpenMP path
+2001-CPU-backend-OpenMP-path.patch
 %endif
 
 %description
