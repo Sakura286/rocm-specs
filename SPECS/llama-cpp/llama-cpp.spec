@@ -30,7 +30,10 @@
 #   whichever GPU backend is compiled in; %%check reruns it with "-b CPU")
 # - test-llama-archs (never calls ggml_backend_load_all(), so under
 #   GGML_BACKEND_DL it sees zero devices and every arch check reports SKIP)
-%global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs)
+# - test-generate-models (the same test-llama-archs binary in -o mode, which
+#   fails to create a model with no backend loaded) and its fixture consumer
+#   test-recurrent-state-rollback-nemotron-h
+%global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs|test-generate-models|test-recurrent-state-rollback-nemotron-h)
 %if %{with rocm} || %{with vulkan}
 # test-opt enumerates every registered ggml backend device with no CPU-only
 # filter, which on these flavors includes a GPU the workers cannot initialize.
