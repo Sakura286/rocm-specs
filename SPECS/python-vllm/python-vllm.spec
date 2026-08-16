@@ -31,7 +31,7 @@ URL:            https://github.com/vllm-project/vllm
 #!RemoteAsset:  sha256:eec2d54d137ac1e59cb4c39226dfee1943eefc8f4788f5821d7300d6acbdb646
 Source0:        https://files.pythonhosted.org/packages/source/v/%{srcname}/%{srcname}-%{version}.tar.gz
 #!RemoteAsset:  sha256:ba5834a1fdbb6d1c1b1c065dfd789438e7aa42c03fc52d92c02af85d78d1c75c
-Source2:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
+Source1:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
 BuildSystem:    pyproject
 
 BuildOption(install):  %{srcname}
@@ -125,13 +125,12 @@ Conflicts:      python-%{srcname}-rocm
 2003-ROCm-hipsparselt-ordering.patch
 # cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
 # cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
-2006-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
-# triton_kernels.cmake otherwise git-clones the triton repo at configure time
-# (no network on OBS); vLLM only uses the bundled copy as an import fallback.
-2007-Skip-triton_kernels-bundling-via-env.patch
+2004-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
+# triton_kernels.cmake git-clones the triton repo at configure time
+2005-Skip-triton_kernels-bundling-via-env.patch
 %else
 # Adjust CPU backend for openRuyi's OpenMP path
-2001-CPU-backend-OpenMP-path.patch
+2006-CPU-backend-OpenMP-path.patch
 %endif
 
 %description
@@ -142,7 +141,7 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 %prep -a
 %if %{without rocm}
 # OneDNN is used when building CPU backend
-tar -xzf %{SOURCE2}
+tar -xzf %{SOURCE1}
 %endif
 
 %generate_buildrequires
