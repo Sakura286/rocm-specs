@@ -3,12 +3,8 @@
 # SPDX-FileContributor: CHEN Xuan <chenxuan@iscas.ac.cn>
 #
 # SPDX-License-Identifier: MulanPSL-2.0
-#
-# Originally extracted from Fedora Project
-# Authors: The Fedora Project Contributors
 
-# The default flavor builds the CPU backend. The "rocm" and "vulkan"
-# multibuild flavors select the corresponding GPU backend.
+# The default flavor builds the CPU backend
 %global flavor @BUILD_FLAVOR@%{nil}
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
@@ -22,26 +18,22 @@
 %endif
 
 %global build_number 9948
-# These libraries implement internal CLI/server tools and do not expose a
-# supported ABI for third-party consumers.  The libggml-* entries are the
-# dlopen()ed backend plugins under %%{_libdir}/ggml.
+# Private libraries should not expose public ABI
+# The libllama* is CLI tools
+# The libggml-* entries are dlopen()ed backend plugins under %%{_libdir}/ggml
 %global __provides_exclude ^(libllama-.*-impl|libggml-cpu.*|libggml-hip|libggml-vulkan)\\.so
 %global __requires_exclude ^libllama-.*-impl\\.so
-# Run the full ctest suite and blacklist only the tests that cannot pass in
-# an offline OBS build: Hugging Face / network fetches, tests that require a
-# downloaded model, the python+jinja2 comparison variant (not BuildRequired),
-# and the unfiltered "test-backend-ops" ctest entry (its default invocation
-# skips the CPU backend and would otherwise probe whichever GPU backend is
-# compiled in; %%check -a below runs it directly with "-b CPU" instead).
-# test-llama-archs never calls ggml_backend_load_all(), so under
-# GGML_BACKEND_DL it enumerates zero devices and every arch check silently
-# reports SKIP; it "passes" without exercising any real computation, so
-# exclude it everywhere until upstream fixes that gap.
+# Run the full ctest suite; exclude only what cannot pass on build machine:
+# - network / model download tests
+# - test-jinja-py - for source code maintainer to verify jinja works well
+# - test-backend-ops (its ctest invocation skips the CPU backend and probes
+#   whichever GPU backend is compiled in; %%check reruns it with "-b CPU")
+# - test-llama-archs (never calls ggml_backend_load_all(), so under
+#   GGML_BACKEND_DL it sees zero devices and every arch check reports SKIP)
 %global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs)
 %if %{with rocm} || %{with vulkan}
 # test-opt enumerates every registered ggml backend device with no CPU-only
-# filter; on the rocm/vulkan flavors that includes the real GPU backend,
-# which OBS build workers cannot initialize without hardware.
+# filter, which on these flavors includes a GPU the workers cannot initialize.
 %global ctest_exclude ^(%{ctest_exclude_common}|test-opt)$
 %else
 %global ctest_exclude ^%{ctest_exclude_common}$
@@ -65,12 +57,11 @@ Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
 %if %{with rocm}
-%ifarch riscv64
-# Match the openRuyi Ollama workaround for unstable riscv64 ROCm inference;
-# do not reduce the default batch size for x86_64 ROCm builds.
+# Match the openRuyi Ollama workaround for unstable riscv64 ROCm inference.
+# The patch carries its own #if defined(__riscv) guard, so it applies to
+# every arch and leaves x86_64 defaults untouched.
 # https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
 Patch0:         2000-limit-rocm-batch-size.patch
-%endif
 %endif
 
 BuildOption(prep):  -n llama.cpp-%{version}
