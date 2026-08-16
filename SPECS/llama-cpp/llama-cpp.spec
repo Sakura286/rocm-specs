@@ -17,7 +17,7 @@
 %bcond vulkan 0
 %endif
 
-%global build_number 9948
+%global build_number 10448
 # Private libraries should not expose public ABI
 # The libllama* is CLI tools
 # The libggml-* entries are dlopen()ed backend plugins under %%{_libdir}/ggml
@@ -52,7 +52,7 @@ Summary:        LLM inference in C/C++
 License:        MIT AND Apache-2.0 AND Unlicense
 URL:            https://github.com/ggml-org/llama.cpp
 VCS:            git:https://github.com/ggml-org/llama.cpp.git
-#!RemoteAsset:  sha256:ab2d4fc95692f4f712e4567585299be26611fc07b510c79f9e1cc288d30551cf
+#!RemoteAsset:  sha256:85791799efe44625718640e3dcedb6112a132018e38e61e43190b1ff37ade355
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
@@ -68,7 +68,7 @@ BuildOption(prep):  -n llama.cpp-%{version}
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DLLAMA_BUILD_NUMBER=%{build_number}
 # Source0 is an archive without .git; preserve the verified release tag commit.
-BuildOption(conf):  -DLLAMA_BUILD_COMMIT=074944998d3f25e7001ede30d152b59dff741c8c
+BuildOption(conf):  -DLLAMA_BUILD_COMMIT=ad1de39e0708e3ced9c71bb3c82d93a2c046a73f
 BuildOption(conf):  -DLLAMA_BUILD_EXAMPLES=OFF
 BuildOption(conf):  -DLLAMA_BUILD_TESTS=ON
 BuildOption(conf):  -DLLAMA_TESTS_INSTALL=OFF
