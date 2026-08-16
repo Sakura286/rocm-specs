@@ -9,17 +9,12 @@
 # PyTorch's in-process "fake" c10d backend instead of requiring gloo.  Multi-rank
 # (TP/PP/DP > 1) still asserts and asks for a gloo-enabled torch.
 #
---- a/vllm/distributed/parallel_state.py	2026-07-12 11:50:06.406876902 +0800
-+++ b/vllm/distributed/parallel_state.py	2026-07-12 11:52:59.768117393 +0800
-@@ -432,17 +432,30 @@
+--- a/vllm/distributed/parallel_state.py	2026-08-16 10:27:52.414654732 +0800
++++ b/vllm/distributed/parallel_state.py	2026-08-16 10:28:38.011310803 +0800
+@@ -452,17 +452,25 @@
              timeout = get_cpu_distributed_timeout_or_none()
              device_timeout = get_distributed_timeout_or_none()
  
-+            # openRuyi: a CPU torch may be built without the gloo c10d backend.  In
-+            # that case the WORLD pg uses PyTorch's in-process "fake" backend
-+            # (single-process only), so build the per-group device/cpu groups with
-+            # that same backend instead of gloo.  At world_size==1 no real
-+            # collectives run, so this is sufficient for single-process inference.
 +            gloo_available = torch.distributed.is_gloo_available()
 +            device_backend = torch_distributed_backend
 +            cpu_backend = "gloo"
@@ -44,7 +39,7 @@
                      )
                  if self.rank in ranks:
                      self.ranks = ranks
-@@ -1616,16 +1629,42 @@
+@@ -1649,16 +1657,36 @@
              "distributed_init_method must be provided when initializing "
              "distributed environment"
          )
@@ -63,11 +58,6 @@
 +                )
 +                backend = "gloo"
 +            else:
-+                # openRuyi: the CPU torch may be built without the gloo c10d
-+                # backend.  A single-process (world_size==1) run needs no real
-+                # collectives -- every GroupCoordinator collective short-circuits
-+                # on world_size==1 -- so fall back to PyTorch's in-process "fake"
-+                # backend instead of requiring gloo.
 +                assert world_size == 1, (
 +                    "No usable distributed backend: gloo is unavailable and "
 +                    f"world_size={world_size} > 1.  Rebuild torch with "
@@ -80,7 +70,6 @@
 +                backend = "fake"
 +                use_fake_backend = True
 +        if use_fake_backend:
-+            # Importing fake_pg registers the "fake" c10d backend.
 +            from torch.testing._internal.distributed.fake_pg import FakeStore
 +
 +            torch.distributed.init_process_group(

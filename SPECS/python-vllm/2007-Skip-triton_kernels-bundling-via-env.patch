@@ -10,34 +10,27 @@ setup.py unconditionally passes --target=triton_kernels to cmake --build
 and copies the bundled tree from build_lib, so define an empty cmake
 target and skip the copytree when the bundle is disabled.
 
-Generated with diff -Naur against vllm 0.25.0.
-
+Generated with diff -Naur against vllm 0.27.1.
 diff -Naur a/CMakeLists.txt b/CMakeLists.txt
---- a/CMakeLists.txt	2026-07-21 12:24:48.878862590 +0800
-+++ b/CMakeLists.txt	2026-07-21 12:24:48.889044028 +0800
-@@ -1387,8 +1387,17 @@
- endif()
+--- a/CMakeLists.txt	2026-08-16 10:27:52.416807591 +0800
++++ b/CMakeLists.txt	2026-08-16 10:28:58.093633169 +0800
+@@ -1493,7 +1493,11 @@
  
  # For CUDA and HIP builds also build the triton_kernels external package.
-+# openRuyi: VLLM_SKIP_TRITON_KERNELS opts out of bundling triton_kernels into
-+# vllm/third_party (vLLM imports a site-packages triton_kernels first and only
-+# uses the bundled copy as a fallback).
  if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
 -    include(cmake/external_projects/triton_kernels.cmake)
 +    if(NOT DEFINED ENV{VLLM_SKIP_TRITON_KERNELS})
 +        include(cmake/external_projects/triton_kernels.cmake)
 +    else()
-+        # setup.py always passes --target=triton_kernels to cmake --build;
-+        # keep it defined as a no-op so the build does not fail.
 +        add_custom_target(triton_kernels)
 +    endif()
  endif()
  
  # For CUDA we also build and ship some external projects.
 diff -Naur a/setup.py b/setup.py
---- a/setup.py	2026-07-21 12:24:48.878903182 +0800
-+++ b/setup.py	2026-07-21 12:24:48.889182537 +0800
-@@ -408,15 +408,21 @@
+--- a/setup.py	2026-08-16 10:27:52.416837096 +0800
++++ b/setup.py	2026-08-16 10:28:58.093633169 +0800
+@@ -408,15 +408,19 @@
              # copy vllm/third_party/triton_kernels/**/*.py from self.build_lib
              # to current directory so that they can be included in the editable
              # build
@@ -52,8 +45,6 @@ diff -Naur a/setup.py b/setup.py
 +            triton_kernels_build = (
 +                f"{self.build_lib}/vllm/third_party/triton_kernels"
              )
-+            # openRuyi: absent when triton_kernels bundling is skipped
-+            # (VLLM_SKIP_TRITON_KERNELS, see CMakeLists.txt).
 +            if os.path.isdir(triton_kernels_build):
 +                print(
 +                    f"Copying {triton_kernels_build} "

@@ -166,22 +166,16 @@ export PYTORCH_ROCM_ARCH=%{rocm_gpu_list_default}
 export ROCM_HOME=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
-# Do not bundle triton_kernels into vllm/third_party (2007): openRuyi ships no
-# triton_kernels at all, and the cmake module would need network access to
-# fetch it.
+# Do not bundle triton_kernels into vllm/third_party
 export VLLM_SKIP_TRITON_KERNELS=1
-# --rocm-device-lib-path: the LLVM-21 clang looks for the AMDGPU device bitcode
-# in its own resource dir, but rocm-device-libs installs it under
-# %{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode, so point clang there
 export CMAKE_ARGS="-DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
-# Prevent FetchContent from cloning oneDNN in the network-isolated OBS worker
-# (unused when the arch/ISA does not enable the oneDNN path).
+# Prevent FetchContent with network
 export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-3.10"
-# RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from
-# /proc/cpuinfo. SG2044 has VLEN=128
+# RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from /proc/cpuinfo
+# SG2044 has VLEN=128
 %ifarch riscv64
 export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
 %endif
