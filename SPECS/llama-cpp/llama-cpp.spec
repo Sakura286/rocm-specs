@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# CPU is the default flavor.
+# CPU is the default flavor
 %global flavor @BUILD_FLAVOR@%{nil}
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
@@ -23,7 +23,7 @@
 # The libggml-* entries are dlopen()ed backend plugins under %%{_libdir}/ggml
 %global __provides_exclude ^(libllama-.*-impl|libggml-cpu.*|libggml-hip|libggml-vulkan)\\.so
 %global __requires_exclude ^libllama-.*-impl\\.so
-# Exclude network/model-related, maintainer-only, and GGML_BACKEND_DL-incompatible tests.
+# Exclude network/model-related, maintainer-only, and GGML_BACKEND_DL-incompatible tests
 %global ctest_exclude_common (test-tokenizers-ggml-vocabs|test-download-model|test-thread-safety|test-state-restore-fragmented|test-recurrent-state-rollback|test-save-load-state|test-quant-type-selection|test-gguf-model-data|test-arg-parser|test-jinja-py|test-backend-ops|test-llama-archs|test-generate-models|test-recurrent-state-rollback-nemotron-h)
 %if %{with rocm} || %{with vulkan}
 # GPU flavors exclude test-opt because package is built with no GPU device
@@ -59,7 +59,7 @@ Patch2000:      2000-limit-rocm-batch-size.patch
 BuildOption(prep):  -n llama.cpp-%{version}
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DLLAMA_BUILD_NUMBER=%{build_number}
-# Source0 is an archive without .git; preserve the verified release tag commit.
+# Source0 is an archive without .git; preserve the verified release tag commit
 BuildOption(conf):  -DLLAMA_BUILD_COMMIT=ad1de39e0708e3ced9c71bb3c82d93a2c046a73f
 BuildOption(conf):  -DLLAMA_BUILD_EXAMPLES=OFF
 BuildOption(conf):  -DLLAMA_TESTS_INSTALL=OFF
@@ -143,7 +143,7 @@ Headers, shared-library links, pkg-config metadata, and CMake package files for
 developing applications against llama.cpp and ggml.
 
 %check -a
-# Smoke-test the newly built CLI.
+# Smoke-test the newly built CLI
 LD_LIBRARY_PATH=%{_vpath_builddir}/bin %{_vpath_builddir}/bin/llama-cli --version
 
 %files
