@@ -1,3 +1,13 @@
+From 866f86c8326f885e719f29b8b677d64c20eeffe7 Mon Sep 17 00:00:00 2001
+From: velonica0 <like@mail.nankai.edu.cn>
+Date: Tue, 4 Aug 2026 19:02:53 -0700
+Subject: [PATCH] Fix build: make FP32Vec copy constructors non-explicit
+
+Signed-off-by: velonica0 <like@mail.nankai.edu.cn>
+---
+ csrc/cpu/cpu_types_riscv_impl.hpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
 diff --git a/csrc/cpu/cpu_types_riscv_impl.hpp b/csrc/cpu/cpu_types_riscv_impl.hpp
 index 106bf44a2411..9a14d1c33866 100644
 --- a/csrc/cpu/cpu_types_riscv_impl.hpp
