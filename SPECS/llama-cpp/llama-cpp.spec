@@ -32,6 +32,8 @@
 %global ctest_exclude ^%{ctest_exclude_common}$
 %endif
 
+%global llvm_maj_ver 22
+
 %if %{with rocm}
 Name:           llama-cpp-rocm
 %elif %{with vulkan}
@@ -85,27 +87,24 @@ BuildOption(conf):  -DGGML_VULKAN=ON
 BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(openssl)
-Suggests:       ffmpeg
-
 %if %{with rocm}
-BuildRequires:  clang22
-BuildRequires:  clang22-devel
-BuildRequires:  clang22-tools-extra
-BuildRequires:  libomp22-devel
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
+BuildRequires:  libomp%{llvm_maj_ver}-devel
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocblas)
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  hipcc
-BuildRequires:  lld22
-BuildRequires:  llvm22-devel
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
 BuildRequires:  rocm-llvm-macros
 %else
 BuildRequires:  libomp-devel
 %endif
-
 %if %{with vulkan}
 BuildRequires:  cmake(VulkanLoader)
 BuildRequires:  pkgconfig(SPIRV-Headers)
