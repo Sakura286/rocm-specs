@@ -1,16 +1,3 @@
-Skip bundling triton_kernels when VLLM_SKIP_TRITON_KERNELS is set
-
-cmake/external_projects/triton_kernels.cmake otherwise FetchContent-git-clones
-the triton repo at configure time, which fails on network-isolated OBS
-workers.  vLLM prefers a site-packages triton_kernels at runtime and only
-falls back to the bundled vllm/third_party copy, so the bundling step is
-optional.
-
-setup.py unconditionally passes --target=triton_kernels to cmake --build
-and copies the bundled tree from build_lib, so define an empty cmake
-target and skip the copytree when the bundle is disabled.
-
-Generated with diff -Naur against vllm 0.27.1.
 diff -Naur a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt	2026-08-16 10:27:52.416807591 +0800
 +++ b/CMakeLists.txt	2026-08-16 10:28:58.093633169 +0800

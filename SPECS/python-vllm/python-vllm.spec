@@ -8,6 +8,8 @@
 
 %global srcname vllm
 
+%global onednn_ver 3.10
+
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
 %else
@@ -31,7 +33,7 @@ URL:            https://github.com/vllm-project/vllm
 #!RemoteAsset:  sha256:eec2d54d137ac1e59cb4c39226dfee1943eefc8f4788f5821d7300d6acbdb646
 Source0:        https://files.pythonhosted.org/packages/source/v/%{srcname}/%{srcname}-%{version}.tar.gz
 #!RemoteAsset:  sha256:ba5834a1fdbb6d1c1b1c065dfd789438e7aa42c03fc52d92c02af85d78d1c75c
-Source1:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v3.10.tar.gz
+Source1:        https://github.com/uxlfoundation/oneDNN/archive/refs/tags/v%{onednn_ver}.tar.gz
 BuildSystem:    pyproject
 
 BuildOption(install):  %{srcname}
@@ -115,21 +117,17 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 
 %patchlist
-# Backport #51099: fix riscv64 build — RISC-V FP32Vec copy ctors must not be
-# explicit (cpu_attn_vec.hpp copy-initialises them)
+# https://github.com/vllm-project/vllm/pull/51099
 1000-riscv-fp32vec-copy-ctors-non-explicit.patch
-# Ignore some version requirement; Tailor some packages
 2001-Adjust-dependencies-for-openRuyi.patch
-# Single-process: fall back to a fake distributed backend when torch lacks
-# the gloo c10d backend (lets vLLM run without rebuilding torch w/ USE_GLOO=ON).
+# Allow single-process execution when PyTorch lacks the Gloo backend
 2002-CPU-single-process-fake-distributed-backend.patch
 %if %{with rocm}
-# Run find_package(hipsparselt) before find_package(Torch) for proper link target
+# Define roc::hipsparselt before importing Torch's CMake targets
 2003-ROCm-hipsparselt-ordering.patch
-# cumem_allocator (LANGUAGE CXX) never gets -DUSE_ROCM on the HIP build, so
-# cumem_allocator_compat.h takes the CUDA path and #includes cuda_runtime_api.h.
+# Build cumem_allocator with ROCm HIP
 2004-cumem_allocator-define-USE_ROCM-for-CXX-target.patch
-# triton_kernels.cmake git-clones the triton repo at configure time
+# triton_kernels is an optional feature which git-clones code via network
 2005-Skip-triton_kernels-bundling-via-env.patch
 %else
 # Adjust CPU backend for openRuyi's OpenMP path
@@ -171,8 +169,7 @@ export CMAKE_ARGS="-DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
-# Prevent FetchContent with network
-export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-3.10"
+export FETCHCONTENT_SOURCE_DIR_ONEDNN="$PWD/oneDNN-%{onednn_ver}"
 # RISC-V CPU: cpu_extension.cmake auto-detects the RVV vector length from /proc/cpuinfo
 # SG2044 has VLEN=128
 %ifarch riscv64
@@ -181,8 +178,7 @@ export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
 %endif
 export CMAKE_BUILD_TYPE=Release
 
-# Cap parallelism by available memory: the kernel translation units are memory
-# hungry and will thrash or OOM otherwise.
+# Limit parallelism by available memory to avoid compiler OOM.
 mem_gb=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
 compile_jobs=$(nproc)
 mem_jobs=$(( 1 + mem_gb / 3 ))
@@ -191,8 +187,7 @@ mem_jobs=$(( 1 + mem_gb / 3 ))
 export MAX_JOBS=$compile_jobs
 
 %check
-# importing vllm pulls its large runtime dependency stack that is not、packaged
-# on openRuyi, and needs a GPU runtime. Temporarily skip them
+# Skip import checks: runtime dependencies and backend setup are unavailable.
 
 %files -f %{pyproject_files}
 %doc README.md

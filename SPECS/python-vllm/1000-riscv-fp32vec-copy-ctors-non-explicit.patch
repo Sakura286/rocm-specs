@@ -1,17 +1,3 @@
-[CPU][RISC-V] Fix build: make FP32Vec copy constructors non-explicit
-
-cpu_attn_vec.hpp copy-initialises the halves of the pair returned by
-load_b_pair_vec (`auto v = pair.first`). Copy-initialisation only considers
-non-explicit constructors, and the RISC-V backend declares the FP32Vec8 and
-FP32Vec16 copy constructors explicit, so the riscv64 build fails with
-"no matching function for call to FP32Vec16::FP32Vec16(FP32Vec16&)".
-Every other CPU backend leaves the copy constructor implicit; drop the
-explicit from these two. The RISC-V CPU backend has not compiled since
-upstream #49021.
-
-Upstream: https://github.com/vllm-project/vllm/pull/51099
-Upstream commit: ac7509e2b1db40fec2f03dde1ed4e9dfdc2338c9
-
 diff --git a/csrc/cpu/cpu_types_riscv_impl.hpp b/csrc/cpu/cpu_types_riscv_impl.hpp
 index 106bf44a2411..9a14d1c33866 100644
 --- a/csrc/cpu/cpu_types_riscv_impl.hpp
