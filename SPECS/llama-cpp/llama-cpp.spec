@@ -50,7 +50,8 @@ Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
 BuildSystem:    cmake
 
 %if %{with rocm}
-Patch0:         2000-limit-rocm-batch-size.patch
+# llama.cpp/ggml produces unstable output in riscv64 ROCm with default batch size
+Patch2000:      2000-limit-rocm-batch-size.patch
 %endif
 
 BuildOption(prep):  -n llama.cpp-%{version}

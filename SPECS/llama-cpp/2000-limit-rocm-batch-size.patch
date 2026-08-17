@@ -1,28 +1,12 @@
-Subject: [PATCH] limit default ROCm batch sizes to 8 on riscv64
-
-llama.cpp/ggml has produced unstable output in openRuyi's riscv64 ROCm
-environment at the upstream default batch sizes.  Match the workaround used
-by the openRuyi Ollama package while keeping the command-line options
-available for explicit overrides.
-
-The riscv64 condition lives in an #if defined(__riscv) guard rather than a
-spec-level %ifarch so the patch applies cleanly to every architecture,
-leaving non-riscv defaults untouched.
-
-Reference:
-https://github.com/Sakura286/rocm-specs/commit/d1069acf22589a2bc60d8fefa706c1fa822f5556
-
 --- a/common/common.h
 +++ b/common/common.h
-@@ -449,8 +449,15 @@
+@@ -440,8 +440,13 @@
  struct common_params {
      int32_t n_predict             =    -1; // max. number of new tokens to predict, -1 == no limit
      int32_t n_ctx                 =     0; // context size, 0 == context the model was trained with
 +#if defined(__riscv)
-+    // openRuyi: unstable riscv64 ROCm inference at the upstream default batch
-+    // sizes; limit them here. --batch-size/--ubatch-size still override.
-+    int32_t n_batch               =     8; // logical batch size for prompt processing
-+    int32_t n_ubatch              =     8; // physical batch size for prompt processing
++    int32_t n_batch               =     8;
++    int32_t n_ubatch              =     8;
 +#else
      int32_t n_batch               =  2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
      int32_t n_ubatch              =   512; // physical batch size for prompt processing (must be >=32 to use BLAS)
