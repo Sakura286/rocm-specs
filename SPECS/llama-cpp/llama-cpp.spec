@@ -74,7 +74,6 @@ BuildOption(conf):  -DGGML_BACKEND_DIR=%{_libdir}/ggml
 %ifarch x86_64
 BuildOption(conf):  -DGGML_CPU_ALL_VARIANTS=ON
 %endif
-BuildOption(check):  --output-on-failure --exclude-regex '%{ctest_exclude}'
 %if %{with rocm}
 BuildOption(conf):  -DGGML_HIP=ON
 BuildOption(conf):  -DCMAKE_HIP_COMPILER=%{rocmllvm_bindir}/clang++
@@ -83,6 +82,7 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %if %{with vulkan}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
+BuildOption(check):  --output-on-failure --exclude-regex '%{ctest_exclude}'
 
 BuildRequires:  cmake
 BuildRequires:  ninja
