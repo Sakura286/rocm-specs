@@ -39,7 +39,7 @@ Name:           llama-cpp-rocm
 %elif %{with vulkan}
 Name:           llama-cpp-vulkan
 %else
-Name:           llama-cpp-cpu
+Name:           llama-cpp
 %endif
 Version:        b%{build_number}
 Release:        %autorelease
@@ -62,13 +62,11 @@ BuildOption(conf):  -DLLAMA_BUILD_NUMBER=%{build_number}
 # Source0 is an archive without .git; preserve the verified release tag commit.
 BuildOption(conf):  -DLLAMA_BUILD_COMMIT=ad1de39e0708e3ced9c71bb3c82d93a2c046a73f
 BuildOption(conf):  -DLLAMA_BUILD_EXAMPLES=OFF
-BuildOption(conf):  -DLLAMA_BUILD_TESTS=ON
 BuildOption(conf):  -DLLAMA_TESTS_INSTALL=OFF
 # Building the Web UI downloads frontend assets
 BuildOption(conf):  -DLLAMA_BUILD_UI=OFF
 BuildOption(conf):  -DLLAMA_USE_PREBUILT_UI=OFF
 BuildOption(conf):  -DGGML_NATIVE=OFF
-BuildOption(conf):  -DGGML_CCACHE=OFF
 BuildOption(conf):  -DGGML_BACKEND_DL=ON
 BuildOption(conf):  -DGGML_BACKEND_DIR=%{_libdir}/ggml
 %ifarch x86_64
@@ -82,7 +80,7 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %if %{with vulkan}
 BuildOption(conf):  -DGGML_VULKAN=ON
 %endif
-BuildOption(check):  --output-on-failure --exclude-regex '%{ctest_exclude}'
+BuildOption(check):  --exclude-regex '%{ctest_exclude}'
 
 BuildRequires:  cmake
 BuildRequires:  ninja
@@ -111,17 +109,19 @@ BuildRequires:  pkgconfig(SPIRV-Headers)
 BuildRequires:  shaderc
 %endif
 
+# For multimodel AI
+Suggests:       ffmpeg
 %if %{without rocm}
 %if %{without vulkan}
-Provides:       llama-cpp = %{version}-%{release}
+Provides:       llama-cpp-cpu
 Conflicts:      llama-cpp-rocm
 Conflicts:      llama-cpp-vulkan
 %else
-Conflicts:      llama-cpp-cpu
+Conflicts:      llama-cpp
 Conflicts:      llama-cpp-rocm
 %endif
 %else
-Conflicts:      llama-cpp-cpu
+Conflicts:      llama-cpp
 Conflicts:      llama-cpp-vulkan
 %endif
 
@@ -138,36 +138,35 @@ Provides:       llama-cpp-devel = %{version}-%{release}
 %endif
 %endif
 
-%description devel
+%description    devel
 Headers, shared-library links, pkg-config metadata, and CMake package files for
 developing applications against llama.cpp and ggml.
 
 %check -a
 # Smoke-test the newly built CLI.
-LD_LIBRARY_PATH=%{_vpath_builddir}/bin \
-    %{_vpath_builddir}/bin/llama-cli --version
+LD_LIBRARY_PATH=%{_vpath_builddir}/bin %{_vpath_builddir}/bin/llama-cli --version
 
 %files
 %doc README.md
 %license LICENSE licenses/LICENSE-jsonhpp vendor/cpp-httplib/LICENSE
-%{_bindir}/llama*
 %{_libdir}/ggml/
 %{_libdir}/libggml*.so.*
 %{_libdir}/libllama-*-impl.so
 %{_libdir}/libllama*.so.*
 %{_libdir}/libmtmd.so.*
+%{_bindir}/llama*
 
 %files devel
 %{_includedir}/ggml*.h
 %{_includedir}/gguf.h
 %{_includedir}/llama*.h
 %{_includedir}/mtmd*.h
+%{_libdir}/cmake/ggml/
+%{_libdir}/cmake/llama/
 %{_libdir}/libggml*.so
 %{_libdir}/libllama.so
 %{_libdir}/libllama-common.so
 %{_libdir}/libmtmd.so
-%{_libdir}/cmake/ggml/
-%{_libdir}/cmake/llama/
 %{_libdir}/pkgconfig/llama.pc
 
 %changelog
