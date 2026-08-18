@@ -10,6 +10,8 @@
 
 %global onednn_ver 3.10
 
+%global llvm_maj_ver 22
+
 %if "%{flavor}" == "rocm"
 %bcond rocm 1
 %else
@@ -54,8 +56,8 @@ BuildRequires:  python3dist(numpy)
 BuildRequires:  cmake
 BuildRequires:  ninja
 %if %{with rocm}
-BuildRequires:  clang
-BuildRequires:  clang-tools-extra
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hipblaslt)
@@ -77,11 +79,11 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
-BuildRequires:  compiler-rt
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  hipcc
 BuildRequires:  libstdc++-devel
-BuildRequires:  lld
-BuildRequires:  llvm
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  python-torch-rocm-devel
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
