@@ -27,7 +27,9 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+%if %{with test}
 BuildOption(conf):  -DBUILD_TEST=ON
+%endif
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
@@ -65,12 +67,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 The rocRAND development package.
 
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{_description}
+%endif
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
@@ -93,9 +97,11 @@ rm -f %{buildroot}%{_datadir}/doc/rocrand/LICENSE.md
 %{_libdir}/cmake/rocrand/
 %{_libdir}/librocrand.so
 
+%if %{with test}
 %files test
 %{_bindir}/rocRAND/
 %{_bindir}/test_*
+%endif
 
 %changelog
 %autochangelog
