@@ -167,7 +167,7 @@ export PATH=%{rocmllvm_bindir}:$PATH
 export HIP_CLANG_PATH=%{rocmllvm_bindir}
 # Do not bundle triton_kernels into vllm/third_party
 export VLLM_SKIP_TRITON_KERNELS=1
-export CMAKE_ARGS="-DCMAKE_HIP_FLAGS=--rocm-device-lib-path=%{_prefix}/lib/clang/%{rocmllvm_version}/amdgcn/bitcode"
+export CMAKE_ARGS="-DCMAKE_HIP_FLAGS=--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resource-dir)/amdgcn/bitcode"
 %else
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
