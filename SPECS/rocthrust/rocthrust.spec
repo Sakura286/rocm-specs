@@ -34,7 +34,9 @@ BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
+%if %{with test}
 BuildOption(conf):  -DBUILD_TEST=ON
+%endif
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
@@ -69,12 +71,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    devel
 %{_description}
 
+%if %{with test}
 %package        test
 Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{_description}
+%endif
 
 %prep -a
 sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' cmake/ROCMExportTargetsHeaderOnly.cmake
@@ -99,10 +103,12 @@ rm -f %{buildroot}%{_docdir}/rocthrust/LICENSE
 %{_includedir}/thrust/
 %{_libdir}/cmake/rocthrust/
 
+%if %{with test}
 %files test
 %{_bindir}/*.hip
 %{_bindir}/test_*
 %{_bindir}/rocthrust/
+%endif
 
 %changelog
 %autochangelog
