@@ -74,6 +74,7 @@ BuildRequires:  rocm-llvm-macros
 # Add riscv64 support
 2001-fix-riscv64-abi.patch
 2002-add-lp64d-target-to-llvm-mc.patch
+2003-avoid-noinline-macro-pollution.patch
 
 %description
 ROCm Compute Language Runtime
@@ -92,9 +93,12 @@ Summary:        ROCm HIP development package
 Requires:       rocm-hip = %{version}-%{release}
 Requires:       rocm-comgr-devel
 Requires:       rocr-runtime-devel >= %{rocm_release}
-# For roc-obj-ls
+# For roc-obj-ls and roc-obj-extract
+# Both are Perl scripts installed without a .pl suffix
 Requires:       binutils
 Requires:       gawk
+Requires:       perl(File::Which)
+Requires:       perl(URI::Escape)
 
 %description -n rocm-hip-devel
 ROCm HIP development package.
