@@ -155,7 +155,8 @@ export VLLM_TARGET_DEVICE=rocm
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
 %endif
-%pyproject_buildrequires -R
+# The CLI smoke test needs the runtime dependencies declared by vLLM.
+%pyproject_buildrequires
 
 %build -p
 %if %{with rocm}
