@@ -70,6 +70,10 @@ Requires:       gcc
 Requires:       pkgconfig(python3)
 Requires:       cmake(hip)
 Requires:       rocm-device-libs
+# Triton invokes FileCheck through triton/FileCheck.  Use the system LLVM copy
+# instead of shipping the same ELF twice, which creates a build-id file conflict
+# when llvm22 and python-triton are installed together.
+Requires:       llvm%{llvm_maj_ver}
 
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
@@ -115,6 +119,11 @@ export CFLAGS="${CFLAGS} -fuse-ld=lld"
 export CXXFLAGS="${CXXFLAGS} -fuse-ld=lld"
 export LDFLAGS="${LDFLAGS} -fuse-ld=lld"
 export TRITON_APPEND_CMAKE_ARGS="-DTRITON_BUILD_EXAMPLES=OFF -DTRITON_BUILD_TOOLS=OFF -DTRITON_BUILD_UT=OFF -DLLVM_LINK_LLVM_DYLIB=ON -DMLIR_LINK_MLIR_DYLIB=ON -DCMAKE_BUILD_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib -DCMAKE_INSTALL_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
+
+%install -a
+rm %{buildroot}%{python3_sitearch}/%{srcname}/FileCheck
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/bin/FileCheck \
+    %{buildroot}%{python3_sitearch}/%{srcname}/FileCheck
 
 %files -f %{pyproject_files}
 %doc README.md
