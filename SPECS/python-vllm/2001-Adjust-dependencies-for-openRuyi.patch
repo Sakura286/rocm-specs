@@ -39,9 +39,7 @@ diff -N -a -r -U 0 a/requirements/common.txt b/requirements/common.txt
 +compressed-tensors >= 0.15.0.1 # required for compressed-tensors
 @@ -45 +43,0 @@
 -ninja # Required for xgrammar, rocm, tpu, xpu
-@@ -50 +47,0 @@
--openai-harmony >= 0.0.3  # Required for gpt-oss
-@@ -56 +52,0 @@
+@@ -56 +53,0 @@
 -opentelemetry-exporter-otlp >= 1.27.0
 diff -N -a -r -U 0 a/requirements/cpu.txt b/requirements/cpu.txt
 --- a/requirements/cpu.txt	2026-08-16 10:17:59.800610182 +0800
