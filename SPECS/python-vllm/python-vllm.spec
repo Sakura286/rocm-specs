@@ -189,7 +189,10 @@ mem_jobs=$(( 1 + mem_gb / 3 ))
 export MAX_JOBS=$compile_jobs
 
 %check
-# Skip import checks: runtime dependencies and backend setup are unavailable.
+# Smoke-test the installed CLI without running the full import check.
+PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
+PYTHONDONTWRITEBYTECODE=1 \
+%{buildroot}%{_bindir}/vllm --version
 
 %files -f %{pyproject_files}
 %doc README.md
