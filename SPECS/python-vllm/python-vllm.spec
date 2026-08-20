@@ -53,6 +53,7 @@ BuildRequires:  python3dist(jinja2)
 BuildRequires:  libomp
 BuildRequires:  pkgconfig(protobuf)
 BuildRequires:  python3dist(numpy)
+BuildRequires:  python3dist(regex)
 BuildRequires:  cmake
 BuildRequires:  ninja
 %if %{with rocm}
@@ -155,8 +156,8 @@ export VLLM_TARGET_DEVICE=rocm
 export VLLM_VERSION_OVERRIDE=%{version}+cpu
 export VLLM_TARGET_DEVICE=cpu
 %endif
-# The CLI smoke test needs the runtime dependencies declared by vLLM.
-%pyproject_buildrequires
+# Runtime dependencies needed by the CLI smoke test are listed explicitly above.
+%pyproject_buildrequires -R
 
 %build -p
 %if %{with rocm}
