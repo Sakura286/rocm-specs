@@ -65,6 +65,7 @@ BuildRequires:  python3dist(pytest)
 %if %{with rocm}
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake(hip)
+BuildRequires:  cmake(rocm-core)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  hipcc
 BuildRequires:  lld(major) = %{llvm_maj_ver}
