@@ -50,6 +50,7 @@ BuildRequires:  python-rpm-macros
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libwebp)
+BuildRequires:  pkgconfig(pybind11)
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  python3dist(numpy)
@@ -66,6 +67,8 @@ BuildRequires:  python3dist(pytest)
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(rocm-core)
+BuildRequires:  cmake(rocprim)
+BuildRequires:  cmake(rocthrust)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  hipcc
 BuildRequires:  lld(major) = %{llvm_maj_ver}
