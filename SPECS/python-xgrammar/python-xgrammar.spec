@@ -23,6 +23,8 @@ BuildOption(check):  -e xgrammar.kernels.apply_token_bitmask_inplace_cuda
 # No module named 'mlx'
 BuildOption(check):  -e xgrammar.kernels.apply_token_bitmask_mlx
 BuildOption(check):  -e xgrammar.contrib.mlxlm
+# This is a native shared library, not an importable Python extension module.
+BuildOption(check):  -e xgrammar.libxgrammar_bindings
 
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
@@ -42,9 +44,15 @@ sed -i 's/-Werror//g' CMakeLists.txt
 %generate_buildrequires
 %pyproject_buildrequires
 
+%install -a
+# RPM removes wheel RECORD metadata, so provide tvm_ffi's supported lib/ fallback.
+ln -s ../libxgrammar_bindings.so \
+    %{buildroot}%{python3_sitearch}/%{srcname}/lib/libxgrammar_bindings.so
+
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
+%{python3_sitearch}/%{srcname}/lib/libxgrammar_bindings.so
 
 %changelog
 %autochangelog
