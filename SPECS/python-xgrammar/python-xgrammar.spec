@@ -45,14 +45,14 @@ sed -i 's/-Werror//g' CMakeLists.txt
 %pyproject_buildrequires
 
 %install -a
-# RPM removes wheel RECORD metadata, so provide tvm_ffi's supported lib/ fallback.
-ln -s ../libxgrammar_bindings.so \
-    %{buildroot}%{python3_sitearch}/%{srcname}/lib/libxgrammar_bindings.so
+# tvm_ffi uses wheel RECORD metadata to locate the native binding library.
+echo '%{srcname}/libxgrammar_bindings.so,,' > \
+    %{buildroot}%{python3_sitearch}/%{srcname}-%{version}.dist-info/RECORD
 
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
-%{python3_sitearch}/%{srcname}/lib/libxgrammar_bindings.so
+%{python3_sitearch}/%{srcname}-%{version}.dist-info/RECORD
 
 %changelog
 %autochangelog
