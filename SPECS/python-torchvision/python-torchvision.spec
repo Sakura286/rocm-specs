@@ -43,6 +43,9 @@ BuildOption(prep):  -n vision-%{version}
 BuildOption(install):  %{srcname}
 # torchvision.image is a torch operator library, not an importable Python module.
 BuildOption(check):  -e '%{srcname}.image'
+# torchvision.io.video re-exports Meta-internal pytorch.vision.fb code that is
+# intentionally unavailable in OSS builds.
+BuildOption(check):  -e '%{srcname}.io.video'
 
 BuildRequires:  ninja
 BuildRequires:  pyproject-rpm-macros
@@ -66,6 +69,10 @@ BuildRequires:  python3dist(pytest)
 %if %{with rocm}
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake(hip)
+BuildRequires:  cmake(hipblas)
+BuildRequires:  cmake(hipblaslt)
+BuildRequires:  cmake(hipsolver)
+BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  cmake(rocthrust)
