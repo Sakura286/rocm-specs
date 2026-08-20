@@ -26,13 +26,13 @@ BuildRequires:  python3dist(maturin)
 BuildRequires:  rust
 BuildRequires:  rust-rpm-macros
 
-BuildRequires:  crate(blake3-1.0/default) >= 1.5.5
-BuildRequires:  crate(blake3-1.0/mmap) >= 1.5.5
-BuildRequires:  crate(blake3-1.0/rayon) >= 1.5.5
+BuildRequires:  crate(blake3-1/default) >= 1.5.5
+BuildRequires:  crate(blake3-1/mmap) >= 1.5.5
+BuildRequires:  crate(blake3-1/rayon) >= 1.5.5
 BuildRequires:  crate(hex-0.4/default) >= 0.4.3
 BuildRequires:  crate(pyo3-0.26/default) >= 0.26.0
 BuildRequires:  crate(pyo3-0.26/extension-module) >= 0.26.0
-BuildRequires:  crate(rayon-1.0/default) >= 1.11.0
+BuildRequires:  crate(rayon-1/default) >= 1.11.0
 
 Provides:       python3-%{srcname} = %{version}-%{release}
 Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
