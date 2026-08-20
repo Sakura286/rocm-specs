@@ -21,6 +21,9 @@ BuildSystem:    pyproject
 BuildOption(install):  -l tvm_ffi -L
 # This optional helper imports PyTorch, which is not a core runtime dependency.
 BuildOption(check):  -e tvm_ffi.utils._build_optional_torch_c_dlpack
+# These are native shared libraries, not importable Python extension modules.
+BuildOption(check):  -e tvm_ffi.lib.libtvm_ffi
+BuildOption(check):  -e tvm_ffi.lib.libtvm_ffi_testing
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
