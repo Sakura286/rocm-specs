@@ -89,6 +89,8 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 # Keep the pure-Python descriptor types imported by the common native
 # specialization code; this does not restore the NVIDIA codegen backend.
 2004-Retain-NVIDIA-Gluon-descriptor-types.patch
+# PUBLIC LLVM/MLIR component links still archive static libs next to the dylibs.
+2005-Link-LLVM-MLIR-components-through-shared-dylibs.patch
 
 %description
 Triton is a language and compiler for writing highly efficient custom

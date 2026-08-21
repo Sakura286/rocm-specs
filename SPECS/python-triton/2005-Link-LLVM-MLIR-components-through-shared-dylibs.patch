@@ -1,0 +1,77 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Fri, 21 Aug 2026 12:16:00 +0800
+Subject: [PATCH] Link LLVM/MLIR components through shared dylibs
+
+openRuyi LLVM 22 is BUILD_SHARED_LIBS=OFF while still shipping libLLVM.so
+and libMLIR.so. Triton's add_triton_object() PUBLIC-links named LLVM/MLIR
+component targets, which archives a second llvm::TargetRegistry next to
+the dylib. LLVM_LINK_LLVM_DYLIB / MLIR_LINK_MLIR_DYLIB only rewrite
+llvm_config() / mlir_target_link_libraries() consumers, which Triton does
+not use consistently.
+
+No upstream Triton, LLVM, or MLIR fix was found for this mixed-link
+pattern (triton-lang/triton issues/PRs/commits; #1743 is about Triton's
+own BUILD_SHARED_LIBS, not distro dylibs). The remap follows LLVM's
+mlir_target_link_libraries() / llvm_config(USE_SHARED) behaviour.
+
+---
+ CMakeLists.txt | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -122,6 +122,35 @@
+ include(AddLLVM)
+ include(AddMLIR)
+ 
++# Distro LLVM/MLIR is BUILD_SHARED_LIBS=OFF while still shipping libLLVM.so /
++# libMLIR.so. LLVM_LINK_LLVM_DYLIB and MLIR_LINK_MLIR_DYLIB only rewrite
++# llvm_config() / mlir_target_link_libraries() consumers. Triton's
++# target_link_libraries(PUBLIC LLVMCore / MLIRIR / ...) still archives the
++# static components and duplicates llvm::TargetRegistry inside libtriton.so.
++# Map those component names onto the shared dylibs instead.
++function(triton_use_shared_llvm_mlir libs_var)
++  set(_in ${${libs_var}})
++  set(_out)
++  set(_need_llvm FALSE)
++  set(_need_mlir FALSE)
++  foreach(_lib ${_in})
++    if(LLVM_LINK_LLVM_DYLIB AND _lib MATCHES "^LLVM")
++      set(_need_llvm TRUE)
++    elseif(MLIR_LINK_MLIR_DYLIB AND _lib MATCHES "^MLIR")
++      set(_need_mlir TRUE)
++    else()
++      list(APPEND _out ${_lib})
++    endif()
++  endforeach()
++  if(_need_llvm)
++    list(APPEND _out LLVM)
++  endif()
++  if(_need_mlir)
++    list(APPEND _out MLIR)
++  endif()
++  set(${libs_var} ${_out} PARENT_SCOPE)
++endfunction()
++
+ # Utilities
+ function(add_triton_object name)
+   cmake_parse_arguments(ARG "" "" "DEPENDS;LINK_LIBS" ${ARGN})
+@@ -137,6 +166,7 @@
+     add_dependencies(${name} ${ARG_DEPENDS})
+   endif()
+   if(ARG_LINK_LIBS)
++    triton_use_shared_llvm_mlir(ARG_LINK_LIBS)
+     target_link_libraries(${name} PUBLIC ${ARG_LINK_LIBS})
+   endif()
+ endfunction(add_triton_object)
+@@ -274,6 +304,7 @@
+     pybind11::headers
+ 
+   )
++  triton_use_shared_llvm_mlir(TRITON_LIBRARIES)
+   # Define triton library
+   string(JOIN "," TRITON_BACKENDS_TUPLE ${TRITON_CODEGEN_BACKENDS})
+ 
+-- 
+2.53.0
