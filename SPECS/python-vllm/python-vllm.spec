@@ -126,6 +126,8 @@ Conflicts:      python-%{srcname}-rocm
 # Allow single-process execution when PyTorch lacks the Gloo backend
 2002-CPU-single-process-fake-distributed-backend.patch
 %if %{with rocm}
+# https://github.com/vllm-project/vllm/pull/45916
+1001-ROCm-split-KV-paged-decode.patch
 # Define roc::hipsparselt before importing Torch's CMake targets
 2003-ROCm-hipsparselt-ordering.patch
 # Build cumem_allocator with ROCm HIP
