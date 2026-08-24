@@ -45,10 +45,10 @@ learning systems, including Python and C++ bindings used by XGrammar.
 %generate_buildrequires
 %pyproject_buildrequires
 
-%files -f %{pypro
-%{_bindir}/tvm-ffi-cject_files}
+%files -f %{pyproject_files}
 %doc README.md
-%license LICENSE NOTICE licenses/*onfig
+%license LICENSE NOTICE licenses/*
+%{_bindir}/tvm-ffi-config
 %{_bindir}/tvm-ffi-stubgen
 
 %changelog
