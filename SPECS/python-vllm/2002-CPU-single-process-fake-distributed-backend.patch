@@ -1,6 +1,18 @@
---- a/vllm/distributed/parallel_state.py	2026-08-16 10:27:52.414654732 +0800
-+++ b/vllm/distributed/parallel_state.py	2026-08-16 10:28:38.011310803 +0800
-@@ -452,17 +452,25 @@
+From ce564c052a58c6d15c905fa63fcabfb43dc5173c Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Mon, 24 Aug 2026 12:34:33 +0800
+Subject: [PATCH] CPU single-process fake distributed backend
+
+Allow single-process execution when PyTorch lacks the Gloo backend.
+---
+ vllm/distributed/parallel_state.py | 48 +++++++++++++++++++++++-------
+ 1 file changed, 38 insertions(+), 10 deletions(-)
+
+diff --git a/vllm/distributed/parallel_state.py b/vllm/distributed/parallel_state.py
+index a90e8ac..59eebf1 100644
+--- a/vllm/distributed/parallel_state.py
++++ b/vllm/distributed/parallel_state.py
+@@ -452,17 +452,25 @@ class GroupCoordinator:
              timeout = get_cpu_distributed_timeout_or_none()
              device_timeout = get_distributed_timeout_or_none()
  
@@ -28,7 +40,7 @@
                      )
                  if self.rank in ranks:
                      self.ranks = ranks
-@@ -1649,16 +1657,36 @@
+@@ -1649,16 +1657,36 @@ def init_distributed_environment(
              "distributed_init_method must be provided when initializing "
              "distributed environment"
          )
@@ -73,3 +85,6 @@
              # split_group needs local_rank early to compute device_id for
              # the eager init. local_rank is not available in torch
              # ProcessGroup, see https://github.com/pytorch/pytorch/issues/122816
+-- 
+2.53.0
+

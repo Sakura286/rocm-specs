@@ -142,8 +142,6 @@ Conflicts:      python-%{srcname}-rocm
 # Adjust CPU backend for openRuyi's OpenMP path
 2006-CPU-backend-OpenMP-path.patch
 %endif
-# Generate structured-output dependencies for openRuyi's RISC-V builds
-2007-Enable-structured-output-dependencies-on-RISC-V.patch
 
 %description
 vLLM is a fast and easy-to-use library for LLM inference and serving, featuring

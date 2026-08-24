@@ -1,7 +1,19 @@
-diff -Naur a/CMakeLists.txt b/CMakeLists.txt
---- a/CMakeLists.txt	2026-08-16 10:27:52.416807591 +0800
-+++ b/CMakeLists.txt	2026-08-16 10:28:58.093633169 +0800
-@@ -1493,7 +1493,11 @@
+From 48e113a6f6aa9683e909d0ef1e6506c8b3b8c366 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Mon, 24 Aug 2026 12:34:33 +0800
+Subject: [PATCH] Skip triton_kernels bundling via environment
+
+Permit distribution builds to avoid the external triton_kernels clone and omit its absent build-tree files.
+---
+ CMakeLists.txt |  6 +++++-
+ setup.py       | 20 ++++++++++++--------
+ 2 files changed, 17 insertions(+), 9 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ab64323..a22a701 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1494,7 +1494,11 @@ endif()
  
  # For CUDA and HIP builds also build the triton_kernels external package.
  if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
@@ -14,10 +26,11 @@ diff -Naur a/CMakeLists.txt b/CMakeLists.txt
  endif()
  
  # For CUDA we also build and ship some external projects.
-diff -Naur a/setup.py b/setup.py
---- a/setup.py	2026-08-16 10:27:52.416837096 +0800
-+++ b/setup.py	2026-08-16 10:28:58.093633169 +0800
-@@ -408,15 +408,19 @@
+diff --git a/setup.py b/setup.py
+index a8817a9..14c0ff6 100644
+--- a/setup.py
++++ b/setup.py
+@@ -408,15 +408,19 @@ class cmake_build_ext(build_ext):
              # copy vllm/third_party/triton_kernels/**/*.py from self.build_lib
              # to current directory so that they can be included in the editable
              # build
@@ -45,3 +58,6 @@ diff -Naur a/setup.py b/setup.py
  
          if _is_cuda():
              # copy vendored deep_gemm package from build_lib to source tree
+-- 
+2.53.0
+
