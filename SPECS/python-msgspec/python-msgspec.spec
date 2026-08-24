@@ -21,7 +21,6 @@ BuildOption(install):  %{pypi_name}
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  python3-devel
-BuildRequires:  gcc
 BuildRequires:  python3dist(pip)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)

@@ -16,14 +16,14 @@ URL:            https://github.com/mlc-ai/xgrammar
 Source0:        https://files.pythonhosted.org/packages/source/x/%{srcname}/%{srcname}-%{version}.tar.gz
 BuildSystem:    pyproject
 
-BuildOption(install):  -l %{srcname} -L
+BuildOption(install):  %{srcname}
 # No module named 'triton'
 BuildOption(check):  -e xgrammar.kernels.apply_token_bitmask_inplace_triton
 BuildOption(check):  -e xgrammar.kernels.apply_token_bitmask_inplace_cuda
 # No module named 'mlx'
 BuildOption(check):  -e xgrammar.kernels.apply_token_bitmask_mlx
 BuildOption(check):  -e xgrammar.contrib.mlxlm
-# This is a native shared library, not an importable Python extension module.
+# Native shared library
 BuildOption(check):  -e xgrammar.libxgrammar_bindings
 
 BuildRequires:  pyproject-rpm-macros

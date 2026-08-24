@@ -4,11 +4,6 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# openRuyi base ships transformers 5.2.0, which falls inside vLLM 0.22.1's
-# excluded 5.0-5.5.0 range; carry 5.12.1 here (vLLM allows >=5.5.1, and its
-# huggingface-hub >=1.5.0,<2.0 floor matches base's hub 1.5.0). Drop once base
-# bumps past 5.5.0.
-
 %global srcname transformers
 
 Name:           python-transformers
@@ -23,7 +18,7 @@ Source0:        https://files.pythonhosted.org/packages/source/t/%{srcname}/%{sr
 BuildArch:      noarch
 BuildSystem:    pyproject
 
-BuildOption(install):  -l %{srcname}
+BuildOption(install):  %{srcname}
 BuildOption(check):  -e 'transformers.*'
 
 BuildRequires:  pkgconfig(python3)

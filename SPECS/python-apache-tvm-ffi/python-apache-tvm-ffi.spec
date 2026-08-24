@@ -18,10 +18,10 @@ VCS:            git:https://github.com/apache/tvm-ffi.git
 Source0:        https://files.pythonhosted.org/packages/source/a/%{srcname}/%{pypi_name}-%{version}.tar.gz
 BuildSystem:    pyproject
 
-BuildOption(install):  -l tvm_ffi -L
-# This optional helper imports PyTorch, which is not a core runtime dependency.
+BuildOption(install):  tvm_ffi
+# An optional helper which imports PyTorch
 BuildOption(check):  -e tvm_ffi.utils._build_optional_torch_c_dlpack
-# These are native shared libraries, not importable Python extension modules.
+# Native shared libraries
 BuildOption(check):  -e tvm_ffi.lib.libtvm_ffi
 BuildOption(check):  -e tvm_ffi.lib.libtvm_ffi_testing
 
@@ -30,7 +30,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pyproject-rpm-macros
-BuildRequires:  python3dist(cython) >= 3
+BuildRequires:  python3dist(cython)
 BuildRequires:  python3dist(scikit-build-core) >= 0.10
 BuildRequires:  python3dist(setuptools-scm)
 
@@ -45,10 +45,10 @@ learning systems, including Python and C++ bindings used by XGrammar.
 %generate_buildrequires
 %pyproject_buildrequires
 
-%files -f %{pyproject_files}
+%files -f %{pypro
+%{_bindir}/tvm-ffi-cject_files}
 %doc README.md
-%license LICENSE NOTICE licenses/*
-%{_bindir}/tvm-ffi-config
+%license LICENSE NOTICE licenses/*onfig
 %{_bindir}/tvm-ffi-stubgen
 
 %changelog
