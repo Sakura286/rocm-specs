@@ -3,7 +3,7 @@ From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Mon, 24 Aug 2026 12:34:33 +0800
 Subject: [PATCH] Skip triton_kernels bundling via environment
 
-Permit distribution builds to avoid the external triton_kernels clone and omit its absent build-tree files.
+Skip triton_kernels build and avoid git clone it
 ---
  CMakeLists.txt |  6 +++++-
  setup.py       | 20 ++++++++++++--------

@@ -3,10 +3,6 @@ From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Mon, 24 Aug 2026 12:34:33 +0800
 Subject: [PATCH] Use the openRuyi CPU backend OpenMP path
 
-Use CMake's canonical OpenMP target when PyTorch does not ship libgomp, and explicitly link the selected runtime into each x86 CPU extension. Passing -fopenmp only as a compile option does not add libgomp to the extension's DT_NEEDED entries.
-
-No matching upstream fix was found. oneDNN documents libgomp as the runtime dependency for GCC builds with ONEDNN_CPU_RUNTIME=OMP:
-https://github.com/uxlfoundation/oneDNN#runtime-dependencies
 ---
  cmake/cpu_extension.cmake | 9 +++++----
  1 file changed, 5 insertions(+), 4 deletions(-)

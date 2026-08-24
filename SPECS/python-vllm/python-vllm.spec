@@ -56,7 +56,6 @@ BuildRequires:  libomp
 BuildRequires:  pkgconfig(protobuf)
 BuildRequires:  python3dist(numpy)
 
-
 %if %{with rocm}
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
@@ -150,7 +149,7 @@ continuous batching of incoming requests, and an OpenAI-compatible API server.
 
 %prep -a
 %if %{without rocm}
-# OneDNN is used when building CPU backend
+# OneDNN is used for CPU backend
 tar -xzf %{SOURCE1}
 %endif
 
@@ -187,7 +186,7 @@ export CMAKE_ARGS="-DVLLM_RVV_VLEN=128"
 %endif
 export CMAKE_BUILD_TYPE=Release
 
-# Limit parallelism by available memory to avoid compiler OOM.
+# Limit parallelism by available memory to avoid builder OOM.
 mem_gb=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
 compile_jobs=$(nproc)
 mem_jobs=$(( 1 + mem_gb / 3 ))
@@ -196,7 +195,8 @@ mem_jobs=$(( 1 + mem_gb / 3 ))
 export MAX_JOBS=$compile_jobs
 
 %check
-# Skip import checks: runtime dependencies and backend setup are unavailable.
+# Not all runtime dependencies and backend setup are unavailable.
+# vLLM have several backend and we only use two of them.
 
 %files -f %{pyproject_files}
 %doc README.md

@@ -3,7 +3,7 @@ From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Mon, 24 Aug 2026 12:34:33 +0800
 Subject: [PATCH] Define USE_ROCM for cumem_allocator
 
-cumem_allocator is a CXX target and otherwise falls into the CUDA path by default.
+cumem_allocator is a CXX target but falls into the CUDA path by default.
 ---
  CMakeLists.txt | 4 ++++
  1 file changed, 4 insertions(+)
