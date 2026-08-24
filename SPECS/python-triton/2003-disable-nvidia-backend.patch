@@ -1,30 +1,7 @@
-From 5713335cb101e276f0f57e68256622bcb915b9fe Mon Sep 17 00:00:00 2001
-From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Date: Sun, 12 Jul 2026 01:05:37 +0800
-Subject: [PATCH 4/4] Build only the AMD backend
-
-Based on home:nekorouter/triton-llvm22 and openRuyi PR #861.
----
- CMakeLists.txt                                | 42 +++++++++++++------
- MANIFEST.in                                   |  3 ++
- lib/Conversion/CMakeLists.txt                 |  4 +-
- python/triton/experimental/gluon/__init__.py  |  3 +-
- .../experimental/gluon/language/__init__.py   |  1 -
- setup.py                                      | 22 ++++++++--
- third_party/nvidia/CMakeLists.txt             |  4 +-
- third_party/nvidia/hopper/CMakeLists.txt      |  4 +-
- third_party/nvidia/include/CMakeLists.txt     |  6 ++-
- third_party/nvidia/lib/CMakeLists.txt         |  6 ++-
- third_party/proton/Dialect/CMakeLists.txt     |  2 +-
- .../Conversion/ProtonGPUToLLVM/CMakeLists.txt |  4 +-
- .../lib/ProtonGPUToLLVM/CMakeLists.txt        |  4 +-
- 13 files changed, 75 insertions(+), 30 deletions(-)
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index cdca173..8e85d43 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -20,11 +20,19 @@ option(TRITON_BUILD_PYTHON_MODULE "Build Python Triton bindings" OFF)
+diff -ruN a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-06-18 11:45:56
++++ b/CMakeLists.txt	2026-06-18 11:45:56
+@@ -20,11 +20,19 @@
  option(TRITON_BUILD_PROTON "Build the Triton Proton profiler" ON)
  option(TRITON_BUILD_UT "Build C++ Triton Unit Tests" ON)
  option(TRITON_BUILD_WITH_CCACHE "Build with ccache (if available)" ON)
@@ -44,7 +21,7 @@ index cdca173..8e85d43 100644
  if(TRITON_BUILD_WITH_CCACHE)
    find_program(CCACHE_PROGRAM ccache)
    if(CCACHE_PROGRAM)
-@@ -201,11 +209,15 @@ if(TRITON_BUILD_PYTHON_MODULE)
+@@ -201,6 +209,10 @@
      add_subdirectory(third_party/${CODEGEN_BACKEND})
    endforeach()
  
@@ -54,6 +31,10 @@ index cdca173..8e85d43 100644
 +
    if (TRITON_BUILD_PROTON)
      add_subdirectory(third_party/proton)
+   endif()
+@@ -204,8 +216,8 @@
+   if (TRITON_BUILD_PROTON)
+     add_subdirectory(third_party/proton)
 +    list(APPEND TRITON_PLUGIN_NAMES "proton")
    endif()
    # We always build proton dialect
@@ -61,7 +42,7 @@ index cdca173..8e85d43 100644
    add_subdirectory(third_party/proton/Dialect)
  
    if (DEFINED TRITON_PLUGIN_DIRS)
-@@ -314,7 +326,9 @@ if(TRITON_BUILD_PYTHON_MODULE)
+@@ -314,7 +326,9 @@
      COPYONLY)
  
    # Build plugins when building libtriton since they depend on libtriton.
@@ -72,10 +53,11 @@ index cdca173..8e85d43 100644
  endif()
  
  if (UNIX AND NOT APPLE AND NOT TRITON_EXT_ENABLED)
-@@ -342,15 +356,17 @@ endif()
+@@ -341,16 +355,18 @@
+ 
  find_package(Threads REQUIRED)
  
- add_subdirectory(third_party/f2reduce)
+-add_subdirectory(third_party/f2reduce)
 -add_subdirectory(bin)
 -add_subdirectory(test)
 -
@@ -87,6 +69,7 @@ index cdca173..8e85d43 100644
 -    DEPENDS TritonUnitTests
 -    USES_TERMINAL
 -  )
++add_subdirectory(third_party/f2reduce)
 +if(TRITON_BUILD_TOOLS)
 +  add_subdirectory(bin)
 +  add_subdirectory(test)
@@ -101,11 +84,20 @@ index cdca173..8e85d43 100644
 +    )
 +  endif()
  endif()
-diff --git a/MANIFEST.in b/MANIFEST.in
-index 1d82f2c..874be34 100644
---- a/MANIFEST.in
-+++ b/MANIFEST.in
-@@ -7,6 +7,9 @@ graft lib
+diff -ruN a/lib/Conversion/CMakeLists.txt b/lib/Conversion/CMakeLists.txt
+--- a/lib/Conversion/CMakeLists.txt	2026-06-18 11:21:24
++++ b/lib/Conversion/CMakeLists.txt	2026-06-18 11:45:56
+@@ -1,3 +1,5 @@
+ add_subdirectory(TritonToTritonGPU)
+ add_subdirectory(TritonGPUToLLVM)
+-add_subdirectory(TritonInstrumentToLLVM)
++if(TRITON_BUILD_NVIDIA_BACKEND_PLUGIN)
++  add_subdirectory(TritonInstrumentToLLVM)
++endif()
+diff -ruN a/MANIFEST.in b/MANIFEST.in
+--- a/MANIFEST.in	2026-06-18 11:21:24
++++ b/MANIFEST.in	2026-06-18 12:45:00
+@@ -6,6 +6,9 @@
  graft python/src
  graft python/test
  graft python/triton
@@ -115,21 +107,9 @@ index 1d82f2c..874be34 100644
  graft test
  graft third_party
  graft unittest
-diff --git a/lib/Conversion/CMakeLists.txt b/lib/Conversion/CMakeLists.txt
-index 84aba4f..114d140 100644
---- a/lib/Conversion/CMakeLists.txt
-+++ b/lib/Conversion/CMakeLists.txt
-@@ -1,3 +1,5 @@
- add_subdirectory(TritonToTritonGPU)
- add_subdirectory(TritonGPUToLLVM)
--add_subdirectory(TritonInstrumentToLLVM)
-+if(TRITON_BUILD_NVIDIA_BACKEND_PLUGIN)
-+  add_subdirectory(TritonInstrumentToLLVM)
-+endif()
-diff --git a/python/triton/experimental/gluon/__init__.py b/python/triton/experimental/gluon/__init__.py
-index 7c62d7c..f93b8f6 100644
---- a/python/triton/experimental/gluon/__init__.py
-+++ b/python/triton/experimental/gluon/__init__.py
+diff -ruN a/python/triton/experimental/gluon/__init__.py b/python/triton/experimental/gluon/__init__.py
+--- a/python/triton/experimental/gluon/__init__.py	2026-06-18 11:21:24
++++ b/python/triton/experimental/gluon/__init__.py	2026-06-18 13:20:00
 @@ -1,6 +1,5 @@
  from ._runtime import constexpr_function, jit
  from triton.language.core import must_use_result
@@ -138,22 +118,20 @@ index 7c62d7c..f93b8f6 100644
  
 -__all__ = ["constexpr_function", "jit", "must_use_result", "nvidia", "amd"]
 +__all__ = ["constexpr_function", "jit", "must_use_result", "amd"]
-diff --git a/python/triton/experimental/gluon/language/__init__.py b/python/triton/experimental/gluon/language/__init__.py
-index 8f0b9bd..5bd6639 100644
---- a/python/triton/experimental/gluon/language/__init__.py
-+++ b/python/triton/experimental/gluon/language/__init__.py
-@@ -132,6 +132,5 @@ from ._standard import (
+diff -ruN a/python/triton/experimental/gluon/language/__init__.py b/python/triton/experimental/gluon/language/__init__.py
+--- a/python/triton/experimental/gluon/language/__init__.py	2026-06-18 11:21:24
++++ b/python/triton/experimental/gluon/language/__init__.py	2026-06-18 13:20:00
+@@ -132,6 +132,5 @@
      zeros_like,
  )
  
 -from . import nvidia
  from . import amd
  from . import extra
-diff --git a/setup.py b/setup.py
-index 8bb6133..cc4ad5a 100644
---- a/setup.py
-+++ b/setup.py
-@@ -407,7 +407,8 @@ class CMakeBuild(build_ext):
+diff -ruN a/setup.py b/setup.py
+--- a/setup.py	2026-06-18 11:45:56
++++ b/setup.py	2026-06-18 11:45:56
+@@ -405,7 +405,8 @@
          build_ext.finalize_options(self)
  
      def run(self):
@@ -163,7 +141,7 @@ index 8bb6133..cc4ad5a 100644
  
          try:
              out = subprocess.check_output(["cmake", "--version"])
-@@ -631,7 +632,12 @@ def download_and_copy_dependencies():
+@@ -629,7 +630,12 @@
      )
  
  
@@ -177,7 +155,7 @@ index 8bb6133..cc4ad5a 100644
  
  
  def get_package_dirs():
-@@ -662,7 +668,17 @@ def get_package_dirs():
+@@ -662,7 +668,17 @@
  
  
  def get_packages():
@@ -196,11 +174,10 @@ index 8bb6133..cc4ad5a 100644
  
      for backend in backends:
          yield f"triton.backends.{backend.name}"
-diff --git a/third_party/nvidia/CMakeLists.txt b/third_party/nvidia/CMakeLists.txt
-index ff1ea24..58246d9 100644
---- a/third_party/nvidia/CMakeLists.txt
-+++ b/third_party/nvidia/CMakeLists.txt
-@@ -2,11 +2,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+diff -ruN a/third_party/nvidia/CMakeLists.txt b/third_party/nvidia/CMakeLists.txt
+--- a/third_party/nvidia/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/nvidia/CMakeLists.txt	2026-06-18 11:45:56
+@@ -2,11 +2,11 @@
  include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
  add_subdirectory(include)
  add_subdirectory(lib)
@@ -214,20 +191,18 @@ index ff1ea24..58246d9 100644
    add_subdirectory(unittest)
  endif()
  add_subdirectory(hopper)
-diff --git a/third_party/nvidia/hopper/CMakeLists.txt b/third_party/nvidia/hopper/CMakeLists.txt
-index 8a43d93..9252ad3 100644
---- a/third_party/nvidia/hopper/CMakeLists.txt
-+++ b/third_party/nvidia/hopper/CMakeLists.txt
+diff -ruN a/third_party/nvidia/hopper/CMakeLists.txt b/third_party/nvidia/hopper/CMakeLists.txt
+--- a/third_party/nvidia/hopper/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/nvidia/hopper/CMakeLists.txt	2026-06-18 11:45:56
 @@ -1,2 +1,4 @@
  add_subdirectory(include)
 -add_subdirectory(lib)
 +if(TRITON_BUILD_NVIDIA_BACKEND_PLUGIN)
 +  add_subdirectory(lib)
 +endif()
-diff --git a/third_party/nvidia/include/CMakeLists.txt b/third_party/nvidia/include/CMakeLists.txt
-index 2ef7aab..63b5fdd 100644
---- a/third_party/nvidia/include/CMakeLists.txt
-+++ b/third_party/nvidia/include/CMakeLists.txt
+diff -ruN a/third_party/nvidia/include/CMakeLists.txt b/third_party/nvidia/include/CMakeLists.txt
+--- a/third_party/nvidia/include/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/nvidia/include/CMakeLists.txt	2026-06-18 11:45:56
 @@ -1,3 +1,5 @@
  add_subdirectory(Dialect)
 -add_subdirectory(TritonNVIDIAGPUToLLVM)
@@ -236,10 +211,9 @@ index 2ef7aab..63b5fdd 100644
 +  add_subdirectory(TritonNVIDIAGPUToLLVM)
 +  add_subdirectory(NVGPUToLLVM)
 +endif()
-diff --git a/third_party/nvidia/lib/CMakeLists.txt b/third_party/nvidia/lib/CMakeLists.txt
-index 2ef7aab..63b5fdd 100644
---- a/third_party/nvidia/lib/CMakeLists.txt
-+++ b/third_party/nvidia/lib/CMakeLists.txt
+diff -ruN a/third_party/nvidia/lib/CMakeLists.txt b/third_party/nvidia/lib/CMakeLists.txt
+--- a/third_party/nvidia/lib/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/nvidia/lib/CMakeLists.txt	2026-06-18 11:45:56
 @@ -1,3 +1,5 @@
  add_subdirectory(Dialect)
 -add_subdirectory(TritonNVIDIAGPUToLLVM)
@@ -248,24 +222,10 @@ index 2ef7aab..63b5fdd 100644
 +  add_subdirectory(TritonNVIDIAGPUToLLVM)
 +  add_subdirectory(NVGPUToLLVM)
 +endif()
-diff --git a/third_party/proton/Dialect/CMakeLists.txt b/third_party/proton/Dialect/CMakeLists.txt
-index 9ef6bdc..8c19d82 100644
---- a/third_party/proton/Dialect/CMakeLists.txt
-+++ b/third_party/proton/Dialect/CMakeLists.txt
-@@ -2,7 +2,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
- include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
- add_subdirectory(include)
- add_subdirectory(lib)
--if(TRITON_BUILD_PYTHON_MODULE)
-+if(TRITON_BUILD_PYTHON_MODULE AND TRITON_BUILD_PROTON)
-   add_triton_plugin(TritonProton ${CMAKE_CURRENT_SOURCE_DIR}/triton_proton.cc LINK_LIBS ProtonToProtonGPU ProtonGPUToLLVM ProtonAMDGPUToLLVM ProtonNVIDIAGPUToLLVM ProtonAnalysis)
-   target_link_libraries(TritonProton PRIVATE Python3::Module pybind11::headers)
- endif()
-diff --git a/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt b/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt
-index 4860521..77b8ef1 100644
---- a/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt
-+++ b/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt
-@@ -2,5 +2,7 @@ set(LLVM_TARGET_DEFINITIONS Passes.td)
+diff -ruN a/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt b/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt
+--- a/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/proton/Dialect/include/Conversion/ProtonGPUToLLVM/CMakeLists.txt	2026-06-18 11:50:00
+@@ -2,5 +2,7 @@
  mlir_tablegen(Passes.h.inc -gen-pass-decls --name ProtonGPUToLLVM)
  add_public_tablegen_target(ProtonGPUConversionPassIncGen)
  
@@ -274,11 +234,16 @@ index 4860521..77b8ef1 100644
 +  add_subdirectory(ProtonNvidiaGPUToLLVM)
 +endif()
  add_subdirectory(ProtonAMDGPUToLLVM)
-diff --git a/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt b/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt
-index e3d89b8..c4c85e5 100644
---- a/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt
-+++ b/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt
-@@ -13,5 +13,7 @@ add_triton_library(ProtonGPUToLLVM
+diff -ruN a/third_party/proton/Dialect/CMakeLists.txt b/third_party/proton/Dialect/CMakeLists.txt
+--- a/third_party/proton/Dialect/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/proton/Dialect/CMakeLists.txt	2026-06-18 11:55:00
+@@ -5,1 +5,1 @@
+-if(TRITON_BUILD_PYTHON_MODULE)
++if(TRITON_BUILD_PYTHON_MODULE AND TRITON_BUILD_PROTON)
+diff -ruN a/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt b/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt
+--- a/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt	2026-06-18 11:21:24
++++ b/third_party/proton/Dialect/lib/ProtonGPUToLLVM/CMakeLists.txt	2026-06-18 11:50:00
+@@ -13,5 +13,7 @@
      ProtonAnalysis
  )
  
@@ -287,6 +252,3 @@ index e3d89b8..c4c85e5 100644
 +  add_subdirectory(ProtonNvidiaGPUToLLVM)
 +endif()
  add_subdirectory(ProtonAMDGPUToLLVM)
--- 
-2.53.0
-

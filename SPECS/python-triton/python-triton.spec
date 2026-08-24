@@ -64,12 +64,12 @@ BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(wheel)
 
 %patchlist
-# Use system-provided build tools instead of vendored copies.
-2000-Use-system-build-tools.patch
 # Link X86 codegen libraries on the riscv64 host.
 2001-Add-riscv64-host-codegen-libraries.patch
+# Use system-provided build tools instead of vendored copies.
+2002-use-system-build-tools.patch
 # Disable the NVIDIA backend (not relevant for the RISC-V target).
-2003-Build-only-the-AMD-backend.patch
+2003-disable-nvidia-backend.patch
 # Keep pure-Python descriptor types used by common specialization code.
 2004-Retain-NVIDIA-Gluon-descriptor-types.patch
 
