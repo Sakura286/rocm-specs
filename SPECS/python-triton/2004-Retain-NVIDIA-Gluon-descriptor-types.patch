@@ -1,9 +1,10 @@
-From 874bf422376427042a253ec6ad93a737b989cf62 Mon Sep 17 00:00:00 2001
+From fd3406067f9a105f4f4f243ce959462787ca33f9 Mon Sep 17 00:00:00 2001
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Date: Sun, 12 Jul 2026 10:00:01 +0800
 Subject: [PATCH] Retain NVIDIA Gluon descriptor types
 
-The common native specializer imports the pure-Python NVIDIA TensorDescriptor class even when only the AMD backend is enabled.
+The common native specializer imports the pure-Python NVIDIA
+TensorDescriptor class even when only the AMD backend is enabled.
 ---
  MANIFEST.in | 1 -
  setup.py    | 2 --
