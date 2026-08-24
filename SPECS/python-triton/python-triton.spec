@@ -143,6 +143,7 @@ export TRITON_APPEND_CMAKE_ARGS="-DTRITON_BUILD_EXAMPLES=OFF -DTRITON_BUILD_TOOL
 
 %files -f %{pyproject_files}
 %doc README.md
+%license LICENSE
 %license llvm-project-%{llvm_commit}/llvm/LICENSE.TXT
 
 %changelog
