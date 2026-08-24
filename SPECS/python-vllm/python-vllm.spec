@@ -40,6 +40,8 @@ BuildSystem:    pyproject
 
 BuildOption(install):  %{srcname}
 
+BuildRequires:  cmake
+BuildRequires:  ninja
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  python-rpm-macros
 BuildRequires:  pkgconfig(python3)
@@ -53,8 +55,8 @@ BuildRequires:  python3dist(jinja2)
 BuildRequires:  libomp
 BuildRequires:  pkgconfig(protobuf)
 BuildRequires:  python3dist(numpy)
-BuildRequires:  cmake
-BuildRequires:  ninja
+
+
 %if %{with rocm}
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
@@ -122,12 +124,14 @@ Conflicts:      python-%{srcname}-rocm
 %patchlist
 # https://github.com/vllm-project/vllm/pull/51099
 1000-riscv-fp32vec-copy-ctors-non-explicit.patch
+%if %{with rocm}
+# https://github.com/vllm-project/vllm/pull/45916
+1001-ROCm-split-KV-paged-decode.patch
+%endif
 2001-Adjust-dependencies-for-openRuyi.patch
 # Allow single-process execution when PyTorch lacks the Gloo backend
 2002-CPU-single-process-fake-distributed-backend.patch
 %if %{with rocm}
-# https://github.com/vllm-project/vllm/pull/45916
-1001-ROCm-split-KV-paged-decode.patch
 # Define roc::hipsparselt before importing Torch's CMake targets
 2003-ROCm-hipsparselt-ordering.patch
 # Build cumem_allocator with ROCm HIP
@@ -138,10 +142,8 @@ Conflicts:      python-%{srcname}-rocm
 # Adjust CPU backend for openRuyi's OpenMP path
 2006-CPU-backend-OpenMP-path.patch
 %endif
-# Report package versions without initializing backend/device detection
-2007-Report-version-before-device-detection.patch
 # Generate structured-output dependencies for openRuyi's RISC-V builds
-2008-Enable-structured-output-dependencies-on-RISC-V.patch
+2007-Enable-structured-output-dependencies-on-RISC-V.patch
 
 %description
 vLLM is a fast and easy-to-use library for LLM inference and serving, featuring
