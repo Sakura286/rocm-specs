@@ -140,6 +140,8 @@ Conflicts:      python-%{srcname}-rocm
 %endif
 # Report package versions without initializing backend/device detection
 2007-Report-version-before-device-detection.patch
+# Generate structured-output dependencies for openRuyi's RISC-V builds
+2008-Enable-structured-output-dependencies-on-RISC-V.patch
 
 %description
 vLLM is a fast and easy-to-use library for LLM inference and serving, featuring
