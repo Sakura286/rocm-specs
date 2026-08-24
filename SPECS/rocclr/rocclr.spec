@@ -93,12 +93,9 @@ Summary:        ROCm HIP development package
 Requires:       rocm-hip = %{version}-%{release}
 Requires:       rocm-comgr-devel
 Requires:       rocr-runtime-devel >= %{rocm_release}
-# For roc-obj-ls and roc-obj-extract
-# Both are Perl scripts installed without a .pl suffix
+# For roc-obj-ls
 Requires:       binutils
 Requires:       gawk
-Requires:       perl(File::Which)
-Requires:       perl(URI::Escape)
 
 %description -n rocm-hip-devel
 ROCm HIP development package.
