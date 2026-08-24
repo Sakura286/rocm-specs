@@ -131,6 +131,11 @@ for f in `find %{buildroot}%{python3_sitearch} -name '*.py'`; do
     fi
 done
 
+%check -a
+%if %{with test}
+%pytest
+%endif
+
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
