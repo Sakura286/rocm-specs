@@ -16,7 +16,7 @@ URL:            https://github.com/oconnor663/blake3-py
 Source0:        https://files.pythonhosted.org/packages/source/b/%{srcname}/%{srcname}-%{version}.tar.gz
 BuildSystem:    pyproject
 
-BuildOption(install):  -l %{srcname} -L
+BuildOption(install):  %{srcname}
 
 BuildRequires:  cargo
 BuildRequires:  pkgconfig(python3)
