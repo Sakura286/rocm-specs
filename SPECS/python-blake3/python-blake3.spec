@@ -43,14 +43,7 @@ blake3 provides Python bindings for the BLAKE3 cryptographic hash function,
 backed by the official Rust implementation.
 
 %prep -a
-mkdir -p .cargo
-cat > .cargo/config.toml <<'EOF'
-[source.crates-io]
-replace-with = "system-registry"
-
-[source.system-registry]
-directory = "/usr/share/cargo/registry"
-EOF
+%rust_setup_registry
 rm -f Cargo.lock
 
 %generate_buildrequires
