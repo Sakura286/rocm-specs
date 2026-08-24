@@ -18,7 +18,7 @@ Source0:        https://files.pythonhosted.org/packages/source/t/%{srcname}/%{sr
 BuildArch:      noarch
 BuildSystem:    pyproject
 
-BuildOption(install):  %{srcname}
+BuildOption(install):  -l %{srcname}
 BuildOption(check):  -e 'transformers.*'
 
 BuildRequires:  pkgconfig(python3)
