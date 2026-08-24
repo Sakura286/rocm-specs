@@ -35,10 +35,6 @@ URL:            https://github.com/pytorch/vision
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 BuildSystem:    pyproject
 
-%patchlist
-2001-Add-HIP-detect-logic.patch
-2002-Use-flavor-specific-torch-build-dependency.patch
-
 BuildOption(prep):  -n vision-%{version}
 BuildOption(install):  %{srcname}
 # torchvision.image is a torch operator .so, not a Python extension module; skip import check
@@ -46,7 +42,6 @@ BuildOption(check):  -e '%{srcname}.image'
 BuildOption(check):  -e '%{srcname}.io.video'
 
 BuildRequires:  ninja
-
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libwebp)
@@ -102,6 +97,10 @@ Provides:       python3-%{srcname}%{?_isa} = %{version}-%{release}
 %python_provide python3-%{srcname}
 Conflicts:      python-%{srcname}-rocm
 %endif
+
+%patchlist
+2001-Add-HIP-detect-logic.patch
+2002-Use-flavor-specific-torch-build-dependency.patch
 
 %description
 The torchvision package consists of popular datasets, model architectures,
