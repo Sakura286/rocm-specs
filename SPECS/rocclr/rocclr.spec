@@ -52,12 +52,11 @@ BuildOption(conf):  -DUSE_PROF_API=ON
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
-BuildRequires:  clang22-static
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
-BuildRequires:  llvm22-devel
-BuildRequires:  llvm22-static
+BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
+BuildRequires:  llvm-static(major) = %{llvm_maj_ver}
 BuildRequires:  cmake(rocprofiler-register)
 BuildRequires:  hipcc
 BuildRequires:  lld(major) = %{llvm_maj_ver}
