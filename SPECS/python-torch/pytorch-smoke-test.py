@@ -8,7 +8,9 @@
 # do not collapse to 0.  That guard covers the CBLAS complex-dot path forced on
 # by 2001-force-cblas-complex-dot-for-openblas.patch: the references use
 # elementwise mul + sum, which do not go through the BLAS dot routine, so they
-# stay valid regardless of that path.
+# stay valid regardless of that path.  On a ROCm build it also asserts that
+# ProcessGroupNCCL was compiled in (RCCL is the system NCCL); that is a
+# compile-time flag check and does not need a GPU.
 import torch, torch.nn as nn
 
 torch.manual_seed(0)
@@ -30,5 +32,11 @@ for dt in (torch.complex64, torch.complex128):
     a = torch.randn(9, dtype=dt); b = torch.randn(9, dtype=dt)
     torch.testing.assert_close(torch.dot(a, b), (a * b).sum(), rtol=1e-4, atol=1e-5)
     torch.testing.assert_close(torch.vdot(a, b), (a.conj() * b).sum(), rtol=1e-4, atol=1e-5)
+
+if getattr(torch.version, "hip", None):
+    assert torch.distributed.is_available()
+    assert torch.distributed.is_nccl_available(), (
+        "ROCm torch must ship ProcessGroupNCCL (USE_NCCL=ON, system RCCL)"
+    )
 
 print("functional smoke: PASS")

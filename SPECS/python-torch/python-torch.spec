@@ -24,7 +24,7 @@
 %bcond rocm 0
 %endif
 
-# For testing distributed+rccl etc.
+# MPI process group is optional. RCCL multi-node bootstraps via torchrun/TCPStore.
 # TODO: openmpi not included in openRuyi
 %bcond mpi 0
 
@@ -444,6 +444,12 @@ export USE_ROCM_CK_GEMM=OFF
 export USE_FBGEMM_GENAI=OFF
 
 export USE_MAGMA=ON
+# RCCL is NCCL's ROCm counterpart. ProcessGroupNCCL talks to it through the
+# NCCL API (hipify maps <nccl.h> to <rccl/rccl.h>). Bundled third_party/nccl
+# is CUDA-only; cmake/External/rccl.cmake requires USE_SYSTEM_NCCL and
+# find_package(rccl). MPI is not required to enable this path.
+export USE_NCCL=ON
+export USE_SYSTEM_NCCL=ON
 export HIP_PATH=`hipconfig -p`
 export ROCM_PATH=`hipconfig -R`
 
@@ -469,6 +475,8 @@ export PYTORCH_BLAS_USE_CBLAS_DOT=ON
 %if %{with rocm}
 export USE_ROCM=ON
 export USE_ROCM_CK=OFF
+export USE_NCCL=ON
+export USE_SYSTEM_NCCL=ON
 export HIP_PATH=`hipconfig -p`
 export ROCM_PATH=`hipconfig -R`
 
@@ -479,14 +487,6 @@ export HIPFLAGS="--rocm-device-lib-path=$(%{rocmllvm_bindir}/clang -print-resour
 %endif
 
 %install -a
-%if %{with rocm}
-# Gloo is for CPU backend
-# During PyTorch ROCm building, Gloo tests link the uninstalled libc10d_hip_test.so
-rm -f %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooTest \
-      %{buildroot}%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
-sed -i '\#/torch/bin/ProcessGroupGlooTest$#d;\#/torch/bin/ProcessGroupGlooAsyncTest$#d' %{pyproject_files}
-%endif
-
 # Development SDK files belong to -devel, not the main package.
 sed -i '\#%{python3_sitearch}/torch/include/#d;\#%{python3_sitearch}/torch/share/cmake/#d' \
     %{pyproject_files}
@@ -494,10 +494,10 @@ sed -i '\#%{python3_sitearch}/torch/include/#d;\#%{python3_sitearch}/torch/share
 %if %{with test}
 # Test files belong to -test, not the main package
 sed -i \
-    -e '\#%{python3_sitearch}/torch/bin/\(FileStoreTest\|HashStoreTest\|ProcessGroupGlooAsyncTest\|ProcessGroupGlooTest\|TCPStoreTest\|test_aoti_abi_check\|test_api\|test_cpp_rpc\|test_dist_autograd\|test_jit\|test_lazy\|test_shim\)$#d' \
+    -e '\#%{python3_sitearch}/torch/bin/\(FileStoreTest\|HashStoreTest\|ProcessGroupGlooAsyncTest\|ProcessGroupGlooTest\|ProcessGroupNCCLErrorsTest\|ProcessGroupNCCLTest\|TCPStoreTest\|test_aoti_abi_check\|test_api\|test_cpp_rpc\|test_dist_autograd\|test_jit\|test_lazy\|test_shim\)$#d' \
     -e '\#%{python3_sitearch}/torch/bin/\(script_module_v4\.ptl\|test_interpreter_async\.pt\)$#d' \
     -e '\#%{python3_sitearch}/torch/bin/upgrader_models#d' \
-    -e '\#%{python3_sitearch}/torch/lib/\(libaoti_custom_ops\|libbackend_with_compiler\|libjitbackend_test\|libtorchbind_test\)\.so$#d' \
+    -e '\#%{python3_sitearch}/torch/lib/\(libaoti_custom_ops\|libbackend_with_compiler\|libc10d_hip_test\|libjitbackend_test\|libtorchbind_test\)\.so$#d' \
     -e '\#%{python3_sitearch}/torch/test/#d' \
     -e '\#%{python3_sitearch}/torch/test$#d' \
     %{pyproject_files}
@@ -507,7 +507,8 @@ sed -i \
 %if %{with test}
 # Default %check only checks imports
 # Additionally run a small functional smoke against the just-built tree:
-# real matmul, autograd, a training step, and a complex dot/vdot guard
+# real matmul, autograd, a training step, a complex dot/vdot guard, and
+# (ROCm) a compile-time check that ProcessGroupNCCL/RCCL was built in
 # Fedora/Debian/Arch do not run PyTorch's own test/*.py suite at build time either;
 # A smoke is enough to catch base functionality
 PYTHONPATH="%{buildroot}%{python3_sitearch}:%{buildroot}%{python3_sitelib}" \
@@ -527,8 +528,11 @@ PYTHONDONTWRITEBYTECODE=1 \
 %files test
 %{python3_sitearch}/torch/bin/FileStoreTest
 %{python3_sitearch}/torch/bin/HashStoreTest
-%if %{without rocm}
 %{python3_sitearch}/torch/bin/ProcessGroupGlooTest
+%if %{with rocm}
+%{python3_sitearch}/torch/bin/ProcessGroupGlooAsyncTest
+%{python3_sitearch}/torch/bin/ProcessGroupNCCLErrorsTest
+%{python3_sitearch}/torch/bin/ProcessGroupNCCLTest
 %endif
 %{python3_sitearch}/torch/bin/TCPStoreTest
 %{python3_sitearch}/torch/bin/script_module_v4.ptl
@@ -543,6 +547,9 @@ PYTHONDONTWRITEBYTECODE=1 \
 %{python3_sitearch}/torch/bin/upgrader_models/
 %{python3_sitearch}/torch/lib/libaoti_custom_ops.so
 %{python3_sitearch}/torch/lib/libbackend_with_compiler.so
+%if %{with rocm}
+%{python3_sitearch}/torch/lib/libc10d_hip_test.so
+%endif
 %{python3_sitearch}/torch/lib/libjitbackend_test.so
 %{python3_sitearch}/torch/lib/libtorchbind_test.so
 %{python3_sitearch}/torch/test/
