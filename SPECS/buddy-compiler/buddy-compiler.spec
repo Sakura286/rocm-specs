@@ -15,6 +15,9 @@
 %global _find_debuginfo_dwz_opts %{nil}
 # The private SDK must not satisfy system LLVM/MLIR dependency requests.
 %global __provides_exclude_from ^%{buddy_prefix}/.*$
+# These DSOs and their consumers are shipped together in the private LLVM RPM.
+# Match its hidden Provides with Requires filtering, retaining system library deps.
+%global __requires_exclude ^lib(MLIRPythonCAPI|clang|mlir_float16_utils)\.so\.24\.0git.*$
 
 Name:           buddy-compiler
 Version:        0.0.8
