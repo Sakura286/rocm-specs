@@ -1,0 +1,76 @@
+Use GNUInstallDirs and emit a CMake package config
+
+Distro packaging installs shared libraries into libdir (lib64 on
+64-bit) rather than a hardcoded lib/, and find_package(torq_tile)
+needs a config file that includes the exported targets. Fail
+configure when no RVV sources are selected so an empty library
+is not installed.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -10,6 +10,9 @@
+     LANGUAGES C CXX
+ )
+ 
++include(GNUInstallDirs)
++include(CMakePackageConfigHelpers)
++
+ # ============================================================================
+ # Project Options
+ # ============================================================================
+@@ -192,6 +195,13 @@
+     list(APPEND TORQ_TILE_ALL_SOURCES ${TORQ_TILE_RVV_BF16_SOURCES})
+ endif()
+ 
++if(NOT TORQ_TILE_ALL_SOURCES)
++    message(FATAL_ERROR
++        "TORQ-Tile requires RISC-V Vector compiler support. "
++        "Pass CMAKE_C_FLAGS/CMAKE_CXX_FLAGS with the target ISA, "
++        "for example -march=rv64gcv_zvfh.")
++endif()
++
+ # ============================================================================
+ # Library Target Definition
+ # ============================================================================
+@@ -297,14 +307,14 @@
+ # Install library target
+ install(TARGETS torq_tile
+     EXPORT torq_tile_targets
+-    ARCHIVE DESTINATION lib
+-    LIBRARY DESTINATION lib
+-    RUNTIME DESTINATION bin
++    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+ )
+ 
+ # Install header files
+ install(DIRECTORY src/
+-    DESTINATION include/torq_tile
++    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/torq_tile
+     FILES_MATCHING
+     PATTERN "*.h"
+     PATTERN "*.hpp"
+@@ -315,5 +325,21 @@
+ install(EXPORT torq_tile_targets
+     FILE torq_tile_targets.cmake
+     NAMESPACE torq_tile::
+-    DESTINATION lib/cmake/torq_tile
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/torq_tile
++)
++
++write_basic_package_version_file(
++    "${CMAKE_CURRENT_BINARY_DIR}/torq_tile-config-version.cmake"
++    VERSION ${PROJECT_VERSION}
++    COMPATIBILITY SameMajorVersion
++)
++
++file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/torq_tile-config.cmake"
++    "include(\"\${CMAKE_CURRENT_LIST_DIR}/torq_tile_targets.cmake\")\n"
++)
++
++install(FILES
++    "${CMAKE_CURRENT_BINARY_DIR}/torq_tile-config.cmake"
++    "${CMAKE_CURRENT_BINARY_DIR}/torq_tile-config-version.cmake"
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/torq_tile
+ )
