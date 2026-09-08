@@ -28,6 +28,8 @@ Source0:        %{url}/archive/refs/tags/release/v%{version}.tar.gz
 # LLVM 24 has no matching release tarball for this development revision.
 #!RemoteAsset:  sha256:b5b208a5217744bcafa73dbc26bf58d737936401cf4306206ad3a04a424859be
 Source1:        https://github.com/llvm/llvm-project/archive/%{llvm_commit}.tar.gz
+# Match system Clang GCC discovery for the bootstrapped OpenMP compiler.
+Patch2000:      2000-clang-find-openruyi-gcc.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
@@ -110,9 +112,10 @@ PyTorch graph import and MLIR execution support. Model weights and optional
 model-specific Python dependencies are not included.
 
 %prep
-%autosetup -n buddy-mlir-release-v%{version} -a 1
+%autosetup -N -n buddy-mlir-release-v%{version} -a 1
 rmdir llvm
 mv llvm-project-%{llvm_commit} llvm
+%patch -P 2000 -p1 -d llvm
 # nanobind compiles its runtime into the private Python extension libraries.
 cp %{_licensedir}/python-nanobind/LICENSE nanobind-LICENSE
 # The upstream CMake config assumes its tools are below the install prefix.
