@@ -6,8 +6,20 @@ library from the sdist. Runtime and build headers now come from the same
 RPM provider. Static TVM runtime and Hexagon RPC are not enabled.
 Reference: https://github.com/apache/tvm-ffi/tree/v0.1.10/cmake
 
+Keep the system Z3 SONAME; the unversioned wheel rewrite applies only
+when USE_PYPI_Z3 is enabled.
+
 --- a/3rdparty/tvm/CMakeLists.txt
 +++ b/3rdparty/tvm/CMakeLists.txt
+@@ -564,7 +564,7 @@
+       COMMAND install_name_tool -change "libz3.dylib" "@rpath/libz3.dylib" $<TARGET_FILE:tvm>
+       COMMENT "Patching libz3 reference to use @rpath"
+     )
+-  else()
++  elseif(USE_PYPI_Z3)
+     find_program(PATCHELF_EXECUTABLE patchelf)
+     if (PATCHELF_EXECUTABLE)
+       execute_process(
 @@ -613,7 +613,13 @@
    add_subdirectory("apps/ios_rpc")
  endif()
