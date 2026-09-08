@@ -32,7 +32,7 @@ Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 Patch0:         0001-Add-riscv64-support.patch
-Patch1:         0002-Replace-fence-instrutions-for-riscv64.patch
+Patch1:         0002-Replace-fence-instructions-for-riscv64.patch
 
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 BuildOption(conf):  -DCMAKE_SHARED_LINKER_FLAGS=-ldrm_amdgpu
