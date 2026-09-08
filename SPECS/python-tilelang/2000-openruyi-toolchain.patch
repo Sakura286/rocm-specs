@@ -1,0 +1,60 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Discover the packaged Buddy LLVM toolchain
+
+Keep environment overrides first, then use openRuyi's private Buddy LLVM
+prefix. The spec substitutes the RPM libdir into the placeholder. Disable
+the optional torch-c-dlpack-ext wheel dependency; tvm-ffi supports disabling
+that optimization via TVM_FFI_DISABLE_TORCH_C_DLPACK.
+
+diff --git a/pyproject.toml b/pyproject.toml
+index ae6453a7..7b3f8a89 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -35,7 +35,6 @@ dependencies = [
+     # Without it, TVM FFI may require JIT compilation on first import.
+     # Skip riscv64, where the optional extension currently does not build
+     # against the board's validated torch toolchain.
+-    "torch-c-dlpack-ext; python_version < '3.14' and platform_machine != 'riscv64'",
+     "cloudpickle",
+     "ml-dtypes",
+     "numpy>=1.23.5",
+diff --git a/testing/python/riscv/test_riscv_toolchain.py b/testing/python/riscv/test_riscv_toolchain.py
+index 702632c2..d0fbe571 100644
+--- a/testing/python/riscv/test_riscv_toolchain.py
++++ b/testing/python/riscv/test_riscv_toolchain.py
+@@ -50,6 +50,7 @@ def test_tool_lookup_falls_back_to_path(monkeypatch, tmp_path):
+ 
+     monkeypatch.setattr(toolchain, "_LLVM_SUBMODULE_ROOT", tmp_path / "missing-llvm-project")
+     monkeypatch.setattr(toolchain, "_BUDDY_MLIR_ROOT", tmp_path / "missing-buddy-mlir")
++    monkeypatch.setattr(toolchain, "_SYSTEM_LLVM_ROOT", Path("/nonexistent/tilelang-llvm"))
+     monkeypatch.delenv("TILELANG_RISCV_LLVM_ROOT", raising=False)
+     monkeypatch.delenv("TILELANG_LLVM_INSTALL_DIR", raising=False)
+     monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+@@ -60,6 +61,7 @@ def test_tool_lookup_falls_back_to_path(monkeypatch, tmp_path):
+ def test_missing_toolchain_raises(monkeypatch):
+     monkeypatch.setattr(toolchain, "_LLVM_SUBMODULE_ROOT", Path("/tmp/tilelang-riscv-no-toolchain"))
+     monkeypatch.setattr(toolchain, "_BUDDY_MLIR_ROOT", Path("/tmp/tilelang-riscv-no-buddy"))
++    monkeypatch.setattr(toolchain, "_SYSTEM_LLVM_ROOT", Path("/nonexistent/tilelang-llvm"))
+     monkeypatch.delenv("TILELANG_RISCV_LLVM_ROOT", raising=False)
+     monkeypatch.delenv("TILELANG_LLVM_INSTALL_DIR", raising=False)
+ 
+diff --git a/tilelang/tladapter/toolchain.py b/tilelang/tladapter/toolchain.py
+index 3668ddca..6de0bba0 100644
+--- a/tilelang/tladapter/toolchain.py
++++ b/tilelang/tladapter/toolchain.py
+@@ -13,6 +13,7 @@ class ToolchainNotFoundError(RuntimeError):
+ 
+ _REPO_ROOT = Path(__file__).resolve().parents[2]
+ _LLVM_SUBMODULE_ROOT = _REPO_ROOT / "3rdparty" / "llvm-project"
++_SYSTEM_LLVM_ROOT = Path("@BUDDY_LLVM_PREFIX@")
+ _BUDDY_MLIR_ROOT = _REPO_ROOT.parent / "buddy-mlir"
+ 
+ 
+@@ -25,6 +26,7 @@ def _candidate_roots() -> list[Path]:
+ 
+     roots.extend(
+         [
++            _SYSTEM_LLVM_ROOT,
+             _BUDDY_MLIR_ROOT / "llvm" / "install",
+             _BUDDY_MLIR_ROOT / "llvm" / "build",
+             _LLVM_SUBMODULE_ROOT / "install",

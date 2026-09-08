@@ -1,0 +1,3208 @@
+From: RuyiAI-Stack TileLang contributors
+Subject: [PATCH] Integrate the RISC-V MLIR backend and host adapter
+Origin: https://github.com/RuyiAI-Stack/tilelang-riscv/commit/066362b40faf4c4b6a4a94fb148c086ca7e7886b
+Origin: https://github.com/RuyiAI-Stack/tilelang-riscv/commit/0b7d66eb8fc40607ef014e05e4927dffa11d0b03
+
+Rebased with git apply --3way onto upstream v0.1.9. Preserve upstream
+release logging alongside the backend CMake setup. Omit the fork README
+replacement and test-only TileKernels submodule pointer; retain backend
+tests. The main source remains the official tile-ai release archive.
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 51fc79a0..f97d3152 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,6 +20,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND "$ENV{CIBUILDWHEEL}")
+ endif()
+ 
+ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
++include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/TileLangRISCVMLIR.cmake)
+ 
+ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gitmodules" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+   find_package(Git QUIET)
+@@ -115,6 +116,8 @@ foreach(BACKEND IN LISTS TILELANG_BACKENDS)
+   tilelang_define_backend_option(${BACKEND})
+ endforeach()
+ 
++tilelang_configure_riscv_mlir()
++
+ set(PREBUILD_CYTHON ON)
+ 
+ # CUDA stub libraries (cuda/cudart/nvrtc) are used to build wheels that can run
+@@ -180,7 +183,9 @@ file(GLOB TILE_LANG_SRCS
+   src/target/utils.cc
+   src/target/codegen_c_host.cc
+   src/target/codegen_cpp.cc
++  src/target/codegen_riscv.cc
+   src/target/rt_mod_cpp.cc
++  src/target/rt_mod_riscv.cc
+   # intrin_rule doesn't have system dependency
+   src/target/intrin_rule*.cc
+ )
+@@ -440,6 +445,13 @@ else()
+ endif()
+ option(TILELANG_RELEASE_BUILD "Strip source paths from log messages (for wheel releases)" ${TILELANG_RELEASE_BUILD_DEFAULT})
+ 
++# TVM prefers mold/lld when available, but the SG2044 RISC-V toolchain fails
++# to link TVM with lld due to unsupported relocations in exception tables.
++if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(riscv|riscv32|riscv64)")
++  set(USE_ALTERNATIVE_LINKER OFF CACHE STRING
++      "Disable mold/lld auto-selection on RISC-V toolchains" FORCE)
++endif()
++
+ # Include tvm after configs have been populated
+ add_subdirectory(${TVM_SOURCE} tvm EXCLUDE_FROM_ALL)
+ 
+@@ -467,9 +479,18 @@ target_compile_definitions(tilelang_objs PRIVATE TVM_LOG_CUSTOMIZE=1)
+ if(TILELANG_RELEASE_BUILD)
+   target_compile_definitions(tilelang_objs PRIVATE TILELANG_RELEASE_BUILD=1)
+ endif()
++if(TILELANG_RISCV_MLIR_ENABLED)
++  target_include_directories(tilelang_objs PRIVATE ${TILELANG_RISCV_MLIR_INCLUDE_DIRS})
++  target_compile_definitions(tilelang_objs PRIVATE TILELANG_ENABLE_RISCV_MLIR=1)
++else()
++  target_compile_definitions(tilelang_objs PRIVATE TILELANG_ENABLE_RISCV_MLIR=0)
++endif()
+ 
+ add_library(tilelang SHARED $<TARGET_OBJECTS:tilelang_objs>)
+ target_link_libraries(tilelang PUBLIC tvm)
++if(TILELANG_RISCV_MLIR_ENABLED)
++  target_link_libraries(tilelang PRIVATE ${TILELANG_RISCV_MLIR_LINK_LIBS})
++endif()
+ 
+ # Place dev build outputs under build/lib for consistency
+ set_target_properties(tilelang PROPERTIES
+diff --git a/cmake/TileLangRISCVMLIR.cmake b/cmake/TileLangRISCVMLIR.cmake
+new file mode 100644
+index 00000000..4e7cd155
+--- /dev/null
++++ b/cmake/TileLangRISCVMLIR.cmake
+@@ -0,0 +1,85 @@
++include_guard(GLOBAL)
++
++set(TILELANG_RISCV_MLIR_MODE "AUTO" CACHE STRING
++    "Enable vendored LLVM/MLIR integration for the riscv backend (AUTO, ON, OFF)")
++set_property(CACHE TILELANG_RISCV_MLIR_MODE PROPERTY STRINGS AUTO ON OFF)
++set(TILELANG_RISCV_LLVM_ROOT "" CACHE PATH
++    "LLVM/MLIR install prefix used by the riscv backend")
++
++function(tilelang_configure_riscv_mlir)
++  string(TOUPPER "${TILELANG_RISCV_MLIR_MODE}" _tilelang_riscv_mlir_mode)
++  if(_tilelang_riscv_mlir_mode STREQUAL "OFF")
++    set(TILELANG_RISCV_MLIR_FOUND FALSE PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_ENABLED FALSE PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_ROOT "" PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_INCLUDE_DIRS "" PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_LINK_LIBS "" PARENT_SCOPE)
++    return()
++  endif()
++
++  set(_candidate_roots)
++  foreach(_value
++      "${TILELANG_RISCV_LLVM_ROOT}"
++      "$ENV{TILELANG_RISCV_LLVM_ROOT}"
++      "$ENV{TILELANG_LLVM_INSTALL_DIR}"
++      "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/llvm-project/install"
++      "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/llvm-project/build-host/install"
++      "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/llvm-project/build/install")
++    if(_value AND IS_DIRECTORY "${_value}")
++      cmake_path(ABSOLUTE_PATH _value NORMALIZE OUTPUT_VARIABLE _resolved)
++      list(APPEND _candidate_roots "${_resolved}")
++    endif()
++  endforeach()
++  list(REMOVE_DUPLICATES _candidate_roots)
++
++  set(_found_root "")
++  set(_llvm_dir "")
++  set(_mlir_dir "")
++  foreach(_root IN LISTS _candidate_roots)
++    foreach(_lib_dir IN ITEMS lib lib64)
++      if(EXISTS "${_root}/${_lib_dir}/cmake/llvm/LLVMConfig.cmake"
++         AND EXISTS "${_root}/${_lib_dir}/cmake/mlir/MLIRConfig.cmake")
++        set(_found_root "${_root}")
++        set(_llvm_dir "${_root}/${_lib_dir}/cmake/llvm")
++        set(_mlir_dir "${_root}/${_lib_dir}/cmake/mlir")
++        break()
++      endif()
++    endforeach()
++    if(_found_root)
++      break()
++    endif()
++  endforeach()
++
++  if(NOT _found_root)
++    if(_tilelang_riscv_mlir_mode STREQUAL "ON")
++      message(FATAL_ERROR
++        "TILELANG_RISCV_MLIR_MODE=ON but no LLVM/MLIR install was found. "
++        "Build it with maint/scripts/build_llvm_mlir.sh or set TILELANG_RISCV_LLVM_ROOT.")
++    endif()
++    message(STATUS
++      "LLVM/MLIR toolchain for riscv not found; keeping placeholder backend build. "
++      "Set TILELANG_RISCV_LLVM_ROOT or build 3rdparty/llvm-project/install to enable it.")
++    set(TILELANG_RISCV_MLIR_FOUND FALSE PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_ENABLED FALSE PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_ROOT "" PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_INCLUDE_DIRS "" PARENT_SCOPE)
++    set(TILELANG_RISCV_MLIR_LINK_LIBS "" PARENT_SCOPE)
++    return()
++  endif()
++
++  find_package(LLVM REQUIRED CONFIG PATHS "${_llvm_dir}" NO_DEFAULT_PATH)
++  find_package(MLIR REQUIRED CONFIG PATHS "${_mlir_dir}" NO_DEFAULT_PATH)
++
++  set(_include_dirs ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
++  list(REMOVE_DUPLICATES _include_dirs)
++
++  message(STATUS "Using LLVM/MLIR toolchain for riscv: ${_found_root}")
++
++  set(TILELANG_RISCV_MLIR_FOUND TRUE PARENT_SCOPE)
++  set(TILELANG_RISCV_MLIR_ENABLED TRUE PARENT_SCOPE)
++  set(TILELANG_RISCV_MLIR_ROOT "${_found_root}" PARENT_SCOPE)
++  set(TILELANG_RISCV_MLIR_INCLUDE_DIRS "${_include_dirs}" PARENT_SCOPE)
++  set(TILELANG_RISCV_MLIR_LINK_LIBS
++      "MLIRIR;MLIRFuncDialect;MLIRArithDialect;MLIRLinalgDialect;MLIRMemRefDialect;MLIRSCFDialect;MLIRVectorDialect"
++      PARENT_SCOPE)
++endfunction()
+diff --git a/cmake/pypi-z3/FindZ3.cmake b/cmake/pypi-z3/FindZ3.cmake
+index d7920f8f..27d4d6b0 100644
+--- a/cmake/pypi-z3/FindZ3.cmake
++++ b/cmake/pypi-z3/FindZ3.cmake
+@@ -1,30 +1,68 @@
+ if(Z3_FOUND)
+     return()
+ endif()
+-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+-execute_process(
+-    COMMAND "${Python3_EXECUTABLE}" -c "import z3; print(z3.__path__[0])"
+-    OUTPUT_VARIABLE Z3_PATH
+-    OUTPUT_STRIP_TRAILING_WHITESPACE
+-    RESULT_VARIABLE Z3_PYTHON_RESULT
++
++set(_tilelang_z3_roots)
++foreach(_root
++    "${Z3_ROOT}"
++    "$ENV{Z3_ROOT}"
++    "$ENV{Z3_DIR}"
++    "$ENV{Z3_HOME}"
+ )
+-if(NOT Z3_PYTHON_RESULT EQUAL 0 OR Z3_PATH STREQUAL "")
+-    message(FATAL_ERROR "Failed to locate z3 Python package. Ensure z3-solver>=4.13.0 is installed.")
+-endif()
+-message("-- Find Z3 in path: ${Z3_PATH}")
+-find_path(Z3_INCLUDE_DIR NO_DEFAULT_PATH NAMES z3++.h PATHS ${Z3_PATH}/include)
+-find_library(Z3_LIBRARY NO_DEFAULT_PATH NAMES z3 libz3 PATHS ${Z3_PATH}/bin ${Z3_PATH}/lib ${Z3_PATH}/lib64)
+-message("-- Found Z3 include dir: ${Z3_INCLUDE_DIR}")
+-message("-- Found Z3 library: ${Z3_LIBRARY}")
+-add_library(z3::libz3 SHARED IMPORTED GLOBAL)
+-set_target_properties(z3::libz3
+-    PROPERTIES
+-    IMPORTED_LOCATION ${Z3_LIBRARY}
+-    INTERFACE_INCLUDE_DIRECTORIES ${Z3_INCLUDE_DIR}
++    if(_root)
++        list(APPEND _tilelang_z3_roots "${_root}")
++    endif()
++endforeach()
++
++find_path(
++    Z3_INCLUDE_DIR
++    NAMES z3++.h
++    HINTS ${_tilelang_z3_roots}
++    PATH_SUFFIXES include
++)
++find_library(
++    Z3_LIBRARY
++    NAMES z3 libz3
++    HINTS ${_tilelang_z3_roots}
++    PATH_SUFFIXES bin lib lib64
+ )
++
++if(Z3_INCLUDE_DIR AND Z3_LIBRARY)
++    message(STATUS "Found Z3 from explicit/system paths")
++else()
++    find_package(Python3 COMPONENTS Interpreter REQUIRED)
++    execute_process(
++        COMMAND "${Python3_EXECUTABLE}" -c "import z3; print(z3.__path__[0])"
++        OUTPUT_VARIABLE Z3_PATH
++        OUTPUT_STRIP_TRAILING_WHITESPACE
++        RESULT_VARIABLE Z3_PYTHON_RESULT
++    )
++    if(NOT Z3_PYTHON_RESULT EQUAL 0 OR Z3_PATH STREQUAL "")
++        message(FATAL_ERROR
++            "Failed to locate Z3. Set Z3_ROOT to a Z3 install prefix or install the z3 Python package "
++            "(for example z3-solver>=4.13.0 on supported platforms).")
++    endif()
++    message(STATUS "Find Z3 in Python package path: ${Z3_PATH}")
++    find_path(Z3_INCLUDE_DIR NO_DEFAULT_PATH NAMES z3++.h PATHS ${Z3_PATH}/include)
++    find_library(Z3_LIBRARY NO_DEFAULT_PATH NAMES z3 libz3 PATHS ${Z3_PATH}/bin ${Z3_PATH}/lib ${Z3_PATH}/lib64)
++endif()
++
++message(STATUS "Found Z3 include dir: ${Z3_INCLUDE_DIR}")
++message(STATUS "Found Z3 library: ${Z3_LIBRARY}")
++
+ if(NOT Z3_INCLUDE_DIR OR NOT Z3_LIBRARY)
+     message(FATAL_ERROR "Could not find Z3 library or include directory")
+ endif()
++
++if(NOT TARGET z3::libz3)
++    add_library(z3::libz3 SHARED IMPORTED GLOBAL)
++    set_target_properties(z3::libz3
++        PROPERTIES
++        IMPORTED_LOCATION ${Z3_LIBRARY}
++        INTERFACE_INCLUDE_DIRECTORIES ${Z3_INCLUDE_DIR}
++    )
++endif()
++
+ set(Z3_CXX_INCLUDE_DIRS ${Z3_INCLUDE_DIR})
+ set(Z3_C_INCLUDE_DIRS ${Z3_INCLUDE_DIR})
+ set(Z3_FOUND TRUE)
+diff --git a/docs/get_started/BuildOnSG2044.md b/docs/get_started/BuildOnSG2044.md
+new file mode 100644
+index 00000000..4348b9a1
+--- /dev/null
++++ b/docs/get_started/BuildOnSG2044.md
+@@ -0,0 +1,129 @@
++# Build and Run on SG2044
++
++This document describes the validated native bring-up flow for the structured RISC-V backend on an SG2044 machine.
++It is intentionally separate from the generic installation guide because this path uses a real RISC-V host, a Buddy
++/ LLVM toolchain, and a native GCC sysroot instead of the usual x86 or GPU development environment.
++
++## Scope
++
++The validated flow is:
++
++- `TileLang -> MLIR Linalg -> MLIR vector / RVV lowering`
++- native host shared library build with the RISC-V GCC toolchain
++- execution on SG2044
++
++This document is about native execution on SG2044.
++
++## Get the Sources
++
++Clone the repository with its bundled dependencies, including the `TileKernels`
++submodule used by the RISC-V operator-library tests:
++
++```bash
++git clone --recursive https://github.com/tile-ai/tilelang.git tilelang-riscv
++cd tilelang-riscv
++```
++
++If you already cloned the repository without submodules, run:
++
++```bash
++git submodule update --init --recursive
++```
++
++## Environment Setup
++
++Activate the Python environment and export the toolchain variables:
++
++```bash
++source ~/.venv-buddy/bin/activate
++
++export TILELANG_RISCV_LLVM_ROOT=/path/to/buddy-mlir/llvm/build
++export Z3_ROOT=/path/to/.local/z3
++export CC=/path/to/gcc
++export CXX=/path/to/g++
++export PATH=/path/to/gcc-bin:$TILELANG_RISCV_LLVM_ROOT/bin:$Z3_ROOT/bin:$PATH
++export LIBRARY_PATH=/path/to/gcc-lib64/lp64d:/path/to/gcc-libgcc/lp64d${LIBRARY_PATH:+:$LIBRARY_PATH}
++export TVM_FFI_DISABLE_TORCH_C_DLPACK=1
++export CMAKE_ARGS="-DUSE_CUDA=OFF -DUSE_ROCM=OFF"
++```
++
++Notes:
++
++- `Z3_ROOT` is required when `z3-solver` wheels are unavailable on `riscv64`
++- if the native toolchain uses a split `lib64/lp64d` layout, include it in
++  `LIBRARY_PATH` or CMake's compiler sanity check can fail on `-lgcc_s`
++- `TVM_FFI_DISABLE_TORCH_C_DLPACK=1` avoids first-import JIT building of the optional Torch DLPack extension
++- `torch-c-dlpack-ext` is skipped on `riscv64`; the validated SG2044 flow uses
++  TVM FFI without that optional prebuilt extension
++
++## Install Dependencies
++
++Install the Python-side build dependencies first:
++
++```bash
++pip install scikit-build-core cython patchelf setuptools_scm cloudpickle pytest
++```
++
++Install the vendored TVM FFI package from the source tree:
++
++```bash
++cd tilelang-riscv
++pip install ./3rdparty/tvm/3rdparty/tvm-ffi --no-build-isolation --no-deps
++```
++
++Then install TileLang itself in editable mode:
++
++```bash
++cd tilelang-riscv
++pip install -e . --no-build-isolation -v
++```
++
++## Build Notes
++
++The SG2044 path depends on a few implementation details that are already wired into this tree:
++
++- use `target="riscv"` as the backend name
++- toolchain discovery covers sibling Buddy builds such as `../buddy-mlir/llvm/build`
++- the RISC-V host wrapper passes `--gcc-toolchain` and `--sysroot` when it detects `/opt/gcc-native`
++- RISC-V builds disable TVM's alternative linker selection because `ld.lld` failed on the validated SG2044 toolchain
++
++If you need to rebuild after source changes, the same editable install command is sufficient:
++
++```bash
++cd tilelang-riscv
++pip install -e . --no-build-isolation -v
++```
++
++## Validation
++
++The validated native test set is:
++
++```bash
++cd tilelang-riscv
++pytest testing/python/riscv/test_riscv_target_parse.py -q
++pytest testing/python/riscv/test_riscv_toolchain.py -q
++pytest testing/python/riscv/test_riscv_tladapter_pipeline.py -q
++pytest testing/python/riscv/test_riscv_cache.py -q
++pytest testing/python/riscv/codegen_ops -q
++pytest testing/python/riscv/TileKernels -q
++```
++
++Useful extended runtime checks:
++
++```bash
++pytest testing/python/riscv/test_riscv_jit_runtime.py -q
++pytest testing/python/riscv/test_riscv_artifact_export.py -q
++```
++
++`test_riscv_jit_runtime.py` and `test_riscv_artifact_export.py` exercise broader
++runtime and artifact-export paths and may expose additional toolchain or runtime
++issues beyond the smoke set above.
++
++## Troubleshooting
++
++- If configuration fails with a Z3 lookup error, check that `Z3_ROOT` points to a prefix containing `include` and `lib`
++- If the first CMake configure fails on `-lgcc_s`, verify that the toolchain's
++  `lib64/lp64d` directory is present in `LIBRARY_PATH`
++- If runtime shared library linking fails, verify that `CC`, `CXX`, and `/opt/gcc-native/sysroot` are all present
++- If `tvm_ffi` import fails, reinstall the vendored package from `3rdparty/tvm/3rdparty/tvm-ffi`
++- If first import becomes slow or tries to build extra Torch extensions, keep `TVM_FFI_DISABLE_TORCH_C_DLPACK=1`
+diff --git a/docs/get_started/targets.md b/docs/get_started/targets.md
+index 3a464bd6..5a6a6f6b 100644
+--- a/docs/get_started/targets.md
++++ b/docs/get_started/targets.md
+@@ -18,6 +18,7 @@ the generated code. The most frequent choices are listed below:
+ | `hip` | AMD GPUs via ROCm. Options like `-mcpu=gfx90a` can be appended. |
+ | `metal` | Apple Silicon GPUs (arm64 Macs). |
+ | `llvm` | CPU execution; accepts the standard TVM LLVM switches. |
++| `riscv` | Structured MLIR pipeline for RISC-V execution. Intended for MLIR lowering through Buddy/LLVM and native RVV execution. |
+ | `webgpu` | Browser / WebGPU runtimes. |
+ | `c` | Emit plain C source for inspection or custom toolchains. |
+ 
+@@ -32,7 +33,47 @@ def compiled_kernel(*args):
+     return func(*args)
+ ```
+ 
+-The same convention works for HIP or LLVM (e.g. `hip -mcpu=gfx940`, `llvm -mtriple=x86_64-linux-gnu`).
++The same convention works for HIP, LLVM, or the RISC-V MLIR backend (e.g. `hip -mcpu=gfx940`,
++`llvm -mtriple=x86_64-linux-gnu`, `riscv -mtriple=riscv64-unknown-linux-gnu`).
++
++## RISC-V structured backend
++
++TileLang also exposes a structured MLIR-backed backend for RISC-V bring-up:
++
++```python
++kernel = tilelang.compile(func, target="riscv")
++```
++
++This path is intentionally different from the CUDA/HIP/Metal backends:
++
++- TileLang lowers TIR into a structured MLIR module.
++- The Python runtime adapter then lowers through `mlir-opt`/`mlir-translate`/`llc`.
++- Native execution can target a real RISC-V machine by setting up an LLVM/MLIR toolchain and a native RISC-V C/C++ toolchain.
++
++The intended shared path here is `TileLang -> MLIR Linalg -> MLIR vector/RVV lowering`. This document does not assume
++shared Triton frontend lowering passes; the commonality starts at the Linalg/downstream MLIR pipeline.
++
++For SG2044-style native bring-up, the practical environment variables are:
++
++```bash
++export TILELANG_RISCV_LLVM_ROOT=/path/to/buddy-llvm-build
++export Z3_ROOT=/path/to/z3-install-prefix
++export CC=/path/to/gcc
++export CXX=/path/to/g++
++```
++
++On mixed developer hosts you can still use `target="riscv"` for compilation artifact export without executing on the
++local machine.
++
++### Scope and limitations
++
++The validated path today is a maintainable native bring-up path, not a claim that every TileLang program is already
++supported on RISC-V.
++
++- the verified flow is `TileLang -> MLIR Linalg -> MLIR lowering -> native host adapter -> SG2044 execution`
++- x86 is sufficient for source review and compiler-path review, but not for RVV execution validation
++- first-time optional Torch DLPack extension builds can be avoided with `TVM_FFI_DISABLE_TORCH_C_DLPACK=1`
++- use `target="riscv"` as the only supported target spelling for this backend
+ 
+ ### Advanced: Specify Exact Hardware
+ 
+@@ -119,3 +160,5 @@ This helper mirrors the table above and is safe to call at runtime (for example
+   running on. Try dropping the flag or switching to the correct compute capability.
+ - When targeting multiple environments, use `auto` for convenience and override with an explicit string only when
+   you need architecture-specific tuning.
++- If `target="riscv"` fails during configuration with a Z3 lookup error, set `Z3_ROOT` to a local Z3 install prefix;
++  the `z3-solver` Python wheel is not available on every architecture.
+diff --git a/pyproject.toml b/pyproject.toml
+index 80aba41e..ae6453a7 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -33,7 +33,9 @@ dependencies = [
+     "apache-tvm-ffi~=0.1.0,>=0.1.2",
+     # torch-c-dlpack-ext provides prebuilt torch extensions.
+     # Without it, TVM FFI may require JIT compilation on first import.
+-    "torch-c-dlpack-ext; python_version < '3.14'",
++    # Skip riscv64, where the optional extension currently does not build
++    # against the board's validated torch toolchain.
++    "torch-c-dlpack-ext; python_version < '3.14' and platform_machine != 'riscv64'",
+     "cloudpickle",
+     "ml-dtypes",
+     "numpy>=1.23.5",
+diff --git a/src/target/codegen_riscv.h b/src/target/codegen_riscv.h
+new file mode 100644
+index 00000000..280c17c3
+--- /dev/null
++++ b/src/target/codegen_riscv.h
+@@ -0,0 +1,29 @@
++#pragma once
++
++#include <string>
++#include <utility>
++#include <vector>
++
++#include <tvm/ir/module.h>
++#include <tvm/tir/function.h>
++
++#include "../support/ffi_aliases.h"
++
++namespace tvm {
++namespace codegen {
++
++class CodeGenTileLangRISCV {
++public:
++  CodeGenTileLangRISCV() = default;
++
++  void AddFunction(const GlobalVar &gvar, const tir::PrimFunc &func);
++  std::string Finish() const;
++  Array<String> GetFunctionNames() const { return function_names_; }
++
++private:
++  std::vector<std::pair<std::string, tir::PrimFunc>> functions_;
++  Array<String> function_names_;
++};
++
++} // namespace codegen
++} // namespace tvm
+diff --git a/src/target/rt_mod_riscv.cc b/src/target/rt_mod_riscv.cc
+new file mode 100644
+index 00000000..69c5583e
+--- /dev/null
++++ b/src/target/rt_mod_riscv.cc
+@@ -0,0 +1,132 @@
++#include "codegen_riscv.h"
++
++#include <dmlc/memory_io.h>
++#include <tvm/ffi/extra/module.h>
++#include <tvm/ffi/function.h>
++#include <tvm/ffi/reflection/registry.h>
++#include <tvm/tir/transform.h>
++#include <tvm/target/target_kind.h>
++
++#include <fstream>
++#include <algorithm>
++#include <string>
++#include <vector>
++
++namespace tvm {
++namespace codegen {
++
++class MLIRSourceModuleNode final : public ffi::ModuleObj {
++public:
++  explicit MLIRSourceModuleNode(const std::string &code,
++                                const ffi::Array<ffi::String> &func_names)
++      : code_(code), func_names_(func_names) {}
++
++  const char *kind() const final { return "mlir"; }
++
++  ffi::Optional<ffi::Function> GetFunction(const ffi::String &name) final {
++    ObjectPtr<Object> sptr_to_self = ffi::GetObjectPtr<Object>(this);
++    if (name == "get_symbol") {
++      return ffi::Function([sptr_to_self, this](ffi::PackedArgs args, ffi::Any *rv) {
++        *rv = this->func_names_[0];
++      });
++    }
++    if (name == "get_func_names") {
++      return ffi::Function([sptr_to_self, this](ffi::PackedArgs args, ffi::Any *rv) {
++        *rv = this->func_names_;
++      });
++    }
++    return ffi::Function(nullptr);
++  }
++
++  ffi::String InspectSource(const ffi::String &format) const final {
++    ICHECK(format.empty() || format == "mlir");
++    return code_;
++  }
++
++  ffi::Array<ffi::String> GetWriteFormats() const override { return {"mlir"}; }
++
++  ffi::Bytes SaveToBytes() const final {
++    std::string buffer;
++    dmlc::MemoryStringStream ms(&buffer);
++    dmlc::Stream *stream = &ms;
++    stream->Write(code_);
++
++    std::vector<std::string> func_names;
++    for (const auto &func_name : func_names_) {
++      func_names.push_back(func_name);
++    }
++    stream->Write(func_names);
++    return ffi::Bytes(buffer);
++  }
++
++  static ffi::Module LoadFromBytes(const ffi::Bytes &bytes) {
++    dmlc::MemoryFixedSizeStream ms(const_cast<char *>(bytes.data()), bytes.size());
++    dmlc::Stream *stream = &ms;
++
++    std::string code;
++    ICHECK(stream->Read(&code)) << "Loading MLIR code failed";
++
++    std::vector<std::string> tmp_func_names;
++    ICHECK(stream->Read(&tmp_func_names)) << "Loading MLIR function names failed";
++
++    ffi::Array<ffi::String> func_names;
++    for (const auto &func_name : tmp_func_names) {
++      func_names.push_back(ffi::String(func_name));
++    }
++
++    auto n = ffi::make_object<MLIRSourceModuleNode>(code, func_names);
++    return ffi::Module(n);
++  }
++
++  void WriteToFile(const ffi::String &file_name, const ffi::String &format) const final {
++    ICHECK(format.empty() || format == "mlir");
++    std::ofstream os(file_name.operator std::string(), std::ios::binary);
++    ICHECK(os.good()) << "Failed to open " << file_name << " for writing";
++    os << code_;
++  }
++
++  int GetPropertyMask() const override { return ffi::Module::kBinarySerializable; }
++
++  bool ImplementsFunction(const ffi::String &name) final {
++    return std::find(func_names_.begin(), func_names_.end(), name) != func_names_.end();
++  }
++
++private:
++  std::string code_;
++  ffi::Array<ffi::String> func_names_;
++};
++
++ffi::Module MLIRSourceModuleCreate(const std::string &code,
++                                   const ffi::Array<ffi::String> &func_names) {
++  auto n = ffi::make_object<MLIRSourceModuleNode>(code, func_names);
++  return ffi::Module(n);
++}
++
++ffi::Module BuildTileLangRISCV(IRModule mod, Target target) {
++  (void)target;
++  mod = tir::transform::LowerInitBlock()(mod);
++  CodeGenTileLangRISCV cg;
++  for (const auto &kv : mod->functions) {
++    ICHECK(kv.second->IsInstance<tir::PrimFuncNode>())
++        << "CodeGenTileLangRISCV: Can only take PrimFunc";
++    auto gvar = Downcast<GlobalVar>(kv.first);
++    auto func = Downcast<tir::PrimFunc>(kv.second);
++    cg.AddFunction(gvar, func);
++  }
++
++  std::string code = cg.Finish();
++  return MLIRSourceModuleCreate(code, cg.GetFunctionNames());
++}
++
++TVM_FFI_STATIC_INIT_BLOCK() {
++  namespace refl = tvm::ffi::reflection;
++  refl::GlobalDef().def("ffi.Module.load_from_bytes.mlir",
++                        MLIRSourceModuleNode::LoadFromBytes);
++  refl::GlobalDef().def("target.build.tilelang_riscv",
++                        BuildTileLangRISCV);
++}
++
++TVM_REGISTER_TARGET_KIND("riscv", kDLCPU);
++
++} // namespace codegen
++} // namespace tvm
+diff --git a/tilelang/contrib/nvcc.py b/tilelang/contrib/nvcc.py
+index 94c1aae5..923fff8f 100644
+--- a/tilelang/contrib/nvcc.py
++++ b/tilelang/contrib/nvcc.py
+@@ -344,6 +344,13 @@ def get_target_compute_version(target=None):
+     # 1. input target object
+     # 2. Target.current()
+     target = target or Target.current()
++    if target and target.kind.name == "riscv":
++        # Some CUDA-originated operator libraries query the CUDA compute
++        # capability only to choose conservative vectorization widths while
++        # constructing TIR.  The RISC-V backend does not have a CUDA SM version,
++        # so return a stable pre-Blackwell value instead of failing before the
++        # caller can compile with target="riscv".
++        return "8.0"
+     if target and target.arch:
+         arch = target.arch.split("_")[1].rstrip("af")
+         if len(arch) == 2:
+diff --git a/tilelang/engine/lower.py b/tilelang/engine/lower.py
+index b39a58c6..9004f9f0 100644
+--- a/tilelang/engine/lower.py
++++ b/tilelang/engine/lower.py
+@@ -24,7 +24,7 @@ from tilelang.engine.phase import (
+ 
+ 
+ def is_cpu_device_backend(target: Target):
+-    return target.kind.name == "c"
++    return target.kind.name in {"c", "riscv"}
+ 
+ 
+ def has_device_kernel_launch(attrs) -> bool:
+@@ -225,6 +225,9 @@ def host_codegen(host_mod: tvm.IRModule, target_host: Target, target: Target | N
+ 
+ 
+ def device_codegen(device_mod: tvm.IRModule, target: Target) -> tvm.IRModule:
++    if target.kind.name == "riscv":
++        return tvm.ffi.get_global_func("target.build.tilelang_riscv")(device_mod, target)
++
+     device_mod = tilelang.transform.LowerDeviceStorageAccessInfo()(device_mod)
+     device_mod = tilelang.transform.LowerIntrin()(device_mod)
+     device_mod = tir.transform.Simplify()(device_mod)
+@@ -244,6 +247,9 @@ def device_codegen(device_mod: tvm.IRModule, target: Target) -> tvm.IRModule:
+ 
+ 
+ def device_codegen_without_compile(device_mod: tvm.IRModule, target: Target) -> tvm.IRModule:
++    if target.kind.name == "riscv":
++        return tvm.ffi.get_global_func("target.build.tilelang_riscv")(device_mod, target)
++
+     device_mod = tilelang.transform.LowerDeviceStorageAccessInfo()(device_mod)
+     device_mod = tilelang.transform.LowerIntrin()(device_mod)
+     device_mod = tir.transform.Simplify()(device_mod)
+@@ -310,6 +316,10 @@ def lower(
+     # Phase 2: Optimize the IR for the target
+     mod = OptimizeForTarget(mod, target)
+ 
++    if target.kind.name == "riscv":
++        codegen_mod = device_codegen(mod, target) if enable_device_compile else device_codegen_without_compile(mod, target)
++        return CompiledArtifact(tvm.IRModule(), mod, params, codegen_mod.inspect_source(), rt_mod=codegen_mod)
++
+     host_mod = tir.transform.Filter(_is_host_call)(mod)
+     device_mod = tir.transform.Filter(_is_device_call)(mod)
+     codegen_mod = device_codegen(device_mod, target) if enable_device_compile else device_codegen_without_compile(device_mod, target)
+diff --git a/tilelang/engine/phase.py b/tilelang/engine/phase.py
+index b26ae38a..bbb755b8 100644
+--- a/tilelang/engine/phase.py
++++ b/tilelang/engine/phase.py
+@@ -6,6 +6,10 @@ from tilelang.transform import PassContext
+ from tilelang.contrib.nvcc import have_tma, have_pdl
+ 
+ 
++def is_riscv_target(target: Target | None) -> bool:
++    return target is not None and target.kind.name == "riscv"
++
++
+ def allow_warp_specialized(pass_ctx: PassContext | None = None, target: Target | None = None) -> bool:
+     # avoid circular import
+     from tilelang.jit.adapter.utils import is_cuda_target
+@@ -132,6 +136,19 @@ def PreLowerSemanticCheck(mod: IRModule) -> None:
+ 
+ 
+ def LowerAndLegalize(mod: IRModule, target: Target) -> IRModule:
++    if is_riscv_target(target):
++        mod = tir.transform.BindTarget(target)(mod)
++        mod = tilelang.transform.AddWrapperForSingleBufStore()(mod)
++        mod = tilelang.transform.LegalizeNegativeIndex()(mod)
++        if should_enable_race_check():
++            mod = tilelang.transform.VerifyParallelLoop()(mod)
++        mod = tilelang.transform.InjectAssumes()(mod)
++        mod = tilelang.transform.Simplify()(mod)
++        mod = tilelang.transform.LowerAccessPtr()(mod)
++        mod = tilelang.transform.Simplify()(mod)
++        mod = tilelang.transform.HoistNonRestrictParams()(mod)
++        return mod
++
+     # Bind the target device information to the module
+     """
+     Bind target information and progressively legalize and lower frontend Tile IR into a form suitable for downstream optimization and codegen.
+@@ -214,7 +231,23 @@ def LowerAndLegalize(mod: IRModule, target: Target) -> IRModule:
+     return mod
+ 
+ 
++def LowerAndLegalizeForRISCV(mod: IRModule, target: Target) -> IRModule:
++    """Compatibility entry point for the TileLang-to-Linalg RISC-V pipeline."""
++    return LowerAndLegalize(mod, target)
++
++
++def _lower_thread_allreduce(mod: IRModule) -> IRModule:
++    mod = tir.transform.InferFragment()(mod)
++    return tilelang.transform.LowerThreadAllreduce()(mod)
++
++
+ def OptimizeForTarget(mod: IRModule, target: Target) -> IRModule:
++    if is_riscv_target(target):
++        mod = tir.transform.LowerInitBlock()(mod)
++        mod = tir.transform.Simplify()(mod)
++        mod = tir.transform.RemoveNoOp()(mod)
++        return mod
++
+     pass_ctx = tilelang.transform.get_pass_context()
+     # Lower the shared.tmem into specific initialization slot
+     mod = tilelang.transform.LowerSharedTmem()(mod)
+@@ -248,17 +281,7 @@ def OptimizeForTarget(mod: IRModule, target: Target) -> IRModule:
+ 
+     mod = tir.transform.VerifyMemory()(mod)
+     mod = tir.transform.AnnotateEntryFunc()(mod)
+-    # TODO(lei): This is a hack to make sure the
+-    # thread level allreduce pass can be applied
+-    # in TL. As Tl only use one thread dimension
+-    # the var binding information will be lost
+-    # in the lowering process with Legalization
+-    # and Simplify pass.
+-    # We can find a way better to create var instead
+-    # of putting the LowerThreadAllreduce before
+-    # the Legalization.
+-    mod = tir.transform.InferFragment()(mod)
+-    mod = tilelang.transform.LowerThreadAllreduce()(mod)
++    mod = _lower_thread_allreduce(mod)
+     mod = tilelang.transform.LowerLDGSTG()(mod)
+     mod = tilelang.transform.LowerHopperIntrin()(mod)
+     # Global Barrier Synchronization must be applied before
+@@ -298,3 +321,8 @@ def OptimizeForTarget(mod: IRModule, target: Target) -> IRModule:
+     mod = tilelang.transform.PersistThreadblock()(mod)
+ 
+     return mod
++
++
++def OptimizeForRISCV(mod: IRModule, target: Target) -> IRModule:
++    """Compatibility entry point for the TileLang-to-Linalg RISC-V pipeline."""
++    return OptimizeForTarget(mod, target)
+diff --git a/tilelang/jit/adapter/__init__.py b/tilelang/jit/adapter/__init__.py
+index 0d994528..e757eb32 100644
+--- a/tilelang/jit/adapter/__init__.py
++++ b/tilelang/jit/adapter/__init__.py
+@@ -1,4 +1,5 @@
+ from .base import BaseKernelAdapter  # noqa: F401
++from .riscv import RiscvKernelAdapter  # noqa: F401
+ from .tvm_ffi import TVMFFIKernelAdapter  # noqa: F401
+ from .cython import CythonKernelAdapter  # noqa: F401
+ from .nvrtc import NVRTCKernelAdapter  # noqa: F401
+diff --git a/tilelang/jit/adapter/riscv/__init__.py b/tilelang/jit/adapter/riscv/__init__.py
+new file mode 100644
+index 00000000..7576315a
+--- /dev/null
++++ b/tilelang/jit/adapter/riscv/__init__.py
+@@ -0,0 +1,34 @@
++"""RISC-V adapter scaffolding for the MLIR-backed backend."""
++
++from .adapter import RiscvKernelAdapter
++from .libgen import emit_asm, emit_llvm_ir, emit_mlir, emit_object
++from .wrapper import (
++    HostKernelLibrary,
++    RiscvRunnerError,
++    RiscvRunnerNotFoundError,
++    build_host_shared_library,
++    build_qemu_executable,
++    load_host_module,
++    resolve_riscv_linker,
++    resolve_riscv_runner,
++    run_host,
++    run_qemu,
++)
++
++__all__ = [
++    "HostKernelLibrary",
++    "RiscvKernelAdapter",
++    "RiscvRunnerError",
++    "RiscvRunnerNotFoundError",
++    "build_host_shared_library",
++    "build_qemu_executable",
++    "emit_asm",
++    "emit_llvm_ir",
++    "emit_mlir",
++    "emit_object",
++    "load_host_module",
++    "resolve_riscv_linker",
++    "resolve_riscv_runner",
++    "run_host",
++    "run_qemu",
++]
+diff --git a/tilelang/jit/adapter/riscv/adapter.py b/tilelang/jit/adapter/riscv/adapter.py
+new file mode 100644
+index 00000000..9d17c61d
+--- /dev/null
++++ b/tilelang/jit/adapter/riscv/adapter.py
+@@ -0,0 +1,285 @@
++from __future__ import annotations
++
++import shutil
++from typing import Any, Callable
++
++import numpy as np
++import torch
++from tvm import tir
++from tvm.target import Target
++
++from tilelang import tvm as tvm
++from tilelang.engine.param import KernelParam
++from tilelang.jit.adapter.base import BaseKernelAdapter
++from tilelang.utils.target import determine_target
++
++from .wrapper import HostKernelLibrary, load_host_module, load_host_module_from_binary
++
++
++class _ExportableSharedLibrary:
++    def __init__(self, library_path: str):
++        self.library_path = library_path
++
++    def export_library(self, path: str, **_: Any) -> None:
++        shutil.copy2(self.library_path, path)
++
++
++class RiscvKernelAdapter(BaseKernelAdapter):
++    host_mod: tvm.IRModule | None = None
++    device_mod: tvm.IRModule | None = None
++    rt_mod: tvm.runtime.Module | None = None
++    host_kernel_source: str | None = None
++    device_kernel_source: str | None = None
++
++    def __init__(
++        self,
++        params: list[KernelParam],
++        result_idx: list[int],
++        target: str | Target,
++        func_or_mod: tir.PrimFunc | tvm.IRModule,
++        host_mod: tvm.IRModule | None = None,
++        device_mod: tvm.IRModule | None = None,
++        rt_mod: tvm.runtime.Module | None = None,
++        host_kernel_source: str | None = None,
++        device_kernel_source: str | None = None,
++        verbose: bool = False,
++        pass_configs: dict[str, Any] | None = None,
++        compile_flags: list[str] | None = None,
++    ):
++        self.params = params
++        self.result_idx = self._legalize_result_idx(result_idx)
++        self.target = Target.canon_target(determine_target(target))
++        self.host_mod = host_mod
++        self.device_mod = device_mod
++        self.rt_mod = rt_mod
++        self.host_kernel_source = host_kernel_source
++        self.device_kernel_source = device_kernel_source
++        self.verbose = verbose
++        self.pass_configs = pass_configs or {}
++        self.compile_flags = compile_flags
++        self._host_library: HostKernelLibrary | None = None
++        self.libpath: str | None = None
++        self.executable: _ExportableSharedLibrary | None = None
++
++        if isinstance(func_or_mod, tir.PrimFunc):
++            self.ir_module = tvm.IRModule({func_or_mod.attrs["global_symbol"]: func_or_mod})
++        else:
++            self.ir_module = func_or_mod
++
++        self.dynamic_symbolic_map = self._process_dynamic_symbolic()
++        self._materialize_host_library()
++        self._post_init()
++
++    @property
++    def prim_func(self) -> tir.PrimFunc:
++        _, func = next(iter(self.ir_module.functions.items()))
++        return func
++
++    def _process_dynamic_symbolic(self) -> dict[tir.Var, tuple[int, int]]:
++        func = self.prim_func
++        params = func.params
++        buffer_map = func.buffer_map
++        dynamic_symbolic_map: dict[tir.Var, tuple[int, int]] = {}
++        self._dynamic_symbolic_name_map: dict[str, tuple[int, int]] = {}
++        for i, param in enumerate(params):
++            if param not in buffer_map:
++                continue
++            buffer = buffer_map[param]
++            for j, shape in enumerate(buffer.shape):
++                if not isinstance(shape, tir.Var):
++                    continue
++                existing = dynamic_symbolic_map.get(shape)
++                should_update = existing is None
++                if existing is not None:
++                    existing_param_idx, _ = existing
++                    should_update = existing_param_idx in self.result_idx and i not in self.result_idx
++                if should_update:
++                    dynamic_symbolic_map[shape] = (i, j)
++                    self._dynamic_symbolic_name_map[shape.name] = (i, j)
++        return dynamic_symbolic_map
++
++    def _lookup_dynamic_symbolic(self, value: tir.Var) -> tuple[int, int]:
++        if value in self.dynamic_symbolic_map:
++            return self.dynamic_symbolic_map[value]
++        if value.name in self._dynamic_symbolic_name_map:
++            return self._dynamic_symbolic_name_map[value.name]
++        raise KeyError(f"Dynamic symbolic variable `{value.name}` not found in kernel signature")
++
++    def _get_host_library(self) -> HostKernelLibrary:
++        if self._host_library is None:
++            source_value = self.rt_mod if self.rt_mod is not None else self.device_kernel_source
++            if source_value is None:
++                raise RuntimeError("No MLIR source module is available for host execution")
++            self._host_library = load_host_module(source_value)
++            self.libpath = str(self._host_library.path)
++            self.executable = _ExportableSharedLibrary(self.libpath)
++        return self._host_library
++
++    def _materialize_host_library(self) -> None:
++        self._get_host_library()
++
++    def close(self) -> None:
++        if self._host_library is not None:
++            self._host_library.close()
++            self._host_library = None
++
++    def __del__(self) -> None:
++        try:
++            self.close()
++        except Exception:
++            pass
++
++    def _resolve_output_shape(self, param: KernelParam, provided_args: dict[int, Any]) -> list[int]:
++        analyzer = tvm.arith.Analyzer()
++
++        shape: list[int] = []
++        for dim in param.shape:
++            expr = dim
++            if isinstance(expr, tir.PrimExpr):
++                substitution: dict[tir.Var, tir.PrimExpr] = {}
++
++                def collect_var(node):
++                    if isinstance(node, tir.Var):
++                        ref_tensor_idx, ref_shape_idx = self._lookup_dynamic_symbolic(node)
++                        ref_tensor = provided_args[ref_tensor_idx]
++                        substitution[node] = tir.IntImm(node.dtype, int(ref_tensor.shape[ref_shape_idx]))
++
++                tvm.tir.stmt_functor.post_order_visit(expr, collect_var)
++                if substitution:
++                    expr = tvm.tir.stmt_functor.substitute(expr, substitution)
++                expr = analyzer.simplify(expr)
++            if isinstance(expr, tir.IntImm):
++                shape.append(int(expr.value))
++            elif isinstance(expr, int):
++                shape.append(expr)
++            else:
++                shape.append(int(expr))
++        return shape
++
++    def _normalize_tensor_arg(self, value: Any) -> torch.Tensor:
++        if not isinstance(value, torch.Tensor):
++            raise TypeError(f"Expected a torch.Tensor input, but got {type(value)}")
++        if value.device.type != "cpu":
++            raise ValueError("The current riscv host runner only supports CPU tensors")
++        if not value.is_contiguous():
++            value = value.contiguous()
++        return value.detach()
++
++    def _torch_tensor_to_numpy(self, value: torch.Tensor) -> np.ndarray:
++        dtype = value.dtype
++        if dtype == torch.bfloat16:
++            return value.view(torch.uint16).numpy().view(np.dtype("bfloat16"))
++        if dtype == getattr(torch, "float4_e2m1fn_x2", None):
++            return value.view(torch.uint8).numpy().view(np.int8)
++        if dtype == getattr(torch, "float8_e4m3fn", None):
++            return value.view(torch.uint8).numpy()
++        if dtype == getattr(torch, "float8_e5m2", None):
++            return value.view(torch.uint8).numpy()
++        if dtype == getattr(torch, "float8_e4m3fnuz", None):
++            return value.view(torch.uint8).numpy()
++        if dtype == getattr(torch, "float8_e5m2fnuz", None):
++            return value.view(torch.uint8).numpy()
++        return value.numpy()
++
++    def _host_storage_torch_dtype(self, param: KernelParam) -> torch.dtype:
++        if param.is_float4():
++            return torch.int8
++        return param.torch_dtype()
++
++    def _host_storage_shape(self, param: KernelParam, provided_args: dict[int, Any]) -> list[int]:
++        return self._resolve_output_shape(param, provided_args)
++
++    def _convert_torch_func(self) -> Callable[..., Any]:
++        param_dtypes = [self._host_storage_torch_dtype(param) for param in self.params]
++
++        def func(*inputs: Any):
++            expected_inputs = len(self.params) - len(self.result_idx)
++            if len(inputs) != expected_inputs:
++                raise ValueError(f"Kernel expected {expected_inputs} inputs, but {len(inputs)} were provided")
++
++            provided_args: dict[int, Any] = {}
++            input_idx = 0
++            for i, param in enumerate(self.params):
++                if i in self.result_idx:
++                    continue
++                value = inputs[input_idx]
++                input_idx += 1
++                if param.is_scalar():
++                    if isinstance(value, torch.Tensor):
++                        if value.numel() != 1:
++                            raise ValueError("Scalar kernel parameters must be passed as Python scalars or 0-d tensors")
++                        value = value.item()
++                    provided_args[i] = value
++                else:
++                    provided_args[i] = self._normalize_tensor_arg(value)
++
++            host_args: list[Any] = []
++            for i, param in enumerate(self.params):
++                if i in self.result_idx:
++                    shape = self._host_storage_shape(param, provided_args)
++                    tensor = torch.empty(shape, dtype=param_dtypes[i], device="cpu")
++                    host_args.append(tensor)
++                    continue
++
++                host_args.append(provided_args[i])
++
++            native_args = [
++                self._torch_tensor_to_numpy(arg) if isinstance(arg, torch.Tensor) else arg
++                for arg in host_args
++            ]
++            self._get_host_library()(*native_args)
++
++            if len(self.result_idx) == 1:
++                return host_args[self.result_idx[0]]
++            return [host_args[i] for i in self.result_idx]
++
++        return func
++
++    @classmethod
++    def from_database(
++        cls,
++        params: list[KernelParam],
++        result_idx: list[int],
++        target: str,
++        func_or_mod: tir.PrimFunc | tvm.IRModule,
++        host_kernel_source: str,
++        device_kernel_source: str,
++        kernel_lib_path: str,
++        verbose: bool = False,
++        pass_configs: dict[str, Any] | None = None,
++        compile_flags: list[str] | None = None,
++    ):
++        adapter = cls.__new__(cls)
++        adapter.params = params
++        adapter.result_idx = adapter._legalize_result_idx(result_idx)
++        adapter.target = Target.canon_target(determine_target(target))
++        adapter.host_mod = None
++        adapter.device_mod = None
++        adapter.rt_mod = None
++        adapter.host_kernel_source = host_kernel_source
++        adapter.device_kernel_source = device_kernel_source
++        adapter.verbose = verbose
++        adapter.pass_configs = pass_configs or {}
++        adapter.compile_flags = compile_flags
++        adapter.libpath = kernel_lib_path
++        adapter._host_library = load_host_module_from_binary(device_kernel_source, kernel_lib_path)
++        adapter.executable = _ExportableSharedLibrary(kernel_lib_path)
++
++        if isinstance(func_or_mod, tir.PrimFunc):
++            adapter.ir_module = tvm.IRModule({func_or_mod.attrs["global_symbol"]: func_or_mod})
++        else:
++            adapter.ir_module = func_or_mod
++
++        adapter.dynamic_symbolic_map = adapter._process_dynamic_symbolic()
++        adapter._post_init()
++        return adapter
++
++    def get_kernel_source(self, kernel_only: bool = True) -> str:
++        if self.rt_mod is not None and hasattr(self.rt_mod, "inspect_source"):
++            return self.rt_mod.inspect_source()
++        if isinstance(self.device_kernel_source, str):
++            return self.device_kernel_source
++        return super().get_kernel_source(kernel_only=kernel_only)
++
++    def get_host_source(self) -> str:
++        return self.get_kernel_source(kernel_only=False)
+diff --git a/tilelang/jit/adapter/riscv/libgen.py b/tilelang/jit/adapter/riscv/libgen.py
+new file mode 100644
+index 00000000..2ecb6bdf
+--- /dev/null
++++ b/tilelang/jit/adapter/riscv/libgen.py
+@@ -0,0 +1,269 @@
++"""Helpers for MLIR -> LLVM -> RISC-V artifact generation."""
++
++from __future__ import annotations
++
++import os
++import re
++import subprocess
++import tempfile
++from pathlib import Path
++from typing import Any
++
++from tilelang.tladapter.toolchain import resolve_tool
++from tilelang.tladapter.utils import Pipeline
++
++
++DEFAULT_RISCV_TRIPLE = os.environ.get("TILELANG_RISCV_TRIPLE", "riscv64-unknown-linux-gnu")
++
++
++_F8_EXTF_RE = re.compile(
++    r"^(?P<indent>\s*)(?P<result>%[\w\d_.$-]+)\s*=\s*arith\.extf\s+"
++    r"(?P<value>%[\w\d_.$-]+)\s*:\s*(?P<src>f8E4M3FN(?:UZ)?)\s+to\s+f32\s*$"
++)
++_F8_TRUNCF_RE = re.compile(
++    r"^(?P<indent>\s*)(?P<result>%[\w\d_.$-]+)\s*=\s*arith\.truncf\s+"
++    r"(?P<value>%[\w\d_.$-]+)\s*:\s*f32\s+to\s+(?P<dst>f8E4M3FN(?:UZ)?)\s*$"
++)
++_F4_EXTF_RE = re.compile(
++    r"^(?P<indent>\s*)(?P<result>%[\w\d_.$-]+)\s*=\s*arith\.extf\s+"
++    r"(?P<value>%[\w\d_.$-]+)\s*:\s*f4E2M1FN\s+to\s+f32\s*$"
++)
++_F4_TRUNCF_RE = re.compile(
++    r"^(?P<indent>\s*)(?P<result>%[\w\d_.$-]+)\s*=\s*arith\.truncf\s+"
++    r"(?P<value>%[\w\d_.$-]+)\s*:\s*f32\s+to\s+f4E2M1FN\s*$"
++)
++
++
++def _f8_helper_suffix(dtype: str) -> str:
++    return dtype.lower()
++
++
++def _ssa_suffix(value: str, suffix: str) -> str:
++    base = value[1:] if value.startswith("%") else value
++    base = base.replace(".", "_").replace("$", "_").replace("-", "_")
++    return f"%{suffix}_{base}"
++
++
++def _legalize_low_precision_conversions_for_riscv(mlir_source: str) -> str:
++    """Lower MLIR FP8 convert ops to explicit byte-level helper calls.
++
++    The LLVM dialect lowers FP8 memrefs to byte storage on the RISC-V host path, but
++    upstream MLIR does not legalize bare arith.extf/truncf for these FP8 types to
++    LLVM. Keep FP8 storage in MLIR and only replace scalar conversions.
++    """
++
++    helper_decls: set[str] = set()
++    rewritten: list[str] = []
++    for line in mlir_source.splitlines():
++        ext_match = _F8_EXTF_RE.match(line)
++        if ext_match:
++            indent = ext_match.group("indent")
++            result = ext_match.group("result")
++            value = ext_match.group("value")
++            src = ext_match.group("src")
++            suffix = _f8_helper_suffix(src)
++            bits = _ssa_suffix(result, "bits")
++            helper = f"tilelang_riscv_{suffix}_to_f32"
++            helper_decls.add(f"  func.func private @{helper}(i8) -> f32")
++            rewritten.append(f"{indent}{bits} = arith.bitcast {value} : {src} to i8")
++            rewritten.append(f"{indent}{result} = func.call @{helper}({bits}) : (i8) -> f32")
++            continue
++
++        trunc_match = _F8_TRUNCF_RE.match(line)
++        if trunc_match:
++            indent = trunc_match.group("indent")
++            result = trunc_match.group("result")
++            value = trunc_match.group("value")
++            dst = trunc_match.group("dst")
++            suffix = _f8_helper_suffix(dst)
++            bits = _ssa_suffix(result, "bits")
++            helper = f"tilelang_riscv_f32_to_{suffix}"
++            helper_decls.add(f"  func.func private @{helper}(f32) -> i8")
++            rewritten.append(f"{indent}{bits} = func.call @{helper}({value}) : (f32) -> i8")
++            rewritten.append(f"{indent}{result} = arith.bitcast {bits} : i8 to {dst}")
++            continue
++
++        f4_ext_match = _F4_EXTF_RE.match(line)
++        if f4_ext_match:
++            indent = f4_ext_match.group("indent")
++            result = f4_ext_match.group("result")
++            value = f4_ext_match.group("value")
++            helper = "tilelang_riscv_f4e2m1fn_to_f32"
++            helper_decls.add(f"  func.func private @{helper}(i8) -> f32")
++            rewritten.append(f"{indent}{result} = func.call @{helper}({value}) : (i8) -> f32")
++            continue
++
++        f4_trunc_match = _F4_TRUNCF_RE.match(line)
++        if f4_trunc_match:
++            indent = f4_trunc_match.group("indent")
++            result = f4_trunc_match.group("result")
++            value = f4_trunc_match.group("value")
++            helper = "tilelang_riscv_f32_to_f4e2m1fn"
++            helper_decls.add(f"  func.func private @{helper}(f32) -> i8")
++            rewritten.append(f"{indent}{result} = func.call @{helper}({value}) : (f32) -> i8")
++            continue
++
++        rewritten.append(line)
++
++    if not helper_decls:
++        return mlir_source.replace("f4E2M1FN", "i8")
++
++    output: list[str] = []
++    inserted = False
++    for line in rewritten:
++        output.append(line)
++        if not inserted and line.strip() == "module {":
++            output.extend(sorted(helper_decls))
++            inserted = True
++    if not inserted:
++        output = sorted(helper_decls) + output
++    return ("\n".join(output) + ("\n" if mlir_source.endswith("\n") else "")).replace("f4E2M1FN", "i8")
++
++
++def _extract_mlir_source(value: Any) -> str:
++    if isinstance(value, str):
++        return value
++
++    inspect_source = getattr(value, "inspect_source", None)
++    if callable(inspect_source):
++        return inspect_source()
++
++    rt_mod = getattr(value, "rt_mod", None)
++    if rt_mod is not None and hasattr(rt_mod, "inspect_source"):
++        return rt_mod.inspect_source()
++
++    kernel_source = getattr(value, "kernel_source", None)
++    if isinstance(kernel_source, str):
++        return kernel_source
++
++    raise TypeError(f"Cannot extract MLIR source from value of type {type(value)}")
++
++
++def _write_text_if_requested(text: str, path: str | os.PathLike[str] | None) -> str:
++    if path is not None:
++        Path(path).write_text(text)
++    return text
++
++
++def _run_checked(cmd: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess:
++    proc = subprocess.run(
++        cmd,
++        input=input_text,
++        text=input_text is not None,
++        capture_output=True,
++        check=False,
++    )
++    if proc.returncode != 0:
++        message = proc.stderr.strip() or proc.stdout.strip() or "unknown tool failure"
++        raise RuntimeError(f"`{' '.join(cmd)}` failed: {message}")
++    return proc
++
++
++def build_debug_pipeline() -> Pipeline:
++    pipeline = Pipeline()
++    for pass_name in (
++        "canonicalize",
++        "cse",
++        "func.func(convert-linalg-to-loops)",
++        "canonicalize",
++        "cse",
++        "convert-scf-to-cf",
++        "expand-strided-metadata",
++        "lower-affine",
++        "finalize-memref-to-llvm",
++        "arith-expand{include-f4e2m1=true}",
++        "convert-math-to-llvm",
++        "convert-arith-to-llvm",
++        "convert-func-to-llvm",
++        "convert-cf-to-llvm",
++        "reconcile-unrealized-casts",
++    ):
++        pipeline.add(pass_name)
++    return pipeline
++
++
++def lower_to_llvm_dialect_mlir(value: Any, *, pipeline: Pipeline | None = None) -> str:
++    mlir_source = _legalize_low_precision_conversions_for_riscv(_extract_mlir_source(value))
++    active_pipeline = pipeline if pipeline is not None else build_debug_pipeline()
++    return active_pipeline.run(mlir_source)
++
++
++def emit_mlir(value: Any, path: str | os.PathLike[str] | None = None) -> str:
++    return _write_text_if_requested(_extract_mlir_source(value), path)
++
++
++def emit_llvm_ir(
++    value: Any,
++    path: str | os.PathLike[str] | None = None,
++    *,
++    pipeline: Pipeline | None = None,
++) -> str:
++    llvm_dialect_mlir = lower_to_llvm_dialect_mlir(value, pipeline=pipeline)
++    proc = _run_checked([str(resolve_tool("mlir-translate")), "--mlir-to-llvmir"], input_text=llvm_dialect_mlir)
++    return _write_text_if_requested(proc.stdout, path)
++
++
++def _emit_llc_artifact(
++    value: Any,
++    *,
++    filetype: str,
++    triple: str = DEFAULT_RISCV_TRIPLE,
++    path: str | os.PathLike[str] | None = None,
++    pipeline: Pipeline | None = None,
++) -> bytes | str:
++    llvm_ir = emit_llvm_ir(value, pipeline=pipeline)
++    with tempfile.TemporaryDirectory(prefix="tilelang-riscv-") as temp_dir:
++        temp_dir_path = Path(temp_dir)
++        ll_path = temp_dir_path / "kernel.ll"
++        out_path = temp_dir_path / f"kernel.{ 's' if filetype == 'asm' else 'o' }"
++        ll_path.write_text(llvm_ir)
++        _run_checked(
++            [
++                str(resolve_tool("llc")),
++                f"-mtriple={triple}",
++                f"-filetype={filetype}",
++                str(ll_path),
++                "-o",
++                str(out_path),
++            ]
++        )
++        if filetype == "asm":
++            text = out_path.read_text()
++            if path is not None:
++                Path(path).write_text(text)
++            return text
++        data = out_path.read_bytes()
++        if path is not None:
++            Path(path).write_bytes(data)
++        return data
++
++
++def emit_asm(
++    value: Any,
++    path: str | os.PathLike[str] | None = None,
++    *,
++    triple: str = DEFAULT_RISCV_TRIPLE,
++    pipeline: Pipeline | None = None,
++) -> str:
++    return _emit_llc_artifact(value, filetype="asm", triple=triple, path=path, pipeline=pipeline)
++
++
++def emit_object(
++    value: Any,
++    path: str | os.PathLike[str] | None = None,
++    *,
++    triple: str = DEFAULT_RISCV_TRIPLE,
++    pipeline: Pipeline | None = None,
++) -> bytes:
++    return _emit_llc_artifact(value, filetype="obj", triple=triple, path=path, pipeline=pipeline)
++
++
++__all__ = [
++    "DEFAULT_RISCV_TRIPLE",
++    "build_debug_pipeline",
++    "emit_asm",
++    "emit_llvm_ir",
++    "emit_mlir",
++    "emit_object",
++    "lower_to_llvm_dialect_mlir",
++]
+diff --git a/tilelang/jit/adapter/riscv/wrapper.py b/tilelang/jit/adapter/riscv/wrapper.py
+new file mode 100644
+index 00000000..5ece14d4
+--- /dev/null
++++ b/tilelang/jit/adapter/riscv/wrapper.py
+@@ -0,0 +1,1132 @@
++"""Helpers for compiling MLIR-backed kernels into native host libraries."""
++
++from __future__ import annotations
++
++import ctypes
++import os
++import re
++import shlex
++import shutil
++import subprocess
++import tempfile
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Any
++
++import numpy as np
++
++from tilelang.tladapter.toolchain import ToolchainNotFoundError, resolve_llvm_root, resolve_tool
++
++from .libgen import DEFAULT_RISCV_TRIPLE, emit_llvm_ir, emit_mlir, emit_object
++
++
++@dataclass(frozen=True)
++class _MemRefParam:
++    shape: tuple[int | None, ...]
++    dtype: np.dtype
++    mlir_type: str
++
++    @property
++    def rank(self) -> int:
++        return len(self.shape)
++
++    @property
++    def is_fp4(self) -> bool:
++        return False
++
++
++@dataclass(frozen=True)
++class _ScalarParam:
++    dtype_token: str
++    ctype: type[ctypes._SimpleCData]
++    mlir_type: str
++
++
++@dataclass(frozen=True)
++class _FunctionSignature:
++    name: str
++    params: tuple[_MemRefParam | _ScalarParam, ...]
++
++
++class RiscvRunnerError(RuntimeError):
++    """Raised when the freestanding RISC-V runner cannot be built or executed."""
++
++
++class RiscvRunnerNotFoundError(RiscvRunnerError):
++    """Raised when no runnable RISC-V simulator is available."""
++
++
++_QEMU_OUTPUT_MAGIC = b"TLRVQ001"
++_RETAINED_HOST_LIBRARY_TEMPDIRS: list[tempfile.TemporaryDirectory[str]] = []
++
++
++def _run_checked(cmd: list[str]) -> subprocess.CompletedProcess[str]:
++    proc = subprocess.run(cmd, text=True, capture_output=True, check=False)
++    if proc.returncode != 0:
++        message = proc.stderr.strip() or proc.stdout.strip() or "unknown tool failure"
++        raise RuntimeError(f"`{' '.join(cmd)}` failed: {message}")
++    return proc
++
++
++def _run_checked_binary(cmd: list[str]) -> subprocess.CompletedProcess[bytes]:
++    proc = subprocess.run(cmd, capture_output=True, check=False)
++    if proc.returncode != 0:
++        stderr = proc.stderr.decode("utf-8", errors="replace").strip()
++        stdout = proc.stdout.decode("utf-8", errors="replace").strip()
++        message = stderr or stdout or "unknown tool failure"
++        raise RiscvRunnerError(f"`{' '.join(cmd)}` failed: {message}")
++    return proc
++
++
++_PTR_TO_MEMREF_DECL_RE = re.compile(
++    r"declare\s+\{\s*ptr,\s*ptr,\s*i64,\s*\[(?P<rank>\d+)\s+x\s+i64\],\s*"
++    r"\[(?P=rank)\s+x\s+i64\]\s*\}\s+@(?P<name>tilelang_riscv_ptr_i64_to_memref_[^(]+)"
++    r"\((?P<args>[^)]*)\)"
++)
++
++
++def _decode_ptr_to_memref_shape(symbol: str) -> list[int | None]:
++    marker = "_r"
++    rank_pos = symbol.rfind(marker)
++    if rank_pos < 0:
++        raise ValueError(f"Malformed pointer-backed memref helper symbol: {symbol}")
++    rest = symbol[rank_pos + len(marker) :]
++    pieces = rest.split("_")
++    if not pieces or not pieces[0].isdigit():
++        raise ValueError(f"Malformed pointer-backed memref helper rank: {symbol}")
++    shape: list[int | None] = []
++    i = 1
++    while i < len(pieces):
++        tag = pieces[i]
++        if tag == "d":
++            shape.append(None)
++            i += 1
++            continue
++        if tag.startswith("s") and len(tag) > 1:
++            shape.append(int(tag[1:]))
++            i += 1
++            continue
++        if tag == "s" and i + 1 < len(pieces):
++            shape.append(int(pieces[i + 1]))
++            i += 2
++            continue
++        raise ValueError(f"Malformed pointer-backed memref helper shape: {symbol}")
++    if len(shape) != int(pieces[0]):
++        raise ValueError(f"Pointer-backed memref helper rank/shape mismatch: {symbol}")
++    return shape
++
++
++def _row_major_strides(shape_exprs: list[str]) -> list[str]:
++    strides = ["1"] * len(shape_exprs)
++    running = "1"
++    for i in range(len(shape_exprs) - 1, -1, -1):
++        strides[i] = running
++        running = f"({running}) * ({shape_exprs[i]})"
++    return strides
++
++
++def _emit_ptr_to_memref_helpers(llvm_ir: str) -> str:
++    definitions: list[str] = [
++        "#include <stdint.h>",
++        "",
++    ]
++    seen: set[str] = set()
++    emitted_structs: set[str] = set()
++    for match in _PTR_TO_MEMREF_DECL_RE.finditer(llvm_ir):
++        symbol = match.group("name")
++        if symbol in seen:
++            continue
++        seen.add(symbol)
++        rank = int(match.group("rank"))
++        shape = _decode_ptr_to_memref_shape(symbol)
++        dyn_arg_count = sum(dim is None for dim in shape)
++        struct_name = f"tilelang_riscv_memref_r{rank}"
++        if struct_name not in emitted_structs:
++            emitted_structs.add(struct_name)
++            definitions.extend(
++                [
++                    f"struct {struct_name} {{",
++                    "  void* allocated;",
++                    "  void* aligned;",
++                    "  int64_t offset;",
++                    f"  int64_t sizes[{rank}];",
++                    f"  int64_t strides[{rank}];",
++                    "};",
++                    "",
++                ]
++            )
++        args = ["int64_t raw_addr"] + [f"int64_t d{i}" for i in range(dyn_arg_count)]
++        shape_exprs: list[str] = []
++        dyn_index = 0
++        for dim in shape:
++            if dim is None:
++                shape_exprs.append(f"d{dyn_index}")
++                dyn_index += 1
++            else:
++                shape_exprs.append(str(dim))
++        stride_exprs = _row_major_strides(shape_exprs)
++        definitions.extend(
++            [
++                f"struct {struct_name} {symbol}({', '.join(args)}) {{",
++                f"  struct {struct_name} result;",
++                "  result.allocated = (void*)(uintptr_t)raw_addr;",
++                "  result.aligned = (void*)(uintptr_t)raw_addr;",
++                "  result.offset = 0;",
++            ]
++        )
++        for i, expr in enumerate(shape_exprs):
++            definitions.append(f"  result.sizes[{i}] = {expr};")
++        for i, expr in enumerate(stride_exprs):
++            definitions.append(f"  result.strides[{i}] = {expr};")
++        definitions.extend(
++            [
++                "  return result;",
++                "}",
++                "",
++            ]
++        )
++    return "\n".join(definitions) if seen else ""
++
++
++def _emit_f8_conversion_helpers(llvm_ir: str) -> str:
++    needed = {
++        "tilelang_riscv_f8e4m3fnuz_to_f32": "tilelang_riscv_f8e4m3fnuz_to_f32" in llvm_ir,
++        "tilelang_riscv_f32_to_f8e4m3fnuz": "tilelang_riscv_f32_to_f8e4m3fnuz" in llvm_ir,
++        "tilelang_riscv_f8e4m3fn_to_f32": "tilelang_riscv_f8e4m3fn_to_f32" in llvm_ir,
++        "tilelang_riscv_f32_to_f8e4m3fn": "tilelang_riscv_f32_to_f8e4m3fn" in llvm_ir,
++    }
++    if not any(needed.values()):
++        return ""
++
++    definitions = [
++        "#include <stdint.h>",
++        "",
++        "static float tilelang_riscv_pow2_i32(int exp) {",
++        "  float value = 1.0f;",
++        "  if (exp >= 0) {",
++        "    for (int i = 0; i < exp; ++i) value *= 2.0f;",
++        "  } else {",
++        "    for (int i = 0; i < -exp; ++i) value *= 0.5f;",
++        "  }",
++        "  return value;",
++        "}",
++        "",
++        "static float tilelang_riscv_decode_e4m3(uint8_t raw, int bias, int fnuz) {",
++        "  if ((raw & 0x7f) == 0) return 0.0f;",
++        "  if (fnuz && raw == 0x80) return 0.0f;",
++        "  int sign = (raw & 0x80) ? -1 : 1;",
++        "  int exp = (raw >> 3) & 0x0f;",
++        "  int mant = raw & 0x07;",
++        "  float value;",
++        "  if (exp == 0) {",
++        "    value = ((float)mant / 8.0f) * tilelang_riscv_pow2_i32(1 - bias);",
++        "  } else {",
++        "    value = (1.0f + (float)mant / 8.0f) * tilelang_riscv_pow2_i32(exp - bias);",
++        "  }",
++        "  return sign < 0 ? -value : value;",
++        "}",
++        "",
++        "static uint8_t tilelang_riscv_encode_e4m3(float value, int bias, int fnuz) {",
++        "  if (!(value == value) || value == 0.0f) return 0;",
++        "  float best_diff = 3.4028234663852886e38f;",
++        "  uint8_t best = 0;",
++        "  for (int code = 0; code < 256; ++code) {",
++        "    if (fnuz && code == 0x80) continue;",
++        "    float decoded = tilelang_riscv_decode_e4m3((uint8_t)code, bias, fnuz);",
++        "    float diff = decoded - value;",
++        "    if (diff < 0.0f) diff = -diff;",
++        "    if (diff < best_diff || (diff == best_diff && (code & 1) == 0 && (best & 1) != 0)) {",
++        "      best_diff = diff;",
++        "      best = (uint8_t)code;",
++        "    }",
++        "  }",
++        "  return best;",
++        "}",
++        "",
++    ]
++    if needed["tilelang_riscv_f8e4m3fnuz_to_f32"]:
++        definitions.extend(
++            [
++                "float tilelang_riscv_f8e4m3fnuz_to_f32(uint8_t raw) {",
++                "  return tilelang_riscv_decode_e4m3(raw, 7, 1);",
++                "}",
++                "",
++            ]
++        )
++    if needed["tilelang_riscv_f32_to_f8e4m3fnuz"]:
++        definitions.extend(
++            [
++                "uint8_t tilelang_riscv_f32_to_f8e4m3fnuz(float value) {",
++                "  return tilelang_riscv_encode_e4m3(value, 7, 1);",
++                "}",
++                "",
++            ]
++        )
++    if needed["tilelang_riscv_f8e4m3fn_to_f32"]:
++        definitions.extend(
++            [
++                "float tilelang_riscv_f8e4m3fn_to_f32(uint8_t raw) {",
++                "  return tilelang_riscv_decode_e4m3(raw, 7, 0);",
++                "}",
++                "",
++            ]
++        )
++    if needed["tilelang_riscv_f32_to_f8e4m3fn"]:
++        definitions.extend(
++            [
++                "uint8_t tilelang_riscv_f32_to_f8e4m3fn(float value) {",
++                "  return tilelang_riscv_encode_e4m3(value, 7, 0);",
++                "}",
++                "",
++            ]
++        )
++    return "\n".join(definitions)
++
++
++def _emit_f4_conversion_helpers(llvm_ir: str) -> str:
++    need_decode = "tilelang_riscv_f4e2m1fn_to_f32" in llvm_ir
++    need_encode = "tilelang_riscv_f32_to_f4e2m1fn" in llvm_ir
++    if not need_decode and not need_encode:
++        return ""
++    definitions = [
++        "#include <stdint.h>",
++        "",
++        "float tilelang_riscv_f4e2m1fn_to_f32(uint8_t raw) {",
++        "  raw &= 0x0f;",
++        "  float sign = (raw & 0x08) ? -1.0f : 1.0f;",
++        "  int exp = (raw >> 1) & 0x03;",
++        "  int mant = raw & 0x01;",
++        "  float value = 0.0f;",
++        "  if (exp == 0) {",
++        "    value = 0.5f * (float)mant;",
++        "  } else {",
++        "    float pow2 = exp == 1 ? 1.0f : (exp == 2 ? 2.0f : 4.0f);",
++        "    value = (1.0f + 0.5f * (float)mant) * pow2;",
++        "  }",
++        "  return sign * value;",
++        "}",
++        "",
++        "uint8_t tilelang_riscv_f32_to_f4e2m1fn(float value) {",
++        "  float best_diff = 3.4028234663852886e38f;",
++        "  uint8_t best = 0;",
++        "  for (int code = 0; code < 16; ++code) {",
++        "    float decoded = tilelang_riscv_f4e2m1fn_to_f32((uint8_t)code);",
++        "    float diff = decoded - value;",
++        "    if (diff < 0.0f) diff = -diff;",
++        "    if (diff < best_diff || (diff == best_diff && (code & 1) == 0 && (best & 1) != 0)) {",
++        "      best_diff = diff;",
++        "      best = (uint8_t)code;",
++        "    }",
++        "  }",
++        "  return best;",
++        "}",
++        "",
++    ]
++    return "\n".join(definitions)
++
++
++def _emit_host_helper_source(llvm_ir: str) -> str:
++    helper_parts = [
++        _emit_ptr_to_memref_helpers(llvm_ir),
++        _emit_f8_conversion_helpers(llvm_ir),
++        _emit_f4_conversion_helpers(llvm_ir),
++    ]
++    return "\n".join(part for part in helper_parts if part)
++
++
++def _split_top_level(text: str, delimiter: str = ",") -> list[str]:
++    parts: list[str] = []
++    current: list[str] = []
++    depth = 0
++    pairs = {"<": ">", "(": ")", "[": "]", "{": "}"}
++    closers = set(pairs.values())
++
++    for char in text:
++        if char in pairs:
++            depth += 1
++        elif char in closers:
++            depth -= 1
++        if char == delimiter and depth == 0:
++            piece = "".join(current).strip()
++            if piece:
++                parts.append(piece)
++            current = []
++            continue
++        current.append(char)
++
++    tail = "".join(current).strip()
++    if tail:
++        parts.append(tail)
++    return parts
++
++
++def _dtype_token_to_numpy(dtype_token: str) -> np.dtype:
++    if dtype_token == "f4E2M1FN":
++        return np.dtype(np.int8)
++    if dtype_token == "f16":
++        return np.dtype(np.float16)
++    if dtype_token == "f32":
++        return np.dtype(np.float32)
++    if dtype_token == "f64":
++        return np.dtype(np.float64)
++    if dtype_token == "bf16":
++        return np.dtype("bfloat16")
++    if dtype_token in ("f8E4M3FN", "f8E5M2", "f8E4M3FNUZ", "f8E5M2FNUZ"):
++        return np.dtype(np.uint8)
++    if dtype_token == "i1":
++        return np.dtype(np.bool_)
++    if dtype_token == "index":
++        return np.dtype(np.int64)
++    if dtype_token.startswith("ui"):
++        return np.dtype(f"uint{int(dtype_token[2:])}")
++    if dtype_token.startswith("i"):
++        return np.dtype(f"int{int(dtype_token[1:])}")
++    raise TypeError(f"Unsupported MLIR dtype for host wrapper: {dtype_token}")
++
++
++def _dtype_token_to_ctype(dtype_token: str) -> type[ctypes._SimpleCData]:
++    mapping: dict[str, type[ctypes._SimpleCData]] = {
++        "f32": ctypes.c_float,
++        "f64": ctypes.c_double,
++        "i1": ctypes.c_bool,
++        "i8": ctypes.c_int8,
++        "i16": ctypes.c_int16,
++        "i32": ctypes.c_int32,
++        "i64": ctypes.c_int64,
++        "ui8": ctypes.c_uint8,
++        "ui16": ctypes.c_uint16,
++        "ui32": ctypes.c_uint32,
++        "ui64": ctypes.c_uint64,
++        "index": ctypes.c_int64,
++    }
++    if dtype_token in mapping:
++        return mapping[dtype_token]
++    raise TypeError(f"Unsupported MLIR scalar dtype for host wrapper: {dtype_token}")
++
++
++def _dtype_token_to_c_type(dtype_token: str) -> str:
++    mapping = {
++        "f32": "float",
++        "f64": "double",
++        "i1": "_Bool",
++        "i8": "signed char",
++        "i16": "short",
++        "i32": "int",
++        "i64": "long long",
++        "ui8": "unsigned char",
++        "ui16": "unsigned short",
++        "ui32": "unsigned int",
++        "ui64": "unsigned long long",
++        "index": "long long",
++    }
++    if dtype_token in mapping:
++        return mapping[dtype_token]
++    raise TypeError(f"Unsupported MLIR scalar dtype for freestanding RISC-V runner: {dtype_token}")
++
++
++def _parse_memref_type(type_text: str) -> _MemRefParam:
++    assert type_text.startswith("memref<") and type_text.endswith(">")
++    inner = type_text[len("memref<") : -1].strip()
++    shape_and_dtype = _split_top_level(inner)[0]
++    dims_and_dtype = [piece.strip() for piece in shape_and_dtype.split("x") if piece.strip()]
++    if len(dims_and_dtype) == 1:
++        shape: tuple[int | None, ...] = ()
++        dtype_token = dims_and_dtype[0]
++    else:
++        raw_shape = dims_and_dtype[:-1]
++        dtype_token = dims_and_dtype[-1]
++        shape = tuple(None if dim == "?" else int(dim) for dim in raw_shape)
++    return _MemRefParam(shape=shape, dtype=_dtype_token_to_numpy(dtype_token), mlir_type=type_text)
++
++
++def _parse_param_type(type_text: str) -> _MemRefParam | _ScalarParam:
++    normalized = type_text.strip()
++    if normalized.startswith("memref<"):
++        return _parse_memref_type(normalized)
++    return _ScalarParam(dtype_token=normalized, ctype=_dtype_token_to_ctype(normalized), mlir_type=normalized)
++
++
++def _parse_function_signatures(mlir_source: str) -> list[_FunctionSignature]:
++    matches = list(re.finditer(r"func\.func\s+@(?P<name>[\w$.-]+)\((?P<params>[^)]*)\)\s*(?:->\s*[^({]+)?\{", mlir_source))
++    signatures: list[_FunctionSignature] = []
++    for match in matches:
++        params_text = match.group("params").strip()
++        params: list[_MemRefParam | _ScalarParam] = []
++        if params_text:
++            for param_text in _split_top_level(params_text):
++                _, type_text = param_text.split(":", maxsplit=1)
++                params.append(_parse_param_type(type_text))
++        signatures.append(_FunctionSignature(name=match.group("name"), params=tuple(params)))
++    generic_matches = re.finditer(
++        r'"func\.func"\(\)\s*<\{(?P<attrs>.*?)\}>\s*\(',
++        mlir_source,
++        flags=re.DOTALL,
++    )
++    for match in generic_matches:
++        attrs = match.group("attrs")
++        name_match = re.search(r'sym_name\s*=\s*"(?P<name>[\w$.-]+)"', attrs)
++        type_match = re.search(r"function_type\s*=\s*\((?P<params>.*?)\)\s*->", attrs, flags=re.DOTALL)
++        if name_match is None or type_match is None:
++            continue
++        params_text = type_match.group("params").strip()
++        params: list[_MemRefParam | _ScalarParam] = []
++        if params_text:
++            for type_text in _split_top_level(params_text):
++                params.append(_parse_param_type(type_text))
++        if not any(signature.name == name_match.group("name") for signature in signatures):
++            signatures.append(_FunctionSignature(name=name_match.group("name"), params=tuple(params)))
++    return signatures
++
++
++def _select_signature(mlir_source: str, function_name: str | None) -> _FunctionSignature:
++    signatures = _parse_function_signatures(mlir_source)
++    if not signatures:
++        raise ValueError("No `func.func` definitions found in the MLIR module")
++    if function_name is None:
++        return signatures[0]
++    for signature in signatures:
++        if signature.name == function_name:
++            return signature
++    raise ValueError(f"Function `{function_name}` not found in the MLIR module")
++
++
++def resolve_host_triple() -> str:
++    if os.environ.get("TILELANG_HOST_TRIPLE"):
++        return os.environ["TILELANG_HOST_TRIPLE"]
++    clang = resolve_tool("clang")
++    proc = _run_checked([str(clang), "-dumpmachine"])
++    return proc.stdout.strip()
++
++
++def _normalize_memref_array(spec: _MemRefParam, value: Any) -> np.ndarray:
++    array = np.asarray(value)
++    if array.dtype != spec.dtype:
++        raise TypeError(f"Expected {spec.dtype} for {spec.mlir_type}, but got {array.dtype}")
++    if array.ndim != spec.rank:
++        raise ValueError(f"Expected rank-{spec.rank} array for {spec.mlir_type}, but got rank {array.ndim}")
++    if not array.flags.c_contiguous:
++        raise ValueError("Execution currently requires C-contiguous NumPy arrays")
++    expected_shape = _physical_memref_shape(spec)
++    for expected_dim, actual_dim in zip(expected_shape, array.shape):
++        if expected_dim is not None and expected_dim != actual_dim:
++            raise ValueError(
++                f"Expected shape {expected_shape} for {spec.mlir_type}, but got {tuple(int(dim) for dim in array.shape)}"
++            )
++    return array
++
++
++def _physical_memref_shape(spec: _MemRefParam) -> tuple[int | None, ...]:
++    if not spec.is_fp4 or not spec.shape:
++        return spec.shape
++    shape = list(spec.shape)
++    last = shape[-1]
++    shape[-1] = None if last is None else (last + 1) // 2
++    return tuple(shape)
++
++
++def _logical_memref_shape(spec: _MemRefParam, array: np.ndarray) -> list[int]:
++    shape = [int(dim) for dim in array.shape]
++    if spec.is_fp4 and shape:
++        shape[-1] *= 2
++    return shape
++
++
++def _logical_row_major_strides(shape: list[int]) -> list[int]:
++    strides = [1] * len(shape)
++    running = 1
++    for i in range(len(shape) - 1, -1, -1):
++        strides[i] = running
++        running *= shape[i]
++    return strides
++
++
++def _normalize_scalar_value(spec: _ScalarParam, value: Any) -> Any:
++    scalar = value.item() if isinstance(value, np.generic) else value
++    try:
++        return spec.ctype(scalar).value
++    except Exception as err:  # pragma: no cover - ctypes error details are platform-specific
++        raise TypeError(f"Cannot convert value {value!r} to scalar type {spec.mlir_type}") from err
++
++
++def _format_c_scalar_literal(spec: _ScalarParam, value: Any) -> str:
++    normalized = _normalize_scalar_value(spec, value)
++    if spec.dtype_token in ("f32", "f64"):
++        if not np.isfinite(normalized):
++            raise ValueError("Freestanding RISC-V runner does not support NaN/Inf scalar literals")
++        return float(normalized).hex()
++    if spec.dtype_token == "i1":
++        return "1" if normalized else "0"
++    return str(int(normalized))
++
++
++def _resolve_command_parts(command: str | list[str] | tuple[str, ...]) -> list[str]:
++    if isinstance(command, str):
++        parts = shlex.split(command)
++    else:
++        parts = [str(part) for part in command]
++    if not parts:
++        raise RiscvRunnerNotFoundError("Empty RISC-V runner command")
++    resolved = shutil.which(parts[0]) if not os.path.isabs(parts[0]) else parts[0]
++    if resolved is None:
++        raise RiscvRunnerNotFoundError(
++            f"RISC-V runner `{parts[0]}` not found. Install qemu-user or set TILELANG_RISCV_RUNNER."
++        )
++    return [resolved, *parts[1:]]
++
++
++def resolve_riscv_runner(
++    runner: str | list[str] | tuple[str, ...] | None = None,
++    *,
++    required: bool = True,
++) -> list[str] | None:
++    try:
++        if runner is not None:
++            cmd = _resolve_command_parts(runner)
++        elif os.environ.get("TILELANG_RISCV_RUNNER"):
++            cmd = _resolve_command_parts(os.environ["TILELANG_RISCV_RUNNER"])
++        else:
++            qemu = shutil.which("qemu-riscv64")
++            if qemu is None:
++                if not required:
++                    return None
++                raise RiscvRunnerNotFoundError(
++                    "RISC-V runner `qemu-riscv64` not found. Install qemu-user or set "
++                    "`TILELANG_RISCV_RUNNER=\"spike pk\"`."
++                )
++            cmd = [qemu]
++        if os.environ.get("TILELANG_RISCV_RUNNER_FLAGS"):
++            cmd.extend(shlex.split(os.environ["TILELANG_RISCV_RUNNER_FLAGS"]))
++        return cmd
++    except RiscvRunnerNotFoundError:
++        if required:
++            raise
++        return None
++
++
++def resolve_riscv_linker(*, required: bool = True) -> Path | None:
++    override = os.environ.get("TILELANG_RISCV_LINKER")
++    if override:
++        parts = shlex.split(override)
++        if len(parts) != 1:
++            raise ToolchainNotFoundError("TILELANG_RISCV_LINKER must point to a single linker executable")
++        linker_path = Path(parts[0]).expanduser()
++        if not linker_path.is_file():
++            raise ToolchainNotFoundError(f"Configured RISC-V linker not found: {linker_path}")
++        return linker_path.resolve()
++
++    lld = resolve_tool("ld.lld", required=False)
++    if lld is not None:
++        return lld
++
++    for linker_name in ("riscv64-unknown-linux-gnu-ld", "riscv64-linux-gnu-ld"):
++        linker_path = shutil.which(linker_name)
++        if linker_path:
++            return Path(linker_path).resolve()
++
++    system_ld = shutil.which("ld")
++    if system_ld:
++        proc = subprocess.run([system_ld, "-V"], text=True, capture_output=True, check=False)
++        version_text = proc.stdout + proc.stderr
++        if "elf64lriscv" in version_text:
++            return Path(system_ld).resolve()
++
++    if required:
++        raise ToolchainNotFoundError(
++            "No RISC-V linker found. Build the vendored LLVM toolchain with lld enabled or set "
++            "TILELANG_RISCV_LINKER to a cross linker."
++        )
++    return None
++
++
++def _resolve_riscv_gcc_root() -> Path | None:
++    for env_name in ("TILELANG_RISCV_GCC_ROOT", "GCC_ROOT"):
++        env_value = os.environ.get(env_name)
++        if env_value:
++            candidate = Path(env_value).expanduser().resolve()
++            if candidate.is_dir():
++                return candidate
++
++    for env_name in ("CC", "CXX"):
++        compiler = os.environ.get(env_name)
++        if not compiler:
++            continue
++        compiler_path = Path(shlex.split(compiler)[0]).expanduser()
++        if compiler_path.is_file() and compiler_path.parent.name == "bin":
++            candidate = compiler_path.parent.parent.resolve()
++            if candidate.is_dir():
++                return candidate
++
++    default_root = Path("/opt/gcc-native")
++    if default_root.is_dir():
++        return default_root.resolve()
++    return None
++
++
++def _riscv_gcc_runtime_library_dirs(gcc_root: Path) -> list[Path]:
++    abi = os.environ.get("TILELANG_RISCV_ABI")
++    abi_names = [abi] if abi else ["lp64d", "lp64f", "lp64", "ilp32d", "ilp32f", "ilp32"]
++    candidates: list[Path] = []
++    for abi_name in abi_names:
++        candidates.extend(
++            [
++                gcc_root / "lib64" / abi_name,
++                gcc_root / "lib32" / abi_name,
++                gcc_root / "lib" / "lib64" / abi_name,
++                gcc_root / "lib" / "lib32" / abi_name,
++                gcc_root / "sysroot" / "lib64" / abi_name,
++                gcc_root / "sysroot" / "lib32" / abi_name,
++                gcc_root / "sysroot" / "usr" / "lib64" / abi_name,
++                gcc_root / "sysroot" / "usr" / "lib32" / abi_name,
++            ]
++        )
++
++    runtime_dirs: list[Path] = []
++    seen: set[Path] = set()
++    for candidate in candidates:
++        if (candidate / "libgcc_s.so").is_file() and candidate not in seen:
++            runtime_dirs.append(candidate)
++            seen.add(candidate)
++
++    if runtime_dirs:
++        return runtime_dirs
++
++    for runtime_lib in gcc_root.rglob("libgcc_s.so"):
++        runtime_dir = runtime_lib.parent
++        if runtime_dir not in seen:
++            runtime_dirs.append(runtime_dir)
++            seen.add(runtime_dir)
++    return runtime_dirs
++
++
++def _riscv_clang_flags(*, include_runtime_library_dirs: bool = False) -> list[str]:
++    flags: list[str] = []
++    gcc_root = _resolve_riscv_gcc_root()
++    if gcc_root is not None:
++        flags.append(f"--gcc-toolchain={gcc_root}")
++        sysroot = gcc_root / "sysroot"
++        if sysroot.is_dir():
++            flags.append(f"--sysroot={sysroot}")
++        if include_runtime_library_dirs:
++            for runtime_dir in _riscv_gcc_runtime_library_dirs(gcc_root):
++                flags.append(f"-L{runtime_dir}")
++                flags.append(f"-Wl,-rpath,{runtime_dir}")
++    if os.environ.get("TILELANG_RISCV_MARCH"):
++        flags.append(f"-march={os.environ['TILELANG_RISCV_MARCH']}")
++    if os.environ.get("TILELANG_RISCV_ABI"):
++        flags.append(f"-mabi={os.environ['TILELANG_RISCV_ABI']}")
++    if os.environ.get("TILELANG_RISCV_CPU"):
++        flags.append(f"-mcpu={os.environ['TILELANG_RISCV_CPU']}")
++    if os.environ.get("TILELANG_RISCV_CLANG_FLAGS"):
++        flags.extend(shlex.split(os.environ["TILELANG_RISCV_CLANG_FLAGS"]))
++    return flags
++
++
++def _infer_riscv_abi_flag(obj_path: Path) -> list[str]:
++    llvm_readelf = resolve_tool("llvm-readelf", required=False)
++    if llvm_readelf is None:
++        return []
++    proc = _run_checked([str(llvm_readelf), "-A", str(obj_path)])
++    match = re.search(r"TagName:\s+arch\s+Value:\s+([^\s]+)", proc.stdout)
++    if match is None:
++        return []
++    arch = re.sub(r"\d+p\d+", "", match.group(1))
++    if "g" in arch or "d" in arch:
++        return ["-mabi=lp64d"]
++    if "f" in arch:
++        return ["-mabi=lp64f"]
++    return ["-mabi=lp64"]
++
++
++def _freestanding_runner_source(signature: _FunctionSignature, args: tuple[Any, ...]) -> tuple[str, list[np.ndarray]]:
++    if len(args) != len(signature.params):
++        raise ValueError(f"Expected {len(signature.params)} arguments, but got {len(args)}")
++
++    memref_arrays: list[np.ndarray] = []
++    storage_decls: list[str] = []
++    write_backs: list[str] = []
++    call_args: list[str] = []
++
++    for index, (spec, value) in enumerate(zip(signature.params, args)):
++        arg_name = f"arg{index}"
++        if isinstance(spec, _MemRefParam):
++            array = _normalize_memref_array(spec, value)
++            memref_arrays.append(array)
++            raw_bytes = list(array.tobytes(order="C"))
++            storage_size = max(len(raw_bytes), 1)
++            init_bytes = ", ".join(str(byte) for byte in raw_bytes) if raw_bytes else "0"
++            storage_decls.append(
++                "static union {\n"
++                "  unsigned long long align;\n"
++                f"  unsigned char bytes[{storage_size}];\n"
++                f"}} {arg_name}_storage = {{ .bytes = {{ {init_bytes} }} }};"
++            )
++            call_args.extend(
++                [
++                    f"(void *){arg_name}_storage.bytes",
++                    f"(void *){arg_name}_storage.bytes",
++                    "0",
++                ]
++            )
++            call_args.extend(str(int(dim)) for dim in array.shape)
++            call_args.extend(str(int(stride // array.dtype.itemsize)) for stride in array.strides)
++            write_backs.append(f"  tl_write_all({arg_name}_storage.bytes, {array.nbytes}ul);")
++        else:
++            call_args.append(_format_c_scalar_literal(spec, value))
++
++    prototype_params: list[str] = []
++    for index, spec in enumerate(signature.params):
++        arg_name = f"arg{index}"
++        if isinstance(spec, _MemRefParam):
++            prototype_params.extend(
++                [
++                    f"void *{arg_name}_allocated",
++                    f"void *{arg_name}_aligned",
++                    f"long long {arg_name}_offset",
++                ]
++            )
++            prototype_params.extend(f"long long {arg_name}_size{dim}" for dim in range(spec.rank))
++            prototype_params.extend(f"long long {arg_name}_stride{dim}" for dim in range(spec.rank))
++        else:
++            prototype_params.append(f"{_dtype_token_to_c_type(spec.dtype_token)} {arg_name}")
++    prototype = ", ".join(prototype_params) if prototype_params else "void"
++    symbol_name = signature.name.replace("\\", "\\\\").replace('"', '\\"')
++    storage_block = "\n\n".join(storage_decls)
++    call_expr = ", ".join(call_args)
++    magic_bytes = ", ".join(str(byte) for byte in _QEMU_OUTPUT_MAGIC)
++    write_block = "\n".join(write_backs)
++
++    source = f"""typedef unsigned long tl_size;
++typedef long tl_long;
++
++extern void tilelang_kernel_entry({prototype}) __asm__("{symbol_name}");
++
++static const unsigned char tl_magic[{len(_QEMU_OUTPUT_MAGIC)}] = {{{magic_bytes}}};
++
++{storage_block}
++
++static tl_long tl_syscall3(tl_long number, tl_long arg0, tl_long arg1, tl_long arg2) {{
++  register tl_long a0 __asm__("a0") = arg0;
++  register tl_long a1 __asm__("a1") = arg1;
++  register tl_long a2 __asm__("a2") = arg2;
++  register tl_long a7 __asm__("a7") = number;
++  __asm__ volatile("ecall" : "+r"(a0) : "r"(a1), "r"(a2), "r"(a7) : "memory");
++  return a0;
++}}
++
++static void tl_exit(tl_long code) {{
++  register tl_long a0 __asm__("a0") = code;
++  register tl_long a7 __asm__("a7") = 93;
++  __asm__ volatile("ecall" : : "r"(a0), "r"(a7) : "memory");
++  for (;;) {{
++  }}
++}}
++
++static void tl_write_all(const void *buffer, tl_size size) {{
++  const unsigned char *cursor = (const unsigned char *)buffer;
++  while (size > 0) {{
++    tl_long written = tl_syscall3(64, 1, (tl_long)cursor, (tl_long)size);
++    if (written <= 0) {{
++      tl_exit(3);
++    }}
++    cursor += (tl_size)written;
++    size -= (tl_size)written;
++  }}
++}}
++
++void _start(void) {{
++  tilelang_kernel_entry({call_expr});
++  tl_write_all(tl_magic, {len(_QEMU_OUTPUT_MAGIC)}ul);
++{write_block}
++  tl_exit(0);
++}}
++"""
++    return source, memref_arrays
++
++
++def build_qemu_executable(
++    value: Any,
++    *args: Any,
++    function_name: str | None = None,
++    path: str | os.PathLike[str],
++    triple: str = DEFAULT_RISCV_TRIPLE,
++    pipeline=None,
++    clang_flags: list[str] | None = None,
++) -> Path:
++    mlir_source = emit_mlir(value)
++    signature = _select_signature(mlir_source, function_name)
++    source, _ = _freestanding_runner_source(signature, args)
++    out_path = Path(path)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++
++    with tempfile.TemporaryDirectory(prefix="tilelang-riscv-qemu-build-") as temp_dir:
++        temp_dir_path = Path(temp_dir)
++        obj_path = temp_dir_path / f"{signature.name}.o"
++        harness_path = temp_dir_path / f"{signature.name}_runner.c"
++        linker_bin_dir = temp_dir_path / "linker-bin"
++        linker_bin_dir.mkdir()
++        linker_path = resolve_riscv_linker(required=True)
++        os.symlink(linker_path, linker_bin_dir / "ld")
++        emit_object(value, path=obj_path, triple=triple, pipeline=pipeline)
++        harness_path.write_text(source)
++        cmd = [
++            str(resolve_tool("clang")),
++            f"--target={triple}",
++            f"-B{linker_bin_dir}",
++            "-nostdlib",
++            "-static",
++            "-ffreestanding",
++            "-fno-builtin",
++            "-fno-stack-protector",
++            "-O2",
++            str(harness_path),
++            str(obj_path),
++            "-Wl,-e,_start",
++            "-o",
++            str(out_path),
++        ]
++        cmd.extend(_infer_riscv_abi_flag(obj_path))
++        cmd.extend(_riscv_clang_flags())
++        if clang_flags:
++            cmd.extend(clang_flags)
++        try:
++            _run_checked(cmd)
++        except RuntimeError as err:
++            raise RiscvRunnerError(str(err)) from err
++    return out_path
++
++
++def build_host_shared_library(
++    value: Any,
++    path: str | os.PathLike[str],
++    *,
++    triple: str | None = None,
++    pipeline=None,
++    clang_flags: list[str] | None = None,
++) -> Path:
++    llvm_ir = emit_llvm_ir(value, pipeline=pipeline)
++    out_path = Path(path)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++    llvm_root = resolve_llvm_root()
++    llvm_lib_dir = llvm_root / "lib"
++    with tempfile.TemporaryDirectory(prefix="tilelang-host-compile-") as temp_dir:
++        temp_dir_path = Path(temp_dir)
++        ll_path = temp_dir_path / f"{out_path.stem}.ll"
++        ll_path.write_text(llvm_ir)
++        helper_source = _emit_host_helper_source(llvm_ir)
++        cmd = [
++            str(resolve_tool("clang")),
++            "-shared",
++            "-fPIC",
++            "-O2",
++            "-Wno-override-module",
++            "-x",
++            "ir",
++            str(ll_path),
++            "-o",
++            str(out_path),
++            f"-L{llvm_lib_dir}",
++            f"-Wl,-rpath,{llvm_lib_dir}",
++            "-lmlir_c_runner_utils",
++            "-lmlir_runner_utils",
++        ]
++        if helper_source:
++            helper_path = temp_dir_path / f"{out_path.stem}_ptr_helpers.c"
++            helper_path.write_text(helper_source)
++            out_flag_index = cmd.index("-o")
++            cmd[out_flag_index:out_flag_index] = ["-x", "c", str(helper_path)]
++        active_triple = triple or resolve_host_triple()
++        if active_triple:
++            cmd.extend(["-target", active_triple])
++        cmd.extend(_riscv_clang_flags(include_runtime_library_dirs=True))
++        if clang_flags:
++            cmd.extend(clang_flags)
++        _run_checked(cmd)
++    return out_path
++
++
++class HostKernelLibrary:
++    def __init__(
++        self,
++        library_path: str | os.PathLike[str],
++        signature: _FunctionSignature,
++        *,
++        owned_tempdir: tempfile.TemporaryDirectory[str] | None = None,
++    ) -> None:
++        self.path = Path(library_path)
++        self.signature = signature
++        self.function_name = signature.name
++        self._owned_tempdir = owned_tempdir
++        self._cdll = ctypes.CDLL(str(self.path))
++        self._entry = getattr(self._cdll, self.function_name)
++        self._entry.argtypes = self._build_argtypes()
++        self._entry.restype = None
++
++    def close(self) -> None:
++        if self._owned_tempdir is not None:
++            # ctypes does not expose a portable dlclose. Keep the directory alive
++            # while the process may still hold the shared object mapped.
++            _RETAINED_HOST_LIBRARY_TEMPDIRS.append(self._owned_tempdir)
++            self._owned_tempdir = None
++
++    def __del__(self) -> None:
++        try:
++            self.close()
++        except Exception:
++            pass
++
++    def _build_argtypes(self) -> list[type[Any]]:
++        argtypes: list[type[Any]] = []
++        for spec in self.signature.params:
++            if isinstance(spec, _MemRefParam):
++                argtypes.extend([ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64])
++                argtypes.extend([ctypes.c_int64] * spec.rank)
++                argtypes.extend([ctypes.c_int64] * spec.rank)
++            else:
++                argtypes.append(spec.ctype)
++        return argtypes
++
++    def _flatten_memref_arg(self, spec: _MemRefParam, value: Any) -> list[Any]:
++        array = _normalize_memref_array(spec, value)
++        ptr = array.ctypes.data
++        shape = _logical_memref_shape(spec, array)
++        strides = _logical_row_major_strides(shape) if spec.is_fp4 else [stride // array.dtype.itemsize for stride in array.strides]
++        flattened = [ctypes.c_void_p(ptr), ctypes.c_void_p(ptr), ctypes.c_int64(0)]
++        flattened.extend(ctypes.c_int64(int(dim)) for dim in shape)
++        flattened.extend(ctypes.c_int64(int(stride)) for stride in strides)
++        return flattened
++
++    def _flatten_scalar_arg(self, spec: _ScalarParam, value: Any) -> Any:
++        return spec.ctype(_normalize_scalar_value(spec, value))
++
++    def _prepare_args(self, *args: Any) -> list[Any]:
++        if len(args) != len(self.signature.params):
++            raise ValueError(f"Expected {len(self.signature.params)} arguments, but got {len(args)}")
++        flattened: list[Any] = []
++        for spec, value in zip(self.signature.params, args):
++            if isinstance(spec, _MemRefParam):
++                flattened.extend(self._flatten_memref_arg(spec, value))
++            else:
++                flattened.append(self._flatten_scalar_arg(spec, value))
++        return flattened
++
++    def __call__(self, *args: Any) -> None:
++        self._entry(*self._prepare_args(*args))
++
++
++def load_host_module(
++    value: Any,
++    *,
++    function_name: str | None = None,
++    path: str | os.PathLike[str] | None = None,
++    triple: str | None = None,
++    pipeline=None,
++    clang_flags: list[str] | None = None,
++) -> HostKernelLibrary:
++    mlir_source = emit_mlir(value)
++    signature = _select_signature(mlir_source, function_name)
++    owned_tempdir: tempfile.TemporaryDirectory[str] | None = None
++    if path is None:
++        owned_tempdir = tempfile.TemporaryDirectory(prefix="tilelang-host-lib-")
++        out_path = Path(owned_tempdir.name) / f"{signature.name}.so"
++    else:
++        out_path = Path(path)
++    build_host_shared_library(
++        value,
++        out_path,
++        triple=triple,
++        pipeline=pipeline,
++        clang_flags=clang_flags,
++    )
++    return HostKernelLibrary(out_path, signature, owned_tempdir=owned_tempdir)
++
++
++def load_host_module_from_binary(
++    mlir_source: str,
++    path: str | os.PathLike[str],
++    *,
++    function_name: str | None = None,
++) -> HostKernelLibrary:
++    signature = _select_signature(mlir_source, function_name)
++    return HostKernelLibrary(path, signature)
++
++
++def run_host(
++    value: Any,
++    *args: Any,
++    function_name: str | None = None,
++    triple: str | None = None,
++    pipeline=None,
++    clang_flags: list[str] | None = None,
++) -> None:
++    load_host_module(
++        value,
++        function_name=function_name,
++        triple=triple,
++        pipeline=pipeline,
++        clang_flags=clang_flags,
++    )(*args)
++
++
++def run_qemu(
++    value: Any,
++    *args: Any,
++    function_name: str | None = None,
++    path: str | os.PathLike[str] | None = None,
++    runner: str | list[str] | tuple[str, ...] | None = None,
++    triple: str = DEFAULT_RISCV_TRIPLE,
++    pipeline=None,
++    clang_flags: list[str] | None = None,
++) -> None:
++    mlir_source = emit_mlir(value)
++    signature = _select_signature(mlir_source, function_name)
++    _, memref_arrays = _freestanding_runner_source(signature, args)
++    owned_tempdir: tempfile.TemporaryDirectory[str] | None = None
++    try:
++        if path is None:
++            owned_tempdir = tempfile.TemporaryDirectory(prefix="tilelang-riscv-qemu-run-")
++            exe_path = Path(owned_tempdir.name) / f"{signature.name}.elf"
++        else:
++            exe_path = Path(path)
++        build_qemu_executable(
++            value,
++            *args,
++            function_name=function_name,
++            path=exe_path,
++            triple=triple,
++            pipeline=pipeline,
++            clang_flags=clang_flags,
++        )
++        cmd = resolve_riscv_runner(runner, required=True)
++        proc = _run_checked_binary([*cmd, str(exe_path)])
++        payload = proc.stdout
++        if not payload.startswith(_QEMU_OUTPUT_MAGIC):
++            raise RiscvRunnerError("RISC-V runner output did not start with the expected TileLang marker")
++        cursor = len(_QEMU_OUTPUT_MAGIC)
++        for array in memref_arrays:
++            end = cursor + array.nbytes
++            if end > len(payload):
++                raise RiscvRunnerError("RISC-V runner output was truncated while decoding memref results")
++            updated = np.frombuffer(payload[cursor:end], dtype=array.dtype, count=array.size).reshape(array.shape)
++            np.copyto(array, updated)
++            cursor = end
++        if cursor != len(payload):
++            raise RiscvRunnerError("RISC-V runner produced trailing bytes after the expected memref payload")
++    finally:
++        if owned_tempdir is not None:
++            owned_tempdir.cleanup()
++
++
++__all__ = [
++    "HostKernelLibrary",
++    "RiscvRunnerError",
++    "RiscvRunnerNotFoundError",
++    "build_host_shared_library",
++    "build_qemu_executable",
++    "load_host_module_from_binary",
++    "load_host_module",
++    "resolve_riscv_runner",
++    "resolve_riscv_linker",
++    "resolve_host_triple",
++    "run_host",
++    "run_qemu",
++]
+diff --git a/tilelang/jit/adapter/utils.py b/tilelang/jit/adapter/utils.py
+index 5c730b37..2a1bc585 100644
+--- a/tilelang/jit/adapter/utils.py
++++ b/tilelang/jit/adapter/utils.py
+@@ -104,7 +104,11 @@ def is_hip_target(target: Target) -> bool:
+ 
+ 
+ def is_cpu_target(target: Target) -> bool:
+-    return target.kind.name in ["c"]
++    return target.kind.name in ["c", "riscv"]
++
++
++def is_riscv_target(target: Target) -> bool:
++    return target.kind.name == "riscv"
+ 
+ 
+ def is_metal_target(target: Target) -> bool:
+diff --git a/tilelang/jit/execution_backend.py b/tilelang/jit/execution_backend.py
+index 7481dde7..d106576c 100644
+--- a/tilelang/jit/execution_backend.py
++++ b/tilelang/jit/execution_backend.py
+@@ -41,6 +41,8 @@ def allowed_backends_for_target(target: Target, *, include_unavailable: bool = T
+         allowed = ["tvm_ffi", "torch"]
+     elif kind == "c":  # CPU C backend
+         allowed = ["cython", "tvm_ffi"]
++    elif kind == "riscv":
++        allowed = ["tvm_ffi"]
+     else:
+         # Fallback: prefer portable hosts
+         allowed = ["cython", "tvm_ffi"]
+@@ -80,7 +82,7 @@ def resolve_execution_backend(requested: str | None, target: Target) -> str:
+         if is_cutedsl_target(target):
+             return "cutedsl"
+         kind = _target_kind(target)
+-        if kind == "cuda" or kind == "metal" or kind == "hip":
++        if kind == "cuda" or kind == "metal" or kind == "riscv":
+             choice = "tvm_ffi"
+         else:
+             choice = "cython"
+diff --git a/tilelang/jit/kernel.py b/tilelang/jit/kernel.py
+index b63884e3..11048b26 100644
+--- a/tilelang/jit/kernel.py
++++ b/tilelang/jit/kernel.py
+@@ -19,6 +19,7 @@ from tilelang.jit.adapter import (
+     BaseKernelAdapter,
+     CythonKernelAdapter,
+     CuTeDSLKernelAdapter,
++    RiscvKernelAdapter,
+     TVMFFIKernelAdapter,
+     MetalKernelAdapter,
+ )
+@@ -205,6 +206,10 @@ class JITKernel(Generic[_P, _T]):
+         """
+         return self.torch_function(*args, **kwds)
+ 
++    def close(self) -> None:
++        if self.adapter is not None and hasattr(self.adapter, "close"):
++            self.adapter.close()
++
+     def _compile_and_create_adapter(self, tilelang_func: PrimFunc, out_idx: list[int]) -> BaseKernelAdapter:
+         """
+         Compiles the given TileLang PrimFunc using TVM and creates a kernel adapter.
+@@ -256,22 +261,35 @@ class JITKernel(Generic[_P, _T]):
+ 
+         # Create an adapter based on the specified execution backend.
+         if execution_backend == "tvm_ffi":
+-            # Use TVMFFIKernelAdapter for interoperability with PyTorch via DLPack.
+-            # But we need to ensure that the runtime is enabled and the runtime module is not None.
+             assert artifact.rt_mod is not None, "tvm_ffi backend requires a runtime module."
+-            adapter = TVMFFIKernelAdapter(
+-                params=artifact.params,
+-                result_idx=out_idx,
+-                target=target,
+-                func_or_mod=tilelang_func,
+-                host_mod=artifact.host_mod,
+-                device_mod=artifact.device_mod,
+-                rt_mod=artifact.rt_mod,
+-                device_kernel_source=artifact.kernel_source,
+-                verbose=verbose,
+-                pass_configs=pass_configs,
+-                compile_flags=compile_flags,
+-            )
++            if self.target.kind.name == "riscv":
++                adapter = RiscvKernelAdapter(
++                    params=artifact.params,
++                    result_idx=out_idx,
++                    target=target,
++                    func_or_mod=tilelang_func,
++                    host_mod=artifact.host_mod,
++                    device_mod=artifact.device_mod,
++                    rt_mod=artifact.rt_mod,
++                    device_kernel_source=artifact.kernel_source,
++                    verbose=verbose,
++                    pass_configs=pass_configs,
++                    compile_flags=compile_flags,
++                )
++            else:
++                adapter = TVMFFIKernelAdapter(
++                    params=artifact.params,
++                    result_idx=out_idx,
++                    target=target,
++                    func_or_mod=tilelang_func,
++                    host_mod=artifact.host_mod,
++                    device_mod=artifact.device_mod,
++                    rt_mod=artifact.rt_mod,
++                    device_kernel_source=artifact.kernel_source,
++                    verbose=verbose,
++                    pass_configs=pass_configs,
++                    compile_flags=compile_flags,
++                )
+         elif execution_backend == "cython":
+             adapter = CythonKernelAdapter(
+                 params=artifact.params,
+@@ -351,17 +369,30 @@ class JITKernel(Generic[_P, _T]):
+ 
+         # Create an adapter based on the specified execution backend.
+         if execution_backend == "tvm_ffi":
+-            adapter = TVMFFIKernelAdapter.from_database(
+-                params=params,
+-                result_idx=result_idx,
+-                target=target,
+-                func_or_mod=func_or_mod,
+-                host_kernel_source=host_kernel_source,
+-                device_kernel_source=device_kernel_source,
+-                kernel_lib_path=kernel_lib_path,
+-                pass_configs=pass_configs,
+-                compile_flags=compile_flags,
+-            )
++            if target.kind.name == "riscv":
++                adapter = RiscvKernelAdapter.from_database(
++                    params=params,
++                    result_idx=result_idx,
++                    target=target,
++                    func_or_mod=func_or_mod,
++                    host_kernel_source=host_kernel_source,
++                    device_kernel_source=device_kernel_source,
++                    kernel_lib_path=kernel_lib_path,
++                    pass_configs=pass_configs,
++                    compile_flags=compile_flags,
++                )
++            else:
++                adapter = TVMFFIKernelAdapter.from_database(
++                    params=params,
++                    result_idx=result_idx,
++                    target=target,
++                    func_or_mod=func_or_mod,
++                    host_kernel_source=host_kernel_source,
++                    device_kernel_source=device_kernel_source,
++                    kernel_lib_path=kernel_lib_path,
++                    pass_configs=pass_configs,
++                    compile_flags=compile_flags,
++                )
+         elif execution_backend == "cython":
+             adapter = CythonKernelAdapter.from_database(
+                 params=params,
+diff --git a/tilelang/language/copy_op.py b/tilelang/language/copy_op.py
+index 7e9cdddb..6672de62 100644
+--- a/tilelang/language/copy_op.py
++++ b/tilelang/language/copy_op.py
+@@ -8,7 +8,7 @@ from tilelang.utils.language import (
+     legalize_pairwise_extents,
+ )
+ from tilelang.language.utils import get_extent
+-from tvm import ir, tir
++from tvm import tir
+ 
+ 
+ def _normalize_copy_regions(
+@@ -17,10 +17,6 @@ def _normalize_copy_regions(
+     tir.BufferRegion | tir.BufferLoad | tir.Buffer,
+     tir.BufferRegion | tir.BufferLoad | tir.Buffer,
+ ]:
+-    # If both side are buffers, we should make sure their shapes are equal
+-    if isinstance(src, tir.Buffer) and isinstance(dst, tir.Buffer):
+-        ir.assert_structural_equal(src.shape, dst.shape)
+-
+     src_extent = get_extent(src)
+     dst_extent = get_extent(dst)
+ 
+diff --git a/tilelang/language/dtypes.py b/tilelang/language/dtypes.py
+index 02b289ec..59ef8276 100644
+--- a/tilelang/language/dtypes.py
++++ b/tilelang/language/dtypes.py
+@@ -94,6 +94,11 @@ for dtype_name_tuple in _extended_torch_dtypes:
+         torch_dtype = getattr(torch, dtype_name, None)
+ 
+     if torch_dtype is not None:
++        actual_dtype_name = str(torch_dtype).removeprefix("torch.")
++        if torch_dtype in _TORCH_DTYPE_TO_STR and _TORCH_DTYPE_TO_STR[torch_dtype] != dtype_name:
++            continue
++        if dtype_name.endswith("fnuz") and actual_dtype_name != dtype_name:
++            continue
+         _TORCH_DTYPE_TO_STR[torch_dtype] = dtype_name
+ 
+ 
+@@ -108,6 +113,24 @@ _CANONICAL_TO_DISPLAY_STR = {
+ }
+ 
+ _STR_TO_TORCH_DTYPE = {v: k for k, v in _TORCH_DTYPE_TO_STR.items()}
++_STR_TO_TORCH_DTYPE.update(
++    {
++        "bool": torch.bool,
++        "int8": torch.int8,
++        "int16": torch.int16,
++        "int32": torch.int32,
++        "int64": torch.int64,
++        "uint8": torch.uint8,
++        "float16": torch.float16,
++        "float32": torch.float32,
++        "float64": torch.float64,
++        "bfloat16": torch.bfloat16,
++    }
++)
++for _unsigned_dtype_name in ("uint16", "uint32", "uint64"):
++    _unsigned_torch_dtype = getattr(torch, _unsigned_dtype_name, None)
++    if _unsigned_torch_dtype is not None:
++        _STR_TO_TORCH_DTYPE[_unsigned_dtype_name] = _unsigned_torch_dtype
+ 
+ # _STR_TO_NUMPY_DTYPE = {v: k for k, v in _NUMPY_DTYPE_TO_STR.items()}
+ 
+diff --git a/tilelang/tladapter/__init__.py b/tilelang/tladapter/__init__.py
+new file mode 100644
+index 00000000..152c205a
+--- /dev/null
++++ b/tilelang/tladapter/__init__.py
+@@ -0,0 +1,30 @@
++"""Python-facing helpers for MLIR-backed TileLang backends."""
++
++try:
++    from . import _native  # type: ignore[attr-defined]
++except ImportError:
++    _native = None
++
++from .toolchain import (
++    ToolchainNotFoundError,
++    resolve_llvm_dir,
++    resolve_llvm_root,
++    resolve_mlir_dir,
++    resolve_mlir_python_root,
++    resolve_tool,
++    toolchain_summary,
++)
++from .utils import Pipeline, pass_fn
++
++__all__ = [
++    "Pipeline",
++    "ToolchainNotFoundError",
++    "_native",
++    "pass_fn",
++    "resolve_llvm_dir",
++    "resolve_llvm_root",
++    "resolve_mlir_dir",
++    "resolve_mlir_python_root",
++    "resolve_tool",
++    "toolchain_summary",
++]
+diff --git a/tilelang/tladapter/_native.py b/tilelang/tladapter/_native.py
+new file mode 100644
+index 00000000..2d44dfb5
+--- /dev/null
++++ b/tilelang/tladapter/_native.py
+@@ -0,0 +1,55 @@
++"""Tool-backed compatibility layer for MLIR pass execution."""
++
++from __future__ import annotations
++
++import subprocess
++
++from .toolchain import resolve_tool
++
++
++class PassPipeline:
++    def __init__(self):
++        self._passes: list[str] = []
++        self._enable_ir_printing = False
++
++    def add(self, pipeline_text: str) -> None:
++        self._passes.append(str(pipeline_text))
++
++    def enable_ir_printing(self) -> None:
++        self._enable_ir_printing = True
++
++    def _pipeline_text(self) -> str:
++        if not self._passes:
++            return ""
++        if len(self._passes) == 1 and self._passes[0].lstrip().startswith("builtin.module("):
++            return self._passes[0]
++        return f"builtin.module({','.join(self._passes)})"
++
++    def run(self, mlir_str: str) -> str:
++        if not self._passes:
++            return mlir_str
++
++        cmd = [
++            str(resolve_tool("mlir-opt")),
++            f"--pass-pipeline={self._pipeline_text()}",
++        ]
++        if self._enable_ir_printing:
++            cmd.extend(["--mlir-print-ir-after-all", "--mlir-print-ir-module-scope"])
++
++        proc = subprocess.run(
++            cmd,
++            input=mlir_str,
++            text=True,
++            capture_output=True,
++            check=False,
++        )
++        if proc.returncode != 0:
++            message = proc.stderr.strip() or proc.stdout.strip() or "unknown mlir-opt failure"
++            raise RuntimeError(f"mlir-opt failed: {message}")
++        return proc.stdout
++
++    def __str__(self) -> str:
++        return self._pipeline_text() or "builtin.module()"
++
++    def __repr__(self) -> str:
++        return f"PassPipeline({self})"
+diff --git a/tilelang/tladapter/toolchain.py b/tilelang/tladapter/toolchain.py
+new file mode 100644
+index 00000000..3668ddca
+--- /dev/null
++++ b/tilelang/tladapter/toolchain.py
+@@ -0,0 +1,147 @@
++"""Helpers for locating the vendored LLVM/MLIR toolchain."""
++
++from __future__ import annotations
++
++import os
++import shutil
++from pathlib import Path
++
++
++class ToolchainNotFoundError(RuntimeError):
++    """Raised when the expected LLVM/MLIR toolchain is unavailable."""
++
++
++_REPO_ROOT = Path(__file__).resolve().parents[2]
++_LLVM_SUBMODULE_ROOT = _REPO_ROOT / "3rdparty" / "llvm-project"
++_BUDDY_MLIR_ROOT = _REPO_ROOT.parent / "buddy-mlir"
++
++
++def _candidate_roots() -> list[Path]:
++    roots: list[Path] = []
++    for env_name in ("TILELANG_RISCV_LLVM_ROOT", "TILELANG_LLVM_INSTALL_DIR"):
++        env_value = os.environ.get(env_name)
++        if env_value:
++            roots.append(Path(env_value).expanduser())
++
++    roots.extend(
++        [
++            _BUDDY_MLIR_ROOT / "llvm" / "install",
++            _BUDDY_MLIR_ROOT / "llvm" / "build",
++            _LLVM_SUBMODULE_ROOT / "install",
++            _LLVM_SUBMODULE_ROOT / "build-host" / "install",
++            _LLVM_SUBMODULE_ROOT / "build" / "install",
++        ]
++    )
++    return roots
++
++
++def _existing_dirs(paths: list[Path]) -> list[Path]:
++    result: list[Path] = []
++    for path in paths:
++        resolved = path.resolve()
++        if resolved.is_dir() and resolved not in result:
++            result.append(resolved)
++    return result
++
++
++def iter_llvm_roots() -> list[Path]:
++    """Return known LLVM/MLIR install roots in priority order."""
++
++    return _existing_dirs(_candidate_roots())
++
++
++def resolve_llvm_root(*, required: bool = True) -> Path | None:
++    """Resolve the preferred LLVM/MLIR install root."""
++
++    for root in iter_llvm_roots():
++        if (root / "bin").is_dir():
++            return root
++    if required:
++        raise ToolchainNotFoundError(
++            "LLVM/MLIR toolchain not found. Build it with "
++            "`maint/scripts/build_llvm_mlir.sh` or set TILELANG_RISCV_LLVM_ROOT."
++        )
++    return None
++
++
++def _resolve_cmake_dir(package_name: str, *, required: bool) -> Path | None:
++    for root in iter_llvm_roots():
++        for lib_dir_name in ("lib", "lib64"):
++            cmake_dir = root / lib_dir_name / "cmake" / package_name
++            if cmake_dir.is_dir():
++                return cmake_dir
++    if required:
++        raise ToolchainNotFoundError(
++            f"{package_name} CMake package directory not found under the configured LLVM root."
++        )
++    return None
++
++
++def resolve_mlir_dir(*, required: bool = True) -> Path | None:
++    """Resolve the MLIR CMake package directory."""
++
++    return _resolve_cmake_dir("mlir", required=required)
++
++
++def resolve_llvm_dir(*, required: bool = True) -> Path | None:
++    """Resolve the LLVM CMake package directory."""
++
++    return _resolve_cmake_dir("llvm", required=required)
++
++
++def resolve_tool(tool_name: str, *, required: bool = True) -> Path | None:
++    """Resolve a tool from the vendored toolchain or PATH."""
++
++    for root in iter_llvm_roots():
++        candidate = root / "bin" / tool_name
++        if candidate.is_file():
++            return candidate
++
++    path_hit = shutil.which(tool_name)
++    if path_hit:
++        return Path(path_hit).resolve()
++
++    if required:
++        raise ToolchainNotFoundError(
++            f"Tool `{tool_name}` not found. Build the LLVM/MLIR toolchain or add it to PATH."
++        )
++    return None
++
++
++def resolve_mlir_python_root(*, required: bool = True) -> Path | None:
++    """Resolve the vendored MLIR Python package root."""
++
++    for root in iter_llvm_roots():
++        candidate = root / "python_packages" / "mlir_core"
++        if (candidate / "mlir").is_dir():
++            return candidate.resolve()
++
++    if required:
++        raise ToolchainNotFoundError(
++            "MLIR Python bindings not found. Build the vendored toolchain with "
++            "`maint/scripts/build_llvm_mlir.sh` and keep MLIR Python bindings enabled."
++        )
++    return None
++
++
++def toolchain_summary() -> dict[str, str]:
++    """Return a small summary of the discovered toolchain paths."""
++
++    summary: dict[str, str] = {}
++    llvm_root = resolve_llvm_root(required=False)
++    if llvm_root is not None:
++        summary["llvm_root"] = str(llvm_root)
++    mlir_dir = resolve_mlir_dir(required=False)
++    if mlir_dir is not None:
++        summary["mlir_dir"] = str(mlir_dir)
++    llvm_dir = resolve_llvm_dir(required=False)
++    if llvm_dir is not None:
++        summary["llvm_dir"] = str(llvm_dir)
++    mlir_python_root = resolve_mlir_python_root(required=False)
++    if mlir_python_root is not None:
++        summary["mlir_python_root"] = str(mlir_python_root)
++    for tool in ("mlir-opt", "mlir-translate", "llc", "clang", "ld.lld"):
++        tool_path = resolve_tool(tool, required=False)
++        if tool_path is not None:
++            summary[tool.replace("-", "_")] = str(tool_path)
++    return summary
+diff --git a/tilelang/tladapter/transforms/__init__.py b/tilelang/tladapter/transforms/__init__.py
+new file mode 100644
+index 00000000..98ba04fc
+--- /dev/null
++++ b/tilelang/tladapter/transforms/__init__.py
+@@ -0,0 +1,5 @@
++"""MLIR pass descriptors for TileLang adapters."""
++
++from . import mlir
++
++__all__ = ["mlir"]
+diff --git a/tilelang/tladapter/transforms/mlir.py b/tilelang/tladapter/transforms/mlir.py
+new file mode 100644
+index 00000000..0f98a9ef
+--- /dev/null
++++ b/tilelang/tladapter/transforms/mlir.py
+@@ -0,0 +1,9 @@
++"""Builtin MLIR transformation pass descriptors."""
++
++from tilelang.tladapter.utils import pass_fn
++
++canonicalize = pass_fn("canonicalize")
++cse = pass_fn("cse")
++sccp = pass_fn("sccp")
++
++__all__ = ["canonicalize", "cse", "sccp"]
+diff --git a/tilelang/tladapter/utils.py b/tilelang/tladapter/utils.py
+new file mode 100644
+index 00000000..aff8fcbd
+--- /dev/null
++++ b/tilelang/tladapter/utils.py
+@@ -0,0 +1,96 @@
++"""Common utilities for future MLIR-backed TileLang adapters."""
++
++
++def _format_pass_option_value(value) -> str:
++    if isinstance(value, bool):
++        return "true" if value else "false"
++    return str(value)
++
++
++def _build_pipeline_text(pass_name: str, anchor: str | None = None, **options) -> str:
++    inner = pass_name
++    if options:
++        opts = ",".join(
++            f"{key.replace('_', '-')}={_format_pass_option_value(value)}"
++            for key, value in options.items()
++        )
++        inner = f"{pass_name}{{{opts}}}"
++    if anchor:
++        inner = f"{anchor}({inner})"
++    return inner
++
++
++def _get_native_module():
++    try:
++        import tilelang.tladapter as _tladapter
++    except ImportError as err:
++        raise ImportError(
++            "TileLang MLIR adapters require a native module. "
++            "Build TileLang with the riscv/MLIR integration enabled."
++        ) from err
++    native = getattr(_tladapter, "_native", None)
++    if native is None:
++        raise RuntimeError(
++            "tilelang.tladapter native module not found; "
++            "the MLIR integration scaffold is present but the native binding is not built yet."
++        )
++    return native
++
++
++class Pipeline:
++    def __init__(self):
++        self._pp = _get_native_module().PassPipeline()
++
++    def add(self, pass_or_text, **options):
++        if isinstance(pass_or_text, str):
++            if options:
++                raise ValueError(
++                    "options are not supported with raw pipeline text; "
++                    "embed them in the string or use a pass descriptor"
++                )
++            self._pp.add(pass_or_text)
++        elif isinstance(pass_or_text, _PassDescriptor):
++            self._pp.add(pass_or_text._make_pipeline_text(**options))
++        else:
++            raise TypeError(f"expected str or pass descriptor, got {type(pass_or_text)}")
++        return self
++
++    def enable_ir_printing(self):
++        self._pp.enable_ir_printing()
++        return self
++
++    def run(self, mlir_str: str) -> str:
++        return self._pp.run(mlir_str)
++
++    def __str__(self):
++        return str(self._pp)
++
++    def __repr__(self):
++        return repr(self._pp)
++
++
++class _PassDescriptor:
++    def __init__(self, pass_name: str, anchor: str | None = None, **default_options):
++        self._pass_name = pass_name
++        self._anchor = anchor
++        self._default_options = default_options
++
++    def _make_pipeline_text(self, **extra_options):
++        merged = {**self._default_options, **extra_options}
++        return _build_pipeline_text(self._pass_name, self._anchor, **merged)
++
++    def __call__(self, *args, **options):
++        text = self._make_pipeline_text(**options)
++        pp = _get_native_module().PassPipeline()
++        pp.add(text)
++        if not args:
++            return pp
++        value = args[0]
++        result = pp.run(str(value) if not isinstance(value, str) else value)
++        if isinstance(value, str):
++            return result
++        return result
++
++
++def pass_fn(pass_name: str, anchor: str | None = None, **options):
++    return _PassDescriptor(pass_name, anchor=anchor, **options)
+diff --git a/tilelang/utils/target.py b/tilelang/utils/target.py
+index 94252a5f..13a1db52 100644
+--- a/tilelang/utils/target.py
++++ b/tilelang/utils/target.py
+@@ -3,6 +3,7 @@ from __future__ import annotations
+ 
+ import torch
+ 
++import os
+ from platform import mac_ver
+ from typing import Literal
+ from tilelang import tvm as tvm
+@@ -18,6 +19,7 @@ SUPPORTED_TARGETS: dict[str, str] = {
+     "hip": "ROCm HIP target (supports options like `hip -mcpu=gfx90a`).",
+     "metal": "Apple Metal target for arm64 Macs.",
+     "llvm": "LLVM CPU target (accepts standard TVM LLVM options).",
++    "riscv": "Structured MLIR-backed RISC-V backend.",
+     "webgpu": "WebGPU target for browser/WebGPU runtimes.",
+     "c": "C source backend.",
+     "cutedsl": "CuTe DSL GPU target.",
+@@ -118,6 +120,20 @@ def normalize_cutedsl_target(target: str | Target) -> Target | None:
+     return None
+ 
+ 
++def normalize_riscv_target(target: str | Target) -> str | Target | None:
++    if isinstance(target, Target):
++        if target.kind.name == "riscv":
++            return target
++        return None
++
++    normalized_target = target.strip()
++    if not normalized_target:
++        return None
++    if normalized_target == "riscv" or normalized_target.startswith("riscv "):
++        return normalized_target
++    return None
++
++
+ def determine_target(target: str | Target | Literal["auto"] = "auto", return_object: bool = False) -> str | Target:
+     """
+     Determine the appropriate target for compilation (CUDA, HIP, or manual selection).
+@@ -155,12 +171,17 @@ def determine_target(target: str | Target | Literal["auto"] = "auto", return_obj
+             return_var = "hip"
+         elif check_metal_availability():
+             return_var = "metal"
++        elif os.environ.get("TILELANG_RISCV_MLIR_MODE", "").upper() in {"1", "ON", "TRUE"}:
++            return_var = "riscv"
+         else:
+             raise ValueError("No CUDA or HIP or MPS available on this system.")
+ 
+     else:
++        possible_riscv_target = normalize_riscv_target(target)
+         possible_cutedsl_target = normalize_cutedsl_target(target)
+-        if possible_cutedsl_target is not None:
++        if possible_riscv_target is not None:
++            return_var = possible_riscv_target
++        elif possible_cutedsl_target is not None:
+             try:
+                 from tilelang.jit.adapter.cutedsl.checks import check_cutedsl_available  # lazy
+ 

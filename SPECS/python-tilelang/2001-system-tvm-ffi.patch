@@ -1,0 +1,25 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Build against the installed TVM FFI headers and shared library
+
+Use the public tvm_ffi CMake package instead of building a second FFI
+library from the sdist. Runtime and build headers now come from the same
+RPM provider. Static TVM runtime and Hexagon RPC are not enabled.
+Reference: https://github.com/apache/tvm-ffi/tree/v0.1.10/cmake
+
+--- a/3rdparty/tvm/CMakeLists.txt
++++ b/3rdparty/tvm/CMakeLists.txt
+@@ -613,7 +613,13 @@
+   add_subdirectory("apps/ios_rpc")
+ endif()
+ 
+-add_subdirectory(3rdparty/tvm-ffi)
++find_package(Python COMPONENTS Interpreter REQUIRED)
++execute_process(COMMAND "${Python_EXECUTABLE}" -m tvm_ffi.config --cmakedir
++  OUTPUT_VARIABLE tvm_ffi_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
++  COMMAND_ERROR_IS_FATAL ANY)
++find_package(tvm_ffi CONFIG REQUIRED)
++add_library(tvm_ffi_header ALIAS tvm_ffi::header)
++add_library(tvm_ffi_shared ALIAS tvm_ffi::shared)
+ 
+ if(TVM_DEBUG_WITH_ABI_CHANGE)
+   message(STATUS "Building with debug code that may cause ABI changes...")
