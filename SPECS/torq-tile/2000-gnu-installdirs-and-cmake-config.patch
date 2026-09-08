@@ -1,14 +1,22 @@
-Use GNUInstallDirs and emit a CMake package config
+From 48fa03fdfb8b8499fb1d3367034609c1ac3b25fe Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Tue, 8 Sep 2026 17:18:07 +0800
+Subject: [PATCH] Use GNUInstallDirs and emit a CMake package config
 
 Distro packaging installs shared libraries into libdir (lib64 on
 64-bit) rather than a hardcoded lib/, and find_package(torq_tile)
 needs a config file that includes the exported targets. Fail
 configure when no RVV sources are selected so an empty library
 is not installed.
+---
+ CMakeLists.txt | 36 +++++++++++++++++++++++++++++++-----
+ 1 file changed, 31 insertions(+), 5 deletions(-)
 
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 114f768..1ac7b02 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -10,6 +10,9 @@
+@@ -10,6 +10,9 @@ project(torq-tile
      LANGUAGES C CXX
  )
  
@@ -18,7 +26,7 @@ is not installed.
  # ============================================================================
  # Project Options
  # ============================================================================
-@@ -192,6 +195,13 @@
+@@ -192,6 +195,13 @@ if(TORQ_TILE_ENABLE_RVV_BF16)
      list(APPEND TORQ_TILE_ALL_SOURCES ${TORQ_TILE_RVV_BF16_SOURCES})
  endif()
  
@@ -32,7 +40,7 @@ is not installed.
  # ============================================================================
  # Library Target Definition
  # ============================================================================
-@@ -297,14 +307,14 @@
+@@ -297,14 +307,14 @@ endif()
  # Install library target
  install(TARGETS torq_tile
      EXPORT torq_tile_targets
@@ -51,7 +59,7 @@ is not installed.
      FILES_MATCHING
      PATTERN "*.h"
      PATTERN "*.hpp"
-@@ -315,5 +325,21 @@
+@@ -315,5 +325,21 @@ install(DIRECTORY src/
  install(EXPORT torq_tile_targets
      FILE torq_tile_targets.cmake
      NAMESPACE torq_tile::
@@ -74,3 +82,6 @@ is not installed.
 +    "${CMAKE_CURRENT_BINARY_DIR}/torq_tile-config-version.cmake"
 +    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/torq_tile
  )
+-- 
+2.53.0
+
