@@ -11,7 +11,7 @@
 
 # Host C++ micro-kernels; no HIP/hipcc. openRuyi's cmake %conf writes
 # CFLAGS/CXXFLAGS from the distro rva23u64 set, not from %{optflags}
-# (log/torq-tile-01.log: optflags only landed on FFLAGS/FCFLAGS). Append
+# (log/torq-tile-01.log: %%{optflags} only landed on FFLAGS/FCFLAGS). Append
 # zvfh/zfbfmin/zvfbfwma so try_compile enables FP16 and BF16 kernels;
 # gcc uses the last -march.
 %global torq_tile_march -march=rv64gcv_zfh_zvfh_zfbfmin_zvfbfmin_zvfbfwma
@@ -28,6 +28,9 @@ Source0:        %{url}/archive/%{commit}/%{name}-%{commit}.tar.gz
 # Install into libdir, ship a find_package(torq_tile) config, and refuse an
 # empty library when the compiler has no RVV support.
 Patch2000:      2000-gnu-installdirs-and-cmake-config.patch
+# GCC 16 RISC-V has _Float16 (aliased as float16_t), not ARM/XuanTie __fp16.
+# log/torq-tile-02.log: '__fp16' was not declared in this scope
+Patch2001:      2001-use-float16-t-instead-of-fp16.patch
 # All sources are RVV kernels; cmake try_compile yields no objects on other
 # ISAs. openRuyi keeps ExclusiveArch for genuinely arch-specific packages
 # (see opensbi).

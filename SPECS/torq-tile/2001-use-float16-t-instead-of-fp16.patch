@@ -1,0 +1,28 @@
+From ce3c747b5d5f70c0ae511d5462f2abc78b4e9853 Mon Sep 17 00:00:00 2001
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Date: Wed, 9 Sep 2026 09:29:26 +0800
+Subject: [PATCH] Use float16_t instead of __fp16 for RVV vfmv
+
+__fp16 is an ARM/XuanTie type. GCC 16 on RISC-V with zfh provides
+_Float16, which this tree already aliases as float16_t. Sibling
+kernels pass (float16_t)0.0f to __riscv_vfmv_v_f_f16m1.
+---
+ .../tqt_convcl_1xnbias_clamp_f16_f16p_f16p_8x3vl_rvv.cpp        | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/conv/conv_f16_f16/convcl_1xnbias_clamp_f16_f16p_f16p/tqt_convcl_1xnbias_clamp_f16_f16p_f16p_8x3vl_rvv.cpp b/src/conv/conv_f16_f16/convcl_1xnbias_clamp_f16_f16p_f16p/tqt_convcl_1xnbias_clamp_f16_f16p_f16p_8x3vl_rvv.cpp
+index 03f6ca9..bb97ddb 100644
+--- a/src/conv/conv_f16_f16/convcl_1xnbias_clamp_f16_f16p_f16p/tqt_convcl_1xnbias_clamp_f16_f16p_f16p_8x3vl_rvv.cpp
++++ b/src/conv/conv_f16_f16/convcl_1xnbias_clamp_f16_f16p_f16p/tqt_convcl_1xnbias_clamp_f16_f16p_f16p_8x3vl_rvv.cpp
+@@ -150,7 +150,7 @@ static void a_im2colpack_cl_fill(float16_t *dst, size_t actual_m, size_t row_sta
+                         float16_t *d = dst + k_col * actual_m + r;
+                         while (rem > 0) {
+                             size_t vl = __riscv_vsetvl_e16m1(rem);
+-                            vfloat16m1_t v = __riscv_vfmv_v_f_f16m1((__fp16)0.0f, vl);
++                            vfloat16m1_t v = __riscv_vfmv_v_f_f16m1((float16_t)0.0f, vl);
+                             __riscv_vsse16_v_f16m1(d, actual_m * sizeof(float16_t), v, vl);
+                             d += vl * actual_m;
+                             rem -= vl;
+-- 
+2.53.0
+
