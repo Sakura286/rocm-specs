@@ -9,12 +9,12 @@
 # Package current main (2a0c0e1, 2026-05-22) as a never-released snapshot.
 %global commit 2a0c0e1d03dbd644f3dcfbd62a4953481bbc1569
 
-# Host C++ micro-kernels; no HIP/hipcc. Match upstream's documented native
-# ISA, plus zfbfmin so the unconditional __bf16 typedef in tqt_common.h
-# compiles, and the vector BF16 extensions so those kernels are not dropped.
-%ifarch riscv64
-%global optflags %{optflags} -march=rv64gcv_zfh_zvfh_zfbfmin_zvfbfmin_zvfbfwma
-%endif
+# Host C++ micro-kernels; no HIP/hipcc. openRuyi's cmake %conf writes
+# CFLAGS/CXXFLAGS from the distro rva23u64 set, not from %{optflags}
+# (log/torq-tile-01.log: optflags only landed on FFLAGS/FCFLAGS). Append
+# zvfh/zfbfmin/zvfbfwma so try_compile enables FP16 and BF16 kernels;
+# gcc uses the last -march.
+%global torq_tile_march -march=rv64gcv_zfh_zvfh_zfbfmin_zvfbfmin_zvfbfwma
 
 Name:           torq-tile
 Version:        0+git20260908.2a0c0e1
@@ -39,6 +39,10 @@ BuildOption(conf):  -DTORQ_TILE_BUILD_SHARED=ON
 # Tests FetchContent googletest (network) and need RVV hardware to run.
 BuildOption(conf):  -DTORQ_TILE_BUILD_TEST=OFF
 BuildOption(conf):  -DTORQ_TILE_BUILD_BENCHMARK=OFF
+# cmake %conf assigns CFLAGS/CXXFLAGS after %conf -p, so extra -march must
+# go on the cmake command line. ${CFLAGS} expands in the generated script.
+BuildOption(conf):  -DCMAKE_C_FLAGS="${CFLAGS} %{torq_tile_march}"
+BuildOption(conf):  -DCMAKE_CXX_FLAGS="${CXXFLAGS} %{torq_tile_march}"
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
