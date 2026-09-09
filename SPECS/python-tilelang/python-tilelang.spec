@@ -43,6 +43,7 @@ BuildOption(check):  -t
 
 BuildRequires:  buddy-compiler-llvm = 0.0.8
 BuildRequires:  clang
+BuildRequires:  git-core
 BuildRequires:  cmake >= 3.26.1
 BuildRequires:  ninja
 BuildRequires:  patchelf
