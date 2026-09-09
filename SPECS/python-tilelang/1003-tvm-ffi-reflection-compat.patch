@@ -1,0 +1,103 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Backport TVM reflection compatibility with newer FFI
+
+Backport the duplicate-field, Python slots, IR repr, and target-kind fixes
+from https://github.com/apache/tvm/pull/18938
+Upstream commit: 44dbd138d51314309955fba8c3d1294e4a89da35
+
+Adapt tirx/build.py and s_tir/meta_schedule/utils.py to the bundled TVM's
+older paths. Existing explicit derived-object slots are retained. Omit upstream's
+FFI gitlink bump and unrelated newer IR/printer changes. System FFI 0.1.10
+already supplies the new reflection and constructor machinery.
+
+--- a/3rdparty/tvm/include/tvm/script/ir_builder/relax/frame.h
++++ b/3rdparty/tvm/include/tvm/script/ir_builder/relax/frame.h
+@@ -125,9 +125,8 @@
+         .def_ro("params", &FunctionFrameNode::params)
+         .def_ro("ret_struct_info", &FunctionFrameNode::ret_struct_info)
+         .def_ro("is_pure", &FunctionFrameNode::is_pure)
+-        .def_ro("attrs", &FunctionFrameNode::attrs)
+-        .def_ro("binding_blocks", &FunctionFrameNode::binding_blocks)
+-        .def_ro("output", &FunctionFrameNode::output);
++        .def_ro("attrs", &FunctionFrameNode::attrs);
++    // `binding_blocks` and `output` are inherited from SeqExprFrameNode.
+     // `block_builder` is not registered as it's not visited.
+   }
+   TVM_FFI_DECLARE_OBJECT_INFO_FINAL("script.ir_builder.relax.FunctionFrame", FunctionFrameNode,
+--- a/3rdparty/tvm/src/relax/ir/emit_te.h
++++ b/3rdparty/tvm/src/relax/ir/emit_te.h
+@@ -44,12 +44,7 @@
+   static void RegisterReflection() {
+     namespace refl = tvm::ffi::reflection;
+     refl::ObjectDef<RXPlaceholderOpNode>()
+-        .def_ro("name", &RXPlaceholderOpNode::name)
+-        .def_ro("tag", &RXPlaceholderOpNode::tag)
+-        .def_ro("attrs", &RXPlaceholderOpNode::attrs)
+-        .def_ro("value", &RXPlaceholderOpNode::value)
+-        .def_ro("shape", &RXPlaceholderOpNode::shape)
+-        .def_ro("dtype", &RXPlaceholderOpNode::dtype);
++        .def_ro("value", &RXPlaceholderOpNode::value);
+   }
+ 
+   // FFI system configuration for structural equality and hashing
+--- a/3rdparty/tvm/python/tvm/ir/base.py
++++ b/3rdparty/tvm/python/tvm/ir/base.py
+@@ -25,6 +25,14 @@
+ class Node(Object):
+     """Base class of all IR Nodes."""
+ 
++    def __repr__(self) -> str:
++        from tvm.runtime.script_printer import _script  # noqa: PLC0415
++
++        try:
++            return _script(self, None)
++        except Exception:  # noqa: BLE001
++            return super().__repr__()
++
+ 
+ @register_object("ir.SourceMap")
+ class SourceMap(Object):
+--- a/3rdparty/tvm/python/tvm/ir/transform.py
++++ b/3rdparty/tvm/python/tvm/ir/transform.py
+@@ -145,6 +145,8 @@
+     conveniently interact with the base class.
+     """
+ 
++    __slots__ = ("__dict__",)
++
+     @property
+     def info(self):
+         """Get the pass meta."""
+--- a/3rdparty/tvm/python/tvm/relax/binding_rewrite.py
++++ b/3rdparty/tvm/python/tvm/relax/binding_rewrite.py
+@@ -39,6 +39,8 @@
+     use mutate_irmodule which rewrites the old function that registered in the constructor.
+     """
+ 
++    __slots__ = ("__dict__",)
++
+     def __init__(self, dfb: DataflowBlock, root_fn: Function):
+         """
+         Construct a rewriter with the DataflowBlock to rewrite and its root function.
+--- a/3rdparty/tvm/python/tvm/relax/block_builder.py
++++ b/3rdparty/tvm/python/tvm/relax/block_builder.py
+@@ -150,6 +150,8 @@
+         mod = bb.get()
+     """
+ 
++    __slots__ = ("__dict__",)
++
+     _stack = []
+ 
+     @staticmethod
+--- a/3rdparty/tvm/python/tvm/tir/build.py
++++ b/3rdparty/tvm/python/tvm/tir/build.py
+@@ -101,7 +101,7 @@
+ 
+     def is_host_func(f):
+         target = f.attrs.get("target", tvm.target.Target("llvm"))
+-        return str(target.kind) in ["llvm", "c"]
++        return target.kind.name in ["llvm", "c"]
+ 
+     host_mod = tvm.tir.transform.Filter(is_host_func)(mod)
+     device_mod = tvm.tir.transform.Filter(lambda f: not is_host_func(f))(mod)
