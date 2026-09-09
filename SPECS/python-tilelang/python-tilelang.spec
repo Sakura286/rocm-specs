@@ -26,6 +26,7 @@ Patch1001:      1001-riscv-mlir-codegen.patch
 Patch1002:      1002-riscv-tests.patch
 Patch2000:      2000-openruyi-toolchain.patch
 Patch2001:      2001-system-tvm-ffi.patch
+Patch2002:      2002-noncopyable-target-kind.patch
 BuildSystem:    pyproject
 
 BuildOption(build):  -Ccmake.define.USE_CUDA=OFF

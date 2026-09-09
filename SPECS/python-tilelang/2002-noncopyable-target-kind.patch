@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Mark the target-kind registry node as non-copyable
+
+System TVM FFI 0.1.10 automatically registers shallow-copy methods for
+copy-constructible reflected nodes. The unordered_map copy trait does not
+inspect its unique_ptr-containing values, so TargetKindNode incorrectly
+appears copyable until the copy body is instantiated. Declare its existing
+non-copyable semantics explicitly and retain default construction.
+
+Upstream FFI behavior: https://github.com/apache/tvm-ffi/pull/438
+The newer TVM target-config refactor is not a minimal backport:
+https://github.com/apache/tvm/pull/18788
+No matching upstream fix found; this adapts the bundled TVM to system FFI.
+
+--- a/3rdparty/tvm/include/tvm/target/target_kind.h
++++ b/3rdparty/tvm/include/tvm/target/target_kind.h
+@@ -66,6 +66,11 @@
+ /*! \brief Target kind, specifies the kind of the target */
+ class TargetKindNode : public Object {
+  public:
++  TargetKindNode() = default;
++  // The registry owns unique type metadata; this node cannot be copied.
++  TargetKindNode(const TargetKindNode&) = delete;
++  TargetKindNode& operator=(const TargetKindNode&) = delete;
++
+   /*! \brief Name of the target kind */
+   ffi::String name;
+   /*! \brief Device type of target kind */
