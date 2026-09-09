@@ -39,8 +39,9 @@ BuildOption(build):  -Ccmake.define.TILELANG_RISCV_MLIR_MODE=ON
 BuildOption(build):  -Ccmake.define.TILELANG_RISCV_LLVM_ROOT=%{buddy_llvm_prefix}
 BuildOption(build):  -Ccmake.define.CMAKE_SKIP_INSTALL_RPATH=OFF
 BuildOption(install):  %{srcname}
-# Submodules include optional GPU integrations and vendored TVM utilities;
-# the root import plus dedicated RISC-V tests cover the supported build.
+# Submodules include optional GPU integrations and vendored TVM utilities.
+# Keep the default smoke import of the top-level module; runtime backend
+# tests belong to installed-RPM verification, not %check.
 BuildOption(check):  -t
 
 BuildRequires:  buddy-compiler-llvm = 0.0.8
@@ -56,7 +57,6 @@ BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  python3dist(apache-tvm-ffi) >= 0.1.10
 BuildRequires:  python3dist(cython) >= 3.1
-BuildRequires:  python3dist(pytest)
 BuildRequires:  python3dist(scikit-build-core)
 BuildRequires:  cmake(hip)
 Requires:       buddy-compiler-llvm = 0.0.8
@@ -81,9 +81,6 @@ sed -i '/^[[:space:]]*"patchelf>=0\.17\.2;/d' pyproject.toml
 # System Z3 is found through pkgconfig; its Python RPM lacks dist metadata.
 sed -i '/^requires = \[/,/^\]/ { /^[[:space:]]*"z3-solver/d; }' pyproject.toml
 sed -i 's|@BUDDY_LLVM_PREFIX@|%{buddy_llvm_prefix}|g' tilelang/tladapter/toolchain.py
-# Run the backend tests against the installed wheel without the source-tree
-# import override in testing/conftest.py.
-cp -a testing/python/riscv rpm-tests
 
 %generate_buildrequires
 export NO_VERSION_LABEL=1
@@ -97,10 +94,6 @@ export TVM_FFI_DISABLE_TORCH_C_DLPACK=1
 
 %check -p
 export TVM_FFI_DISABLE_TORCH_C_DLPACK=1
-export TILELANG_CACHE_DIR="$PWD/rpm-cache"
-
-%check -a
-%pytest --confcutdir=rpm-tests rpm-tests/test_riscv_target_parse.py rpm-tests/test_riscv_toolchain.py rpm-tests/test_riscv_tladapter_pipeline.py rpm-tests/codegen_ops
 
 %files -f %{pyproject_files}
 %doc README.md docs/get_started/BuildOnSG2044.md
