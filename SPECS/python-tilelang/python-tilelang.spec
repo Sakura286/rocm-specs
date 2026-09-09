@@ -73,6 +73,8 @@ is selected explicitly with target="riscv".
 
 %prep
 %autosetup -p1 -n %{srcname}-%{version}
+# CMake finds the distro executable; no PyPI patchelf distribution is needed.
+sed -i '/^[[:space:]]*"patchelf>=0\.17\.2;/d' pyproject.toml
 sed -i 's|@BUDDY_LLVM_PREFIX@|%{buddy_llvm_prefix}|g' tilelang/tladapter/toolchain.py
 # Run the backend tests against the installed wheel without the source-tree
 # import override in testing/conftest.py.
