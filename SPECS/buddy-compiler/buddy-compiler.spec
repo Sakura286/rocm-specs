@@ -17,7 +17,7 @@
 %global __provides_exclude_from ^%{buddy_prefix}/.*$
 # These DSOs and their consumers are shipped together in the private LLVM RPM.
 # Match its hidden Provides with Requires filtering, retaining system library deps.
-%global __requires_exclude ^lib(MLIRPythonCAPI|clang|mlir_float16_utils)\.so\.24\.0git.*$
+%global __requires_exclude ^lib((MLIRPythonCAPI|clang|mlir_float16_utils)\.so\.24\.0git|(MLIRPythonSupport-mlir|nanobind-mlir)\.so).*$
 
 Name:           buddy-compiler
 Version:        0.0.8
