@@ -6,11 +6,11 @@
 
 优先使用可追溯的 LLVM／ROCm 上游原始提交及必要前置提交进行 backport，弥补 ROCm 所用 LLVM 24 与 openRuyi snapshot 的接口差异；不要优先自造兼容补丁。当前本地 API 适配、postopt 双阶段实现及测试变更均转为待审查的实验对照，不能仅因测试通过就作为最终交付。下一步先比较两端 LLVM 基线、定位上游提交，区分 C++ API／ABI 变化和 AMD 专有功能；能回移原始提交的应替换为带来源的 backport。无法找到上游方案的项应明确记录证据和剩余差异。
 
-审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。八项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 尚待重验。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
+审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。九项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 尚待重验。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 正按上游提交替换本地兼容补丁，旧 revision 11 的构建只保留作实验对照。当前 LLVM 24 已原生支持 postopt，已删除不必要的双阶段替代实现；八项上游回移及其前置关系见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方尚待双架构构建和实际产物验证。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 正按上游提交替换本地兼容补丁，旧 revision 11 的构建只保留作实验对照。当前 LLVM 24 已原生支持 postopt，已删除不必要的双阶段替代实现；九项上游回移及其前置关系见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方尚待双架构构建和实际产物验证。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
@@ -30,6 +30,14 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | rocm-llvm | 旧 `11.1.nor` 通过；新上游回移配方待重验 | 旧 revision 11 在 sg2044-0317:9 构建，新配方待构建 | 新配方待验证 | 未通过 |
 
 ## 固定边界和目标环境
+
+2026-11-13 调度修正：继承的 openruyi 配置新增 `Constraint: sandbox exclude="true" kvm`，OBS 将引号保留为属性值，实际错误地只匹配 KVM worker；这些 worker 的 jobs=4，无法满足本包 jobs=32。已在 **home:Sakura286:ROCm10** 项目配置加入如下修正，保留 RVA23/NATIVE 和包内 jobs=32 约束。上游 OBS `BSDispatcher::Constraints::list2struct` 的本地复现确认了引号问题；修正后 `osc checkconstraints` 恢复匹配六台 worker。未修改 openruyi 或主线 ROCm 项目配置。证据位于 `tmp/rocm10-rocm-llvm/upstream-review/constraint-parser-proof.json`、`project-config-after.txt`、`constraints-after-config.log`。后续若继承配置修正，应重新评估是否可以移除本项。
+
+```text
+%ifarch riscv64
+Constraint: sandbox! exclude=true kvm
+%endif
+```
 
 | 项目 | 本任务约定 |
 | --- | --- |

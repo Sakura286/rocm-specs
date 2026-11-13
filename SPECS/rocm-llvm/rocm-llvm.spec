@@ -91,6 +91,9 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 # Independent test-unit hunk only; dynamic LLVM linkage is retained.
 # https://github.com/ROCm/llvm-project/commit/feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0
 1008-comgr-gtest-llvm-support.patch
+# Follow-up to 1007: generic gfx12.5 does not expose selectable XNACK.
+# https://github.com/ROCm/llvm-project/commit/1c1a11bcabbfda3f52d8541f5536bf69c95941e4
+1009-comgr-gfx125-generic-feature-tests.patch
 # Distribution path for the installed libc++ headers.
 2000-comgr-support-system-llvm.patch
 # Keep source Python lit separate from system LLVM tool paths.

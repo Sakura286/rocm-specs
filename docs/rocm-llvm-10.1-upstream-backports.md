@@ -11,7 +11,7 @@
 - [11a6799740f824282650aa9ec249b55dcf1a8aae](https://github.com/llvm/llvm-project/commit/11a6799740f824282650aa9ec249b55dcf1a8aae)：2024 年引入当前选项及仅在优化后链接的行为。
 - [d9cf5980b7788a8840d69c6e4abb9092a35997bc](https://github.com/llvm/llvm-project/commit/d9cf5980b7788a8840d69c6e4abb9092a35997bc)：优化后链接新增全局对象的 GUID 修复。
 
-当前 snapshot 的 `CodeGenOptions.def`、生成的 `Options.inc`、`CodeGenAction.cpp` 和 `BackendUtil.cpp` 均含该实现，实际 `clang -cc1 --help` 也列出该选项。用 openRuyi x86_64 Clang 运行第一个提交附带的四种 pipeline 回归（默认、开启、关闭、先开启再关闭），全部通过；只有开启时出现 `LinkInModulesPass`。这些已有功能无需再次 backport，也无需替代实现。COMGR 新 RPM 的端到端测试仍须单独通过。
+当前 snapshot 的 `CodeGenOptions.def`、生成的 `Options.inc`、`CodeGenAction.cpp` 和 `BackendUtil.cpp` 均含该实现，实际 `clang -cc1 --help` 也列出该选项。用 openRuyi x86_64 和 riscv64 Clang 运行第一个提交附带的四种 pipeline 回归（默认、开启、关闭、先开启再关闭），两种架构均全部通过；只有开启时出现 `LinkInModulesPass`。这些已有功能无需再次 backport，也无需替代实现。COMGR 新 RPM 的端到端测试仍须单独通过。
 
 ## 回移清单
 
@@ -27,6 +27,7 @@
 | `1006` unbundle 架构检查 | [2bc76dfeecf71b94d0f83487dadc42e75a2d1362](https://github.com/ROCm/llvm-project/commit/2bc76dfeecf71b94d0f83487dadc42e75a2d1362) | 原始 patch 不变；依赖 `1005` |
 | `1007` gfx12.5 XNACK 测试 | [fad9cb3d631c287314e2de2f190274fb8c866a01](https://github.com/ROCm/llvm-project/commit/fad9cb3d631c287314e2de2f190274fb8c866a01) | 省略删除临时 `FixFromJacob` 限制的 hunk（10.1 没有此限制）；保留全部新增 XNACK 测试 |
 | `1008` GTest 的 LLVM Support 链接 | [feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0](https://github.com/ROCm/llvm-project/commit/feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0) | 仅摘取独立的 `test-unit/CMakeLists.txt` 修复及说明；不引入与本配方动态链接无关的静态链接框架重构 |
+| `1009` generic gfx12.5 的最终特性预期 | [1c1a11bcabbfda3f52d8541f5536bf69c95941e4](https://github.com/ROCm/llvm-project/commit/1c1a11bcabbfda3f52d8541f5536bf69c95941e4) | 原始 patch 不变；依赖 `1007`，跟进 generic 型号不再暴露可切换 XNACK 的后续变化 |
 
 没有额外回移 [a23e3d7ec1100fd41d5d4c04816041f2ff85dcd9](https://github.com/ROCm/llvm-project/commit/a23e3d7ec1100fd41d5d4c04816041f2ff85dcd9)：10.1 原始源码已经使用 `llvm::StringSet<>`。此前本地添加的 `<unordered_set>` 因此直接删除。补丁检查使用 `--forward --fuzz=0`，避免 patch 自动反向应用已包含的提交。
 
@@ -45,8 +46,10 @@
 
 ## 验证与证据
 
-原始上游 patch、API 返回、源码对照及日志位于工作区 `tmp/rocm10-rocm-llvm/upstream-review/`。五个完整回移文件与上游下载内容逐字节一致；三个局部或上下文回移明确保留原作者、完整 SHA 和调整说明。整组补丁已在干净归档解包源码上按 SPEC 顺序正向、零 fuzz 应用通过。
+原始上游 patch、API 返回、源码对照及日志位于工作区 `tmp/rocm10-rocm-llvm/upstream-review/`。六个完整回移文件与上游下载内容逐字节一致；三个局部或上下文回移明确保留原作者、完整 SHA 和调整说明。整组补丁已在干净归档解包源码上按 SPEC 顺序正向、零 fuzz 应用通过。原始 patch 的空白上下文行保留 diff 格式，普通 `git diff --check` 会将其报告为空白；非 patch 文件检查及 pre-commit 通过。
 
 本地 x86_64 使用系统 LLVM 24 重新构建 device-libs 并通过全部 33 项 CTest，包含恢复的两个完整 `lgamma_r` 测试（`device-ctest-final.log`）。这是本地诊断构建，不替代 OBS 或 riscv64 验证。诊断链接器使用 `--allow-shlib-undefined` 跨过宿主旧 glibc 的符号检查，运行时加载隔离目录内的 openRuyi 库；正式 SPEC 不使用该参数。早期失败日志（依赖未构建、IR 名称丢弃、CMake 参数转发）均保留。
 
 旧 OBS revision 11 的 x86_64 结果只作为实验对照，不能替代删除 `2005` 后的新构建验证。新配方必须重新完成 x86_64 快速验证，再以 riscv64 构建、实际 RPM 和功能测试作最终验收。当前进度以[持续计划](rocm-10.1.0-port-plan.md)为准。
+
+首轮上游回移（`a824c7c`，OBS revision 12）在 x86_64 通过 device-libs 33/33、COMGR CTest 39/39 和 unit 310/310；lit 仅 generic gfx12.5 的新增 XNACK 预期失败。补齐上游后续提交 `1009`；96 条 ISA parsing 命令在旧 RPM 上的局部验证通过，新 RPM 的完整测试仍以接下来的 OBS 构建为准。
