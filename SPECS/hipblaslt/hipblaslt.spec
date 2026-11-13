@@ -36,6 +36,9 @@ License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:5b2bf3102ef1c04f9e5afad61f8da077e8fb6f34d6395d32d11906f7987d04ff
 Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/hipblaslt.tar.gz
+# rocisa compiles the release-matched conversion glue into its Python module.
+#!RemoteAsset:  sha256:acc43368e45179c66492e90ba766f4a1001342f3eb244e378291baa4afa160ca
+Source1:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/stinkytofu.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n hipblaslt
@@ -158,6 +161,10 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep -a
+# Restore the monorepo sibling source layout for rocisa conversion glue only.
+# find_package still links the separately built system StinkyTofu library.
+mkdir -p ../../shared
+tar -xf %{SOURCE1} -C ../../shared
 # Use the system compiler names in source-tree Tensile invocations.
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
