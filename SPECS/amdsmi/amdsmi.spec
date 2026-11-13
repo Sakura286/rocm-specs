@@ -59,8 +59,6 @@ Requires:       python3dist(pyyaml)
 # libamd_smi.so may lack ESMI symbols; the generated ctypesgen wrapper
 # binds them eagerly at import — patch it to lazy-load them instead
 2002-Tolerate-missing-CPU-E-SMI-symbols.patch
-# amdsmi_cli/BDF.py:126: SyntaxWarning: invalid escape sequence '\.'
-2003-Use-raw-string-for-bdf_regex-to-silence-SyntaxWarning.patch
 
 %global _description %{expand:
 The AMD System Management Interface Library, or AMD SMI library, is a C
