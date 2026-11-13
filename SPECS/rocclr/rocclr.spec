@@ -138,6 +138,7 @@ sed -i -e 's@add_subdirectory(packaging)@#add_subdirectory(packaging)@' opencl/C
 # Imported HIP targets carry the correct multilib runtime location. Clang's
 # implicit HIP runtime lookup assumes prefix/lib and must not add a second path.
 sed -i 's/--hip-link/--hip-link -no-hip-rt/g' hipamd/hip-config-amd.cmake.in
+sed -i 's/--hip-link>/--hip-link;-no-hip-rt>/g' hip/hip-lang-config.cmake.in
 
 # cmake version
 sed -i -e 's@cmake_minimum_required(VERSION 3.3)@cmake_minimum_required(VERSION 3.5)@' hipamd/src/hiprtc/cmake/hiprtc-config.cmake.in
