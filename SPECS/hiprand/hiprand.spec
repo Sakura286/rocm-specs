@@ -9,11 +9,11 @@
 # hipRAND needs a GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hiprand
 Version:        %{rocm_version}
@@ -21,10 +21,13 @@ Release:        %autorelease
 Summary:        HIP random number generator
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:c31cec665ee0a7333fd4dfa54d46dd601710a17f56826f1d309aea4333c37360
-Source:         %{url}/releases/download/rocm-%{version}/hiprand.tar.gz
+#!RemoteAsset:  sha256:174dbab0cacdfd6a12b357ef76dc5cb77b558f2fec24b3e62c00e8ed8aaa25f7
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hiprand.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n hiprand
+
+BuildOption(conf):  -DROCRAND_FETCH_METHOD=PACKAGE
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
