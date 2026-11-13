@@ -28,6 +28,8 @@ Source0:        %{url}/archive/rocm-%{version}.tar.gz
 Source1:        LICENSE.NCSA.txt
 BuildSystem:    cmake
 
+BuildOption(prep):  -n rocm_bandwidth_test-rocm-%{version}
+
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
