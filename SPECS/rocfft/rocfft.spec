@@ -15,6 +15,9 @@
 
 %global llvm_maj_ver 23
 
+# GPU kernel and test compilation needs a sufficiently parallel worker.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           rocfft
 Version:        %{rocm_version}
 Release:        %autorelease
