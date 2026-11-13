@@ -140,6 +140,10 @@ sed -i -e 's@add_subdirectory(packaging)@#add_subdirectory(packaging)@' opencl/C
 sed -i 's/--hip-link/--hip-link -no-hip-rt/g' hipamd/hip-config-amd.cmake.in
 sed -i 's/--hip-link>/--hip-link;-no-hip-rt>/g' hip/hip-lang-config.cmake.in
 
+# Query host builtins using the system compiler's native target. hipcc's
+# complete offload target is intentionally different from the packaged rt path.
+sed -i 's|${HIP_CXX_COMPILER} -print-libgcc-file-name|%{_libdir}/llvm%{llvm_maj_ver}/bin/clang++ -print-libgcc-file-name|' hipamd/hip-config-amd.cmake.in
+
 # cmake version
 sed -i -e 's@cmake_minimum_required(VERSION 3.3)@cmake_minimum_required(VERSION 3.5)@' hipamd/src/hiprtc/cmake/hiprtc-config.cmake.in
 
