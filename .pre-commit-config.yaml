@@ -62,6 +62,8 @@ repos:
          _constraints should not be placed in the git repository
          It should be configured in the obs repository.
        files: ^SPECS/.*/_constraints$
+       # ROCm10 keeps this package's constraints in its authoritative Git source.
+       exclude: ^SPECS/rocm-llvm/_constraints$
     -  id: sourcewithRemoteAsset
        name: "check Source with #!RemoteAsset"
        language: python
