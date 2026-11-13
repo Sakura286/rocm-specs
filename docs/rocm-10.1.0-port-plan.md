@@ -6,30 +6,17 @@
 
 优先使用可追溯的 LLVM／ROCm 上游原始提交及必要前置提交进行 backport，弥补 ROCm 所用 LLVM 24 与 openRuyi snapshot 的接口差异；不要优先自造兼容补丁。当前本地 API 适配、postopt 双阶段实现及测试变更均转为待审查的实验对照，不能仅因测试通过就作为最终交付。下一步先比较两端 LLVM 基线、定位上游提交，区分 C++ API／ABI 变化和 AMD 专有功能；能回移原始提交的应替换为带来源的 backport。无法找到上游方案的项应明确记录证据和剩余差异。
 
-审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。九项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 尚待重验。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
+审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。九项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 已完成重验，见当前检查点。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 已替换为九项有来源的上游回移，恢复系统 LLVM 原生 postopt，见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方提交 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`。x86_64 全部构建测试通过，等待签名／发布，新 RPM 尚不可下载；riscv64 正常排队等待六台符合约束的 worker，尚未最终验收。旧 revision 11 仅作实验对照。
+基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为 33 个源码包，持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
 
-| 阶段 | 状态 | 证据与下一步 |
-| --- | --- | --- |
-| 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
-| 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
-| rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 上游回移与重验中 | 配方 `a09779d` / OBS revision `13`；[Actions 43429675658](https://github.com/Sakura286/rocm-specs/actions/runs/43429675658) 成功，`.obsinfo` 已核对完整提交 |
-| 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
+`rocm-llvm` 配方 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，实际 RPM `10.1.0-13.1.nor`。两个架构均通过 device-libs CTest 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail。实际 RPM 的 21 项检查（含 COMGR、嵌入 libc++、缓存、hipcc gfx1100 编译和无未定义符号检查）与 CMake 下游导入／运行、LLVM 24 宏检查均通过。riscv64 在 `sh-plct-sg2044` 原生执行，RPM 校验值与下载产物一致。
 
-最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
+证据：工作区 `tmp/rocm10-rocm-llvm/upstream-review/build-final-{x86_64,riscv64}.log`、`artifact-final-x86_64.log`、`cmake-final-x86_64.log`、`riscv64-validation/`；总审计 `tmp/rocm10-rocm-llvm/audit.json`。旧 revision 11 和 custom-patch native-build 均为历史实验，不要恢复其下载／构建流程。
 
-ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初次全量 CTest 的失败及修正后日志保留在 `tmp/rocm10-rocm-cmake/logs/`。初始配置证据位于工作区 `tmp/rocm10-setup/`。旧主线构建结果不计入本任务验收。
-
-| 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
-| --- | --- | --- | --- | --- |
-| rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | revision 13 构建测试通过：device 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail；OBS signing，尚待新 RPM 功能验证 | revision 13 排队，waiting for 6 compliant workers | 新配方待验证；系统 LLVM 的原始 postopt pipeline 4/4 通过 | 未通过 |
-
-下一步：先等签名完成，确认下载列表为 `10.1.0-13.1.nor`，再保存旧 `artifacts/x86_64` 与 `artifact-root/x86_64` 为 `x86_64-rev11` 并下载新产物。截至本检查点仍是旧 RPM 列表，版本断言已阻止误测旧包，尚未移动这两个目录。用 `tests/inspect-artifacts.py x86_64`、`TEST_REVISION=rev13 tests/validate-artifacts.py`（通过 Python 执行）和 `tests/validate-cmake.sh` 完成新产物验证。旧验证日志已另存 `upstream-review/previous-rev11-artifact-logs/`。随后跟进 riscv64 构建、产物和目标机功能测试。不要重新启用已经停止的旧 custom-patch native-build 下载／构建流程；它仍是实验对照。
+下一步按依赖关系推进全部 31 个剩余包。先处理 rocm-core、rocprofiler-register、hipblas-common、half、Tensile、管理工具等；随后 HSA/HIP 运行时和数学库。x86_64 结果用于解除开发等待，同时跟进 riscv64。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
 
 ## 固定边界和目标环境
 
@@ -57,7 +44,7 @@ Constraint: sandbox! exclude=true kvm
 | 配方权威来源 | 本分支 `SPECS/<包名>/`；修复以 SPEC、补丁、配套文件形式保存 |
 | 提交身份 | `CHEN Xuan <chenxuan@iscas.ac.cn>` |
 
-主线副本 `rocm-specs/`、`main` 分支和 `home:Sakura286:ROCm` 继续其独立任务。本任务不向主线推送，不批量迁移其他包，不将主线 OBS 项目添加为依赖来源。可读取旧实验的诊断和测试脚本作为参考，但复用前核对源码版本及路径。
+主线副本 `rocm-specs/`、`main` 分支和 `home:Sakura286:ROCm` 继续其独立任务。本任务不向主线推送，不迁移其他 OBS 项目的非 ROCm 包，不将主线 OBS 项目添加为依赖来源。可读取旧实验的诊断和测试脚本作为参考，但复用前核对源码版本及路径。
 
 x86_64 验证用于尽早发现错误和减少依赖链等待。rocm-cmake 的 x86_64 产物可用且快速功能验证通过后，可开始 rocm-llvm 的 x86_64 移植，同时继续处理 rocm-cmake 的 riscv64 构建和测试，不必串行等待 RISC-V worker。rocm-llvm 的 riscv64 构建仍须使用本项目对应架构可用的新依赖，不能用 x86_64 产物替代。
 
