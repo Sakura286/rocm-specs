@@ -8,11 +8,11 @@
 # rocThrust's test client is HIP device-test code, need GPU to run
 %bcond test 0
 
-%global rocm_release 7.14
-%global rocm_patch   1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
 Name:           rocthrust
 Version:        %{rocm_version}
@@ -28,8 +28,8 @@ URL:            https://github.com/ROCm/rocThrust
 # ./thrust/detail/allocator/allocator_traits.h is dual Apache 2.0 and MIT
 # ./thrust/detail/complex contains BSD 2 clause licensed headers
 License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
-#!RemoteAsset:  sha256:63808be10cf288fdea5ce088926e9776f0dc9a65e86bd96860308ce6ebe6338d
-Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocthrust.tar.gz
+#!RemoteAsset:  sha256:1b29efe17e3ac506c492176bbedad5de2c245ac2cdbd4e45c891ef920b140196
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocthrust.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rocthrust
@@ -48,6 +48,7 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(GTest)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(rocprim)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
