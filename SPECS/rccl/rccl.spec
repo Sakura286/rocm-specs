@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
 
 # Linking AMD device libs code takes too much time
 # Set --lto-partitions can accelerate, but even --lto-partitions=4 is killed for OOM on riscv64
@@ -17,6 +17,11 @@
 %global lto_partitions 2
 %else
 %global lto_partitions %(nproc)
+%endif
+
+%ifarch riscv64
+# GPU LTO and generated kernels need the native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
 %endif
 
 Name:           rccl
@@ -30,9 +35,11 @@ Summary:        ROCm Communication Collectives Library
 # The URL for NVIDIA in the License.txt https://github.com/NVIDIA/NVTX is Apache-2.0
 License:        BSD-3-Clause AND MIT AND Apache-2.0
 URL:            https://github.com/ROCm/rccl
-#!RemoteAsset:  sha256:e8927c61f76e70801e660a3482d383b30159d6f2a9e0580e5cdf168f2503e8c7
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:314d0a54e68217efb12eafd2aacd439d4928f443795c778711d846355d262355
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/rccl.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rccl
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -49,6 +56,7 @@ BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
 BuildRequires:  cmake(GTest)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(rocm_smi)
