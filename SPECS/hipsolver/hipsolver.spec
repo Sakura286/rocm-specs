@@ -28,6 +28,9 @@ BuildSystem:    cmake
 
 BuildOption(prep):  -n hipsolver
 
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -G Ninja
 %if %{with test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
