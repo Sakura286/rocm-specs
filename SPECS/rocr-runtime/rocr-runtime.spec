@@ -12,6 +12,12 @@
 %global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
+%ifarch riscv64
+# LLVM/Clang static development packages exceed the small worker build roots.
+#!BuildConstraint: hardware:jobs 32
+#!BuildConstraint: hardware:disk:size unit=G 32
+%endif
+
 #Image support is x86 only
 %ifarch x86_64
 %global enableimage 1
