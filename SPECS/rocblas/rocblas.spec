@@ -125,7 +125,8 @@ Requires:       diffutils
 %conf -p
 # TensileConfig captures PATH for its build command; this version does not
 # forward a Tensile_ASSEMBLER CMake variable to --assembler.
-export PATH=%{_builddir}/%{buildsubdir}/tensile-assembler:%{rocmllvm_bindir}:$PATH
+test -x "$PWD/tensile-assembler/clang++"
+export PATH="$PWD/tensile-assembler":%{rocmllvm_bindir}:$PATH
 
 %prep -a
 # Legacy Tensile emits Fake16 operands; LLVM upstream forbids those in Real16
