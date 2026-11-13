@@ -30,6 +30,7 @@ BuildOption(conf):  -DROCM_DIR=%{_prefix}
 BuildRequires:  make
 BuildRequires:  clang
 BuildRequires:  cmake
+BuildRequires:  rocr-runtime-devel >= %{rocm_version}
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  cmake(hsa-runtime64) >= 1.0
 
