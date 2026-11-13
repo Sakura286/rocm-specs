@@ -70,6 +70,7 @@ BuildRequires:  pkgconfig(numa)
 2000-system-build-and-install.patch
 # Avoid interpreting version numbers as required components.
 2001-fix-system-package-version-arguments.patch
+2002-unload-only-present-library-handles.patch
 
 %description
 ROCm Bandwidth Test is designed to capture the performance

@@ -1,0 +1,20 @@
+Use the library-handle list as the unload loop condition.
+The plugin-path list can be nonempty when no shared libraries were loaded,
+causing back() on an empty handle vector after --help or plugin operations.
+
+--- a/deps/work_bench/src/plugin_mgmt.cpp
++++ b/deps/work_bench/src/plugin_mgmt.cpp
+@@ -533,11 +533,12 @@
+         all_plugins_list.pop_back();
+     }
+ 
+-    while (!m_plugin_loaded_paths->empty()) {
++    while (!m_library_loaded->empty()) {
+         unload_library(m_library_loaded->back(), "");
+         m_library_loaded->pop_back();
+     }
+ 
++    m_plugin_loaded_paths->clear();
+     plugin_get_all_mutable() = std::move(saved_plugins_list);
+ }
+ 
