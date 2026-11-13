@@ -1,0 +1,24 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use rocISA conversion sources from the installed StinkyTofu package
+
+--- a/tensilelite/rocisa/CMakeLists.txt
++++ b/tensilelite/rocisa/CMakeLists.txt
+@@ -155,10 +155,15 @@
+     # define init_stinkytofu), so they compile into _rocisa, not libstinkytofu.
+     # rocisa owns them directly here rather than relying on stinkytofu to inject
+     # them, so the de-bundled (find_package) build links them too.
+-    set(_stinkytofu_src_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../../../shared/stinkytofu")
++    if(stinkytofu_ROCISA_SOURCE_DIR)
++        set(_stinkytofu_rocisa_dir "${stinkytofu_ROCISA_SOURCE_DIR}")
++    else()
++        set(_stinkytofu_rocisa_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../../../shared/stinkytofu/src/conversion/rocisa")
++    endif()
++    set(_stinkytofu_src_dir "${_stinkytofu_rocisa_dir}")
+     target_sources(_rocisa PRIVATE
+-        "${_stinkytofu_src_dir}/src/conversion/rocisa/AllHwMappings.cpp"
+-        "${_stinkytofu_src_dir}/src/conversion/rocisa/ToStinkyTofuUtils.cpp"
++        "${_stinkytofu_rocisa_dir}/AllHwMappings.cpp"
++        "${_stinkytofu_rocisa_dir}/ToStinkyTofuUtils.cpp"
+     )
+ 
+     if(_stinkytofu_from_subdirectory)

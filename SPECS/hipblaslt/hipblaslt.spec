@@ -72,6 +72,8 @@ BuildRequires:  hipblas-common-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(msgpack)
+BuildRequires:  cmake(stinkytofu)
+BuildRequires:  stinkytofu-devel >= 7.14.1
 BuildRequires:  cmake(origami)
 BuildRequires:  rocm-origami-devel >= 7.14.1
 BuildRequires:  cmake(rocm_smi)
@@ -118,6 +120,7 @@ BuildRequires:  cmake(GTest)
 # output the silent phase trips OBS's logidlelimit and times out on slow workers
 # (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
+2003-use-installed-stinkytofu-conversion-sources.patch
 
 %global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix
