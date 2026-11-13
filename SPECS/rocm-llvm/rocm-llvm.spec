@@ -19,7 +19,8 @@
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
 %global llvm_triple %{_target_platform}
-%global amd_device_libs_prefix %{bundle_prefix}/lib/clang/%{llvm_maj_ver}
+# System Clang searches <resource-dir>/lib/amdgcn before ROCM_PATH.
+%global amd_device_libs_prefix %{bundle_prefix}/lib/clang/%{llvm_maj_ver}/lib
 
 %global toolchain clang
 
