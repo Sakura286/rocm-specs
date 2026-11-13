@@ -1,0 +1,160 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use system dependencies and standard CMake installation
+
+Avoid vendoring shared dependencies during installation, propagate the distro
+toolchain to TransferBench, and fix system dependency lookup.
+
+--- a/cmake/build_utils.cmake
++++ b/cmake/build_utils.cmake
+@@ -836,7 +836,7 @@
+             "./plugins"
+             "${ROCM_BASE_PLUGIN_LOOKUP_PATH}"
+             "/usr/local/lib"
+-            "${CMAKE_INSTALL_PREFIX}/lib/${AMD_TARGET_NAME}/plugins"
++            "${CMAKE_INSTALL_FULL_LIBDIR}/${AMD_TARGET_NAME}/plugins"
+             "${CMAKE_INSTALL_PREFIX}/share/${AMD_TARGET_NAME}/plugins"
+         )
+         list(JOIN PLUGIN_BUILTIN_LOOKUP_PATH_ALL_LIST ":" PLUGIN_BUILTIN_LOOKUP_PATH_ALL_STRING)
+@@ -1020,7 +1020,7 @@
+     #   Note:   C++23+ we can use std::stacktrace for the traces.
+     #           Some older compilers/systems will not allow that. We will force/use boost::stacktrace for now.
+     #           Check for 'Boost'
+-    set(BOOST_PACKAGE_NAME "boost")
++    set(BOOST_PACKAGE_NAME "Boost")
+     set(BOOST_LIBRARY_NAME "boost")
+     set(BOOST_REPO_URL "https://github.com/boostorg/boost.git")
+     set(BOOST_PKG_MINIMUM_REQUIRED_VERSION "1.74.0")
+@@ -1162,7 +1162,8 @@
+     #    find_package(Boost 1.74 REQUIRED COMPONENTS stacktrace_basic)
+     #    set(BOOST_LIBRARIES boost::boost)
+     #endif()
+-    set(CATCH2_PACKAGE_NAME "catch2")
++    if(AMD_APP_BUILD_TESTS)
++    set(CATCH2_PACKAGE_NAME "Catch2")
+     set(CATCH2_LIBRARY_NAME "Catch2")
+     set(CATCH2_REPO_URL "https://github.com/catchorg/Catch2.git")
+     set(CATCH2_PKG_MINIMUM_REQUIRED_VERSION "3.5.1")
+@@ -1177,6 +1178,7 @@
+         set(CATCH2_LIBRARIES Catch2::Catch2WithMain)
+     endif()
+     list(APPEND 3RD_PARTY_UNIT_TEST_TARGET_LIST ${CATCH2_LIBRARIES})
++    endif()
+ 
+     #  Note:    If stacktrace is enabled.
+     if(NOT AMD_APP_DISABLE_STACKTRACE)
+--- a/main/cmdline/CMakeLists.txt
++++ b/main/cmdline/CMakeLists.txt
+@@ -54,7 +54,8 @@
+     set(CLI11_LIBRARIES CLI11::CLI11)
+     set(CLI11_INCLUDE_DIRS)
+ else()
+-    find_package(CLI11 CONFIG QUIT)
++    find_package(CLI11 CONFIG REQUIRED)
++    set(CLI11_LIBRARIES CLI11::CLI11)
+ endif()
+ 
+ 
+--- a/plugins/tb/CMakeLists.txt
++++ b/plugins/tb/CMakeLists.txt
+@@ -91,28 +91,20 @@
+ message(STATUS "  >> Build type: '${AMD_PROJECT_BUILD_TYPE}' v:${AMD_APP_ROCM_BUILD_BINARY_VERSION_INTERNAL}")
+ ExternalProject_Add(
+     AMD_TB_LIBRARY
+-    ##PREFIX "lib"
+-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/transferbench/
+-    BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/transferbench/build
+-    ##INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/
+-    CONFIGURE_COMMAND ""
+-    ##  Defined as empty string to avoid the default install step, and uses:
+-    ##  'ExternalProject_Add_Step(AMD_TB_LIBRARY install'
+-    ## INSTALL_COMMAND ""
+-    INSTALL_COMMAND
+-        ${CMAKE_COMMAND} -E make_directory ${LIB_DIRECTORY_PATH} &&
+-        ${CMAKE_COMMAND}
+-            -DINSTALL_DEPENDEE_BASE_PATH=${CMAKE_CURRENT_SOURCE_DIR}
+-            -DINSTALL_SOURCE_LIBAMD_TB_PATH=${DEPS_DIRECTORY_PATH}
+-            -DINSTALL_TARGET_LIBAMD_TB_PATH=${LIB_DIRECTORY_PATH}
+-            -P ${CMAKE_CURRENT_SOURCE_DIR}/transferbench/install_libamd_tb.cmake
+-
+-    BUILD_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/transferbench/build_libamd_tb.sh
+-        ${CMAKE_CURRENT_SOURCE_DIR}/transferbench/build
+-        ${AMD_PROJECT_BUILD_TYPE}
+-        ${AMD_APP_ROCM_BUILD_BINARY_VERSION_INTERNAL}
+-        ${HIPCC_COMPILER_CXX}
+-    COMMENT ">> Building 'libamd_tb' dependency library ..."
++    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/transferbench
++    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/transferbench
++    CMAKE_ARGS
++        -DCMAKE_CXX_COMPILER=${HIPCC_COMPILER_CXX}
++        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
++        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
++        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
++        -DCMAKE_SHARED_LINKER_FLAGS=${CMAKE_SHARED_LINKER_FLAGS}
++        -DCMAKE_SKIP_RPATH=ON
++        -DROCM_PATH=${ROCM_PATH}
++        -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
++        -DBUILD_INTERNAL_BINARY_VERSION=${AMD_APP_ROCM_BUILD_BINARY_VERSION_INTERNAL}
++    INSTALL_COMMAND ""
++    BUILD_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/transferbench/libamd_tb.so
+ )
+ 
+ foreach(file_dependency ${FILE_DEPS_LIST_COPY})
+@@ -133,7 +125,7 @@
+ 
+ add_custom_target(libamd_tb_dependency ALL DEPENDS AMD_TB_LIBRARY)
+ add_library(amd_tb_lib SHARED IMPORTED)
+-set_target_properties(amd_tb_lib PROPERTIES IMPORTED_LOCATION "${LIB_DIRECTORY_PATH}/libamd_tb.so")
++set_target_properties(amd_tb_lib PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/transferbench/libamd_tb.so")
+ 
+ ##
+ # Add the plugin
+@@ -166,3 +158,7 @@
+ target_link_libraries(${AMD_WORK_BENCH_PLUGIN_NAME_BUILD} PRIVATE amd_tb_lib)
+ 
+ ## End of CMakeLists.txt
++
++install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/transferbench/"
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}
++    FILES_MATCHING PATTERN "libamd_tb.so*")
+--- a/plugins/tb/transferbench/CMakeLists.txt
++++ b/plugins/tb/transferbench/CMakeLists.txt
+@@ -31,14 +31,6 @@
+   set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/toolchain-linux.cmake")
+   message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
+ endif()
+-
+-set(TARGET_RPATH "\$ORIGIN:\$ORIGIN/llvm/lib")
+-set(CMAKE_SKIP_RPATH FALSE)
+-set(CMAKE_SKIP_BUILD_RPATH FALSE)
+-set(CMAKE_SKIP_INSTALL_RPATH FALSE)
+-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+-set(CMAKE_INSTALL_RPATH "${TARGET_RPATH}")
+-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+ 
+ set(AMD_PROJECT_NAME "libamd_tb")
+ 
+@@ -249,7 +241,7 @@
+     ${AMD_PROJECT_NAME}
+         PROPERTIES
+         INSTALL_RPATH_USE_LINK_PATH FALSE
+-            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/"
++            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+             #LIBRARY_OUTPUT_NAME "libamd_tb"
+             SOVERSION ${BUILD_BINARY_VERSION}
+             PREFIX ""
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -244,6 +244,13 @@
+ endif()
+ 
+ #
++# Standard distribution install; RPM owns dependencies and file placement.
++set_target_properties(${AMD_TARGET_LIBNAME} PROPERTIES SOVERSION ${AMD_TARGET_VERSION})
++install(TARGETS awb_main RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
++install(TARGETS ${AMD_TARGET_LIBNAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
++install(TARGETS builtin transferbench LIBRARY DESTINATION ${PLUGIN_INSTALL_PATH})
++return()
++
+ # Setup the package environment for custom install
+ setup_distribution_package()
+ 

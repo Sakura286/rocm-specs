@@ -5,35 +5,61 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# This legacy tool has no therock-7.14.1 release; use its latest ROCm tag.
+# This standalone tool has no therock-7.14.1 release; use its latest ROCm tag.
+%global llvm_maj_ver 23
 %global upstreamname rocm_bandwidth_test
 %global rocm_release 7.2
 %global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-# GPU HW is required to run %check, and needs to run locally
-%bcond check 0
-
 Name:           rocm-bandwidth-test
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        Bandwidth test for ROCm
-# License mismatch
-# https://github.com/ROCm/rocm_bandwidth_test/issues/127
-License:        NCSA AND MIT
+License:        MIT
 URL:            https://github.com/ROCm/rocm_bandwidth_test
 #!RemoteAsset:  sha256:eb3256351c00123d4536e93dd1500f5edd6fa46e5acd777c6cce8f9db894ccc0
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
-# From base_test.cpp
-Source1:        LICENSE.NCSA.txt
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rocm_bandwidth_test-rocm-%{version}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
+BuildOption(conf):  -DAMD_APP_ROCM_BUILD_AUTO_DETECT=OFF
+BuildOption(conf):  -DAMD_APP_SUBMODULES_TRY_CHECKOUT=OFF
+BuildOption(conf):  -DAMD_APP_COMPILER_TRY_CLANG=OFF
+BuildOption(conf):  -DAMD_APP_LINKER_TRY_MOLD=OFF
+BuildOption(conf):  -DAMD_APP_TREAT_WARNINGS_AS_ERRORS=OFF
+BuildOption(conf):  -DAMD_WORK_BENCH_INCLUDE_PLUGINS=builtin;tb
+BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
+BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
+BuildOption(conf):  -DUSE_LOCAL_BOOST_STACKTRACE=ON
+BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
+BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
+BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
+
 
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
-BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
+BuildRequires:  rocr-runtime-devel >= 7.14.1
+BuildRequires:  rocm-hip-devel >= 7.14.1
+BuildRequires:  rocm-cmake >= 7.14.1
+BuildRequires:  rocm-llvm-macros
+BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  git
+BuildRequires:  cmake(fmt)
+BuildRequires:  cmake(Boost)
+BuildRequires:  cmake(CLI11)
+BuildRequires:  cmake(nlohmann_json)
+BuildRequires:  cmake(spdlog)
+BuildRequires:  pkgconfig(libcurl)
+BuildRequires:  pkgconfig(numa)
+
+%patchlist
+# Use distribution dependencies and standard library/plugin installation.
+2000-system-build-and-install.patch
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
@@ -43,35 +69,29 @@ for initiating copy, read, and write operations. In
 addition to this, you can also query the system topology in
 terms of memory pools and their agents.
 
-%prep -a
-# Remove execute permissions on docs
-# https://github.com/ROCm/rocm_bandwidth_test/issues/128
-chmod a-x LICENSE.txt
-chmod a-x README.md
-chmod a-x ROCmBandwithTest_UserGuide.pdf
-cp %{SOURCE1} .
+%conf -p
+export ROCM_PATH=%{_prefix}
+export PATH=%{rocmllvm_bindir}:$PATH
+
+%build -p
+export ROCM_PATH=%{_prefix}
+export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
-rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.txt
+ln -s rocm_bandwidth_test %{buildroot}%{_bindir}/rocm-bandwidth-test
 
 %check
-%if %{with check}
-%{_vpath_builddir}/rocm-bandwidth-test
-# On a gfx1201, the start should look something like
-#          RocmBandwidthTest Version: 2.6.0
-#
-#          Launch Command is: redhat-linux-build/rocm-bandwidth-test (rocm_bandwidth -a + rocm_bandwidth -A)
-#
-#
-#          Device: 0,  Intel(R) Core(TM) i5-10400 CPU @ 2.90GHz
-#          Device: 1,  AMD Radeon Graphics,  GPU-7b2a57bc7a036a5f,  03:0.0
-# ...
-%endif
+# The command line parser can be checked without a GPU.
+%{_vpath_builddir}/rocm_bandwidth_test --help
 
 %files
-%doc README.md ROCmBandwithTest_UserGuide.pdf
-%license LICENSE.txt LICENSE.NCSA.txt
+%doc README.md
+%license LICENSE.md
 %{_bindir}/rocm-bandwidth-test
+%{_bindir}/rocm_bandwidth_test
+%{_libdir}/libamd_work_bench.so*
+%{_libdir}/libamd_tb.so*
+%{_libdir}/rocm_bandwidth_test/
 
 %changelog
 %autochangelog
