@@ -101,6 +101,9 @@ Requires:       gcc-c++
 2002-workaround-half-float-expr-deduction.patch
 # Locate LLVM 24 under /usr/lib64, relative to the /usr ROCm prefix.
 2004-fix-clang-rel-path.patch
+# BF16 MFMA argument bit patterns: merged upstream PR 13016, one file only.
+# https://github.com/ROCm/rocm-libraries/commit/d7b6c31cb268642a7b8f97cc202fa418ea3d4190
+1001-upstream-hipconv-bf16-mfma.patch
 
 %global _description %{expand:
 AMD's library for high performance machine learning primitives.
