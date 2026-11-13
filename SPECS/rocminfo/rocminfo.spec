@@ -7,8 +7,8 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 %global upstreamname rocminfo
-%global rocm_release 7.14
-%global rocm_patch 1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global pkg_desc ROCm system info utility
@@ -19,13 +19,11 @@ Release:        %autorelease
 Summary:        %{pkg_desc}
 License:        NCSA
 URL:            https://github.com/ROCm/rocminfo
-#!RemoteAsset:  sha256:48b8909dfca5ef74259012875467905f676aeb2d442ab2b80ad329a1d06d0788
-Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rocminfo.tar.gz
+#!RemoteAsset:  sha256:057f8fcb4fc82d520f266014d6bfb53fb6d5e9413d9e4d71466026696d2c32d1
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/rocminfo.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rocminfo
-
-Patch0:         0001-adjust-CMAKE_CXX_FLAGS.patch
 
 BuildOption(conf):  -DROCM_DIR=%{_prefix}
 
