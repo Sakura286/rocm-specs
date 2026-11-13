@@ -17,22 +17,52 @@ Name:           rocm-bandwidth-test
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        Bandwidth test for ROCm
-# License mismatch
-# https://github.com/ROCm/rocm_bandwidth_test/issues/127
-License:        NCSA AND MIT
+License:        MIT
 URL:            https://github.com/ROCm/rocm_bandwidth_test
 #!RemoteAsset:  sha256:abba532eeb43f0740ed9bbacc39ff738a55acae0f01ba5d75a899e313ddc35ea
 Source0:        %{url}/archive/06dd9df114855ed2dc38cd731ad214066a62d6da/rocm_bandwidth_test-06dd9df114855ed2dc38cd731ad214066a62d6da.tar.gz
-# From base_test.cpp
-Source1:        LICENSE.NCSA.txt
+Source1:        distro-install.cmake
 BuildSystem:    cmake
 
 # No therock-10.1 release exists for this standalone tool; use latest tagged source.
 BuildOption(prep):  -n rocm_bandwidth_test-06dd9df114855ed2dc38cd731ad214066a62d6da
 
+BuildOption(conf):  -DAMD_APP_ROCM_BUILD_AUTO_DETECT=OFF
+BuildOption(conf):  -DAMD_APP_ROCM_BUILD_PACKAGE=OFF
+BuildOption(conf):  -DAMD_APP_SUBMODULES_TRY_CHECKOUT=OFF
+BuildOption(conf):  -DAMD_APP_TREAT_WARNINGS_AS_ERRORS=OFF
+BuildOption(conf):  -DAMD_WORK_BENCH_INCLUDE_PLUGINS='builtin;tb'
+BuildOption(conf):  -DUSE_LOCAL_FMT_LIB=ON
+BuildOption(conf):  -DUSE_LOCAL_NLOHMANN_JSON=ON
+BuildOption(conf):  -DUSE_LOCAL_SPDLOG=ON
+BuildOption(conf):  -DUSE_LOCAL_BOOST=ON
+BuildOption(conf):  -DUSE_LOCAL_BOOST_STACKTRACE=ON
+BuildOption(conf):  -DUSE_LOCAL_CLI11=ON
+BuildOption(conf):  -DUSE_LOCAL_CATCH2=ON
+BuildOption(conf):  -DROCM_PATH=%{_prefix}
+BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
+
 BuildRequires:  make
 BuildRequires:  gcc-c++
+BuildRequires:  git-core
 BuildRequires:  cmake
+BuildRequires:  cmake(Boost)
+BuildRequires:  cmake(Catch2)
+BuildRequires:  cmake(CLI11)
+BuildRequires:  cmake(fmt)
+BuildRequires:  cmake(nlohmann_json)
+BuildRequires:  cmake(spdlog)
+BuildRequires:  pkgconfig(libcurl)
+BuildRequires:  pkgconfig(numa)
+BuildRequires:  clang(major) = 24
+BuildRequires:  chrpath
+BuildRequires:  hipcc
+BuildRequires:  rocm-cmake >= 10.1.0
+BuildRequires:  rocm-hip-devel >= 10.1.0
+BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocr-runtime-devel >= 10.1.0
 
 %description
@@ -44,34 +74,44 @@ addition to this, you can also query the system topology in
 terms of memory pools and their agents.
 
 %prep -a
-# Remove execute permissions on docs
-# https://github.com/ROCm/rocm_bandwidth_test/issues/128
-chmod a-x LICENSE.txt
-chmod a-x README.md
-chmod a-x ROCmBandwithTest_UserGuide.pdf
-cp %{SOURCE1} .
+# Select the distribution CMake package names and exported CLI11 target.
+sed -i -e 's/set(BOOST_PACKAGE_NAME "boost")/set(BOOST_PACKAGE_NAME "Boost")/' \
+    -e 's/set(CATCH2_PACKAGE_NAME "catch2")/set(CATCH2_PACKAGE_NAME "Catch2")/' \
+    cmake/build_utils.cmake
+sed -i -e 's/find_package(CLI11 CONFIG QUIT)/find_package(CLI11 CONFIG REQUIRED)\n    set(CLI11_LIBRARIES CLI11::CLI11)/' \
+    main/cmdline/CMakeLists.txt
+# Pass the configured GPU set to the separately configured TransferBench engine.
+sed -i '/-DCMAKE_BUILD_TYPE=/a\                                -DGPU_TARGETS="%{rocm_gpu_list_default}" \\' \
+    plugins/tb/transferbench/build_libamd_tb.sh
+# Use conventional install rules rather than upstream's /opt staging packager.
+cat %{SOURCE1} >> CMakeLists.txt
+
+%conf -p
+export PATH=%{rocmllvm_bindir}:$PATH
+export ROCM_PATH=%{_prefix}
+
+%build -p
+export ROCM_PATH=%{_prefix}
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 
 %install -a
-rm -f %{buildroot}%{_prefix}/share/doc/rocm-bandwidth-test/LICENSE.txt
+chrpath --delete %{buildroot}%{_libdir}/libamd_tb.so*
 
 %check
 %if %{with check}
-%{_vpath_builddir}/rocm-bandwidth-test
-# On a gfx1201, the start should look something like
-#          RocmBandwidthTest Version: 2.6.0
-#
-#          Launch Command is: redhat-linux-build/rocm-bandwidth-test (rocm_bandwidth -a + rocm_bandwidth -A)
-#
-#
-#          Device: 0,  Intel(R) Core(TM) i5-10400 CPU @ 2.90GHz
-#          Device: 1,  AMD Radeon Graphics,  GPU-7b2a57bc7a036a5f,  03:0.0
-# ...
+LD_LIBRARY_PATH="$PWD/lib:$PWD/plugins/tb/lib" \
+    %{_vpath_builddir}/rocm_bandwidth_test run tb
 %endif
 
 %files
-%doc README.md ROCmBandwithTest_UserGuide.pdf
-%license LICENSE.txt LICENSE.NCSA.txt
+%doc README.md CHANGELOG.md
+%license LICENSE.md
 %{_bindir}/rocm-bandwidth-test
+%{_bindir}/rocm_bandwidth_test
+%{_libdir}/libamd_work_bench.so
+%{_libdir}/libamd_tb.so*
+%{_libdir}/rocm_bandwidth_test/
 
 %changelog
 %autochangelog
