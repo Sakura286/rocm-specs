@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocm-origami
 Version:        %{rocm_version}
@@ -17,16 +17,12 @@ Release:        %autorelease
 Summary:        Analytical GEMM Solution Selection
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:f917d10a3a9a8ec2f527c046a90a674a655b007d28132058c20e0fb34f6fcf71
-Source0:        %{url}/releases/download/rocm-%{version}/origami.tar.gz
-# License file is not included in the release tarball
-#!RemoteAsset:  sha256:b185aaa652b0bf066c37a0d6314ce4bf4521e4a3c9bf46edd2f6a777ac522223
-Source1:        https://raw.githubusercontent.com/ROCm/rocm-libraries/develop/shared/origami/LICENSE.md
+#!RemoteAsset:  sha256:c2a229a3c1733b84646672311fd98b00f18792976cf93d69d964757487d484c6
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/origami.tar.gz
 BuildSystem:    cmake
 
-# Work around the missing exported origami target in hipBLASLt consumers.
-# https://github.com/ROCm/rocm-libraries/issues/2422
-Patch0:         0001-rocm-origami-remove-scope-for-variables.patch
+BuildOption(prep):  -n origami
+
 # Build from a release tarball without requiring unavailable Git metadata.
 Patch2000:      2000-rocm-origami-use-system-build-dependencies.patch
 
@@ -66,10 +62,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
 %{_description}
-
-%prep -a
-# License file is not in the tarball
-cp %{SOURCE1} .
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
