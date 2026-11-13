@@ -19,6 +19,9 @@
 %global lto_partitions %(nproc)
 %endif
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           rccl
 Version:        %{rocm_version}
 Release:        %autorelease
