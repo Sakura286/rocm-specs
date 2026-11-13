@@ -12,6 +12,9 @@
 
 %global llvm_maj_ver 23
 
+# GPU kernel and test compilation needs a sufficiently parallel worker.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           rocblas
 Summary:        BLAS implementation for ROCm
 Version:        %{rocm_version}
