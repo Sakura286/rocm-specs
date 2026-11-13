@@ -113,8 +113,7 @@ export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBR
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a
-# we don't need the rocfft_rtc_helper binary and client-info file
-find %{buildroot} -type f -name "rocfft_rtc_helper" -print0 | xargs -0 -I {} rm -rf "{}"
+# Preserve the versioned runtime compiler helper used by the library.
 rm -rf %{buildroot}/%{_prefix}/.info
 rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 
@@ -127,6 +126,7 @@ rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 %doc README.md
 %license LICENSE.md
 %{_libdir}/librocfft.so.0{,.*}
+%{_libdir}/rocfft/
 
 %files devel
 %{_includedir}/rocfft/
@@ -135,7 +135,6 @@ rm -f %{buildroot}%{_datadir}/doc/rocfft/LICENSE.md
 
 %files test
 %{_bindir}/rocfft-test
-%{_bindir}/rtc_helper_crash
 
 %changelog
 %autochangelog
