@@ -87,6 +87,8 @@ sed -i -e 's/find_package(CLI11 CONFIG QUIT)/find_package(CLI11 CONFIG REQUIRED)
 sed -i '/-DCMAKE_BUILD_TYPE=/a\                                -DGPU_TARGETS=%{rocm_gpu_list_default} \\' \
     plugins/tb/transferbench/build_libamd_tb.sh
 # Use conventional install rules rather than upstream's /opt staging packager.
+# Keep the library ABI version while RPM owns installation and packaging.
+sed -i 's/^setup_distribution_package()$/set_target_properties(${AMD_TARGET_LIBNAME} PROPERTIES SOVERSION ${AMD_TARGET_VERSION})/' CMakeLists.txt
 cat %{SOURCE1} >> CMakeLists.txt
 
 %conf -p
