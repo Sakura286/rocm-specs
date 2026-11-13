@@ -121,6 +121,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 
 %prep -a
+# The standalone device-linker commands bypass CMAKE_CXX_COMPILER_TARGET.
+# Keep their host bundle triple consistent with CMake's normal HIP commands.
+sed -i 's@set(DL_HIP_COMPILER_FLAGS "")@set(DL_HIP_COMPILER_FLAGS "--target=%{_target_cpu}-openruyi-linux-gnu")@' cmake/DeviceLinker.cmake
 # Do not force install
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # -amdgpu-s-branch-bits and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
