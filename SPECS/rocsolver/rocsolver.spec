@@ -99,6 +99,11 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{summary}
 %endif
 
+%prep -a
+# hip::device supplies the installed builtins archive. Use the system libgcc
+# runtime instead of probing compiler-rt with the HIP bundler host triple.
+sed -i '/PLATFORM_ID:Linux>:--rtlib=compiler-rt/d' library/src/CMakeLists.txt
+
 %install -a
 rm -f %{buildroot}%{_prefix}/share/doc/rocsolver/LICENSE.md
 
