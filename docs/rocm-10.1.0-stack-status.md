@@ -1,6 +1,6 @@
 # ROCm 10.1.0 全栈进度
 
-本任务包括原有 33 个 ROCm 源码包，并补入 10.1 新依赖 rocm-stinkytofu（共 34 个）。基础包阶段已完成，持续推进剩余组件；x86_64 是快速验证，riscv64 是最终验收。构建成功与实际 RPM 功能验证分别记录；GPU 运行验证需要可用硬件。
+本任务包括原有 33 个 ROCm 源码包，并补入 10.1 新依赖 rocm-stinkytofu 和 LLVM 24 支持包 rocm-clang（共 35 个）。基础包阶段已完成，持续推进剩余组件；x86_64 是快速验证，riscv64 是最终验收。构建成功与实际 RPM 功能验证分别记录；用户已明确本阶段先完成无 GPU 验证；GPU 运算另列为未验证。
 
 源码统一基线：rocm-systems `therock-10.1` → `7da43026e4f2ef7600433c38c820732f7a205d22`；rocm-libraries → `39d8d60365d2272a5366f76ccb3bfba24b219eaf`。TheRock 固定 half `207ee58595a64b5c4a70df221f1e6e704b807811`（与旧配方相同），HIPIFY `0e051929fe80ccc0af6dc194ddb990aa82eec97d`。归档校验值逐包核实并记入 SPEC。`rocm-bandwidth-test` 不在 systems 10.1 发布中，也无 therock-10.1 标签；采用独立仓库最新标签 `rocm-7.2.4` 的固定提交 `06dd9df114855ed2dc38cd731ad214066a62d6da`（从旧 6.4.2 升级），RPM 保留其真实发布版本 7.2.4，依赖 10.1.0 HSA。上游证据与实验目录：工作区 `tmp/rocm10-stack/`。
 
@@ -8,40 +8,43 @@
 
 | 源码包 | 当前步骤 | x86_64 | riscv64 |
 | --- | --- | --- | --- |
-| amdsmi | 已提交，构建／验证中 | succeeded；实际 RPM Python 版本 API 通过 | succeeded；产物验证待完成 |
-| half | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
-| hipblas | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipblas-common | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
-| hipblaslt | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipcub | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipify | 已提交，构建／验证中 | succeeded；实际 RPM 自动资源发现与 API 翻译通过（声明夹具） | succeeded；产物验证待完成 |
-| hiprand | 已提交，构建／验证中 | succeeded；实际 RPM CMake/版本 API/Philox CPU 算法通过 | unresolvable；产物验证待完成 |
-| hipsolver | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipsparse | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipsparselt | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| miopen | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| python-tensile | 已提交，构建／验证中 | succeeded；Python 导入和 CLI 通过，生成验证待完成 | succeeded；Python 导入和 CLI 通过，生成验证待完成 |
-| rccl | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocblas | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocclr | 已提交，构建／验证中 | succeeded；指定 GNU host triple 后离线 HIP 编译/链接通过 | unresolvable；产物验证待完成 |
-| rocfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocm-bandwidth-test | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocm-cmake | 双架构实际 RPM 验收通过 | 通过 | 通过 |
-| rocm-core | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
-| rocm-llvm | 双架构实际 RPM 验收通过 | 通过 | 通过 |
-| rocm-origami | 已提交，构建／验证中 | succeeded；实际 RPM CMake/gfx1100 硬件模型 API 通过 | unresolvable；产物验证待完成 |
-| rocm-smi | 已提交，构建／验证中 | succeeded；CLI 通过（无 GPU） | succeeded；CLI/API 通过（无 GPU） |
-| rocm-stinkytofu | 双架构实际 RPM 验收通过 | 1500 CTest；CMake/API/解析/优化通过 | 1500 CTest；SG2044 原生 CMake/API/解析/优化通过 |
-| rocminfo | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocprim | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocprofiler-register | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
-| rocr-runtime | 已提交，构建／验证中 | succeeded；产物验证待完成 | building；产物验证待完成 |
-| rocrand | 已提交，构建／验证中 | succeeded；实际 RPM CMake/版本 API/Philox CPU 算法通过 | unresolvable；产物验证待完成 |
-| rocsolver | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocsparse | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocthrust | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| roctracer | 已提交，构建／验证中 | succeeded；实际 RPM 链接/版本 API 通过 | unresolvable；产物验证待完成 |
+| amdsmi | 本阶段无 GPU 验证通过 | succeeded；实际 Python 模块/27.1 版本 API | succeeded；实际 Python 模块/27.1 版本 API |
+| half | 本阶段无 GPU 验证通过 | succeeded；CMake/half 运算 | succeeded；CMake/half 运算 |
+| hipblas | 继续构建／实际 RPM 验证 | unresolvable；依赖待解 | unresolvable；依赖待解 |
+| hipblas-common | 本阶段无 GPU 验证通过 | succeeded；CMake/枚举 API | succeeded；CMake/枚举 API |
+| hipblaslt | 继续构建／实际 RPM 验证 | blocked；跟踪新结果 | blocked；跟踪新结果 |
+| hipcub | 本阶段无 GPU 验证通过 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 |
+| hipfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API | unresolvable；依赖待解 |
+| hipify | 本阶段无 GPU 验证通过 | succeeded；实际资源发现/CUDA→HIP 声明夹具 | succeeded；实际资源发现/CUDA→HIP 声明夹具 |
+| hiprand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
+| hipsolver | 继续构建／实际 RPM 验证 | unresolvable；依赖待解 | unresolvable；依赖待解 |
+| hipsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | unresolvable；依赖待解 |
+| hipsparselt | 继续构建／实际 RPM 验证 | blocked；跟踪新结果 | blocked；跟踪新结果 |
+| miopen | 继续构建／实际 RPM 验证 | unresolvable；依赖待解 | unresolvable；依赖待解 |
+| python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
+| rccl | 继续构建／实际 RPM 验证 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | scheduled；跟踪新结果 |
+| rocblas | 继续构建／实际 RPM 验证 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | building；跟踪新结果 |
+| rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
+| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | building；跟踪新结果 |
+| rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
+| rocm-clang | 继续构建／实际 RPM 验证 | succeeded；上游诊断、实际 HIP/LTO 编译链接 | scheduled；跟踪新结果 |
+| rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
+| rocm-core | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
+| rocm-llvm | 本阶段无 GPU 验证通过 | succeeded；COMGR、HIP/设备库离线编译 | succeeded；COMGR、HIP/设备库离线编译 |
+| rocm-origami | 本阶段无 GPU 验证通过 | succeeded；CMake/gfx1100 硬件模型 API | succeeded；CMake/gfx1100 硬件模型 API |
+| rocm-smi | 本阶段无 GPU 验证通过 | succeeded；CLI/版本 API（无 GPU） | succeeded；CLI/版本 API（无 GPU） |
+| rocm-stinkytofu | 本阶段无 GPU 验证通过 | succeeded；1500 CTest、CMake/解析/优化 | succeeded；1500 CTest、CMake/解析/优化 |
+| rocminfo | 继续构建／实际 RPM 验证 | succeeded；产物验证待完成 | succeeded；无 GPU 诊断/目标枚举 |
+| rocprim | 本阶段无 GPU 验证通过 | succeeded；BlockReduce 离线 gfx1100/1200 | succeeded；BlockReduce 离线 gfx1100/1200 |
+| rocprofiler-register | 本阶段无 GPU 验证通过 | succeeded；132 上游测试、CMake/错误 API | succeeded；132 上游测试、CMake/错误 API |
+| rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
+| rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
+| rocsolver | 继续构建／实际 RPM 验证 | building；跟踪新结果 | unresolvable；依赖待解 |
+| rocsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | unresolvable；依赖待解 |
+| rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
+| roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
+
+表格状态采集时间：2026-11-13T20:28:23.147989+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -158,3 +161,12 @@
 - hipCUB 原生完整构建成功，实际 6.1 RPM 的独立 CMake 导入及 BlockReduce gfx1100/gfx1200 编译通过（`validation/cub-consumer-native-riscv64.log`）。此前底层 LP64D note 未令链接失败，不将该 note 误报为构建错误。
 - 原生 bandwidth 7.2.4 工具的四项 CPU CLI/插件检查全部通过，补入验证 root 的依赖为 parent spdlog 1.15.3-4.21。证据 `validation/bandwidth-cli-native-riscv64.log`、`bandwidth-cli-cpu-riscv64.json`；GPU engine 不在本阶段验证范围。
 - 当前仍需完成全部 35 包；原生 rocBLAS 已至 485/489，FFT 正在编译，Clang/RCCL 需等待大型 worker。继续主链、实际 RPM 验证及最新 source/build revision 核对，不在记录点结束。
+
+### 稀疏包装库与 Tensile 实际产物（继续执行）
+
+- rocSPARSE 10.1.0 完整 x86_64 构建成功（1311 秒），实际 RPM 的 CMake 导入、矩阵描述符创建、默认值、set/get、销毁通过，见 `validation/rocsparse-consumer-x86_64.log`。原生仍待 rocBLAS 与 rocm-clang。
+- hipSPARSE 新版 benchmark 的 clients-common 无条件需要 GTest；`ee49526` 将 GTest 构建依赖移出 GPU 测试条件。重建成功，实际 RPM 同类描述符消费者通过，见 `validation/hipsparse-consumer-x86_64.log`；未启用或执行 GPU 测试。
+- hipSPARSELt 配置失败于缺少 StinkyTofu 的 rocisa 转换源码。上游明确这两份源文件包含 rocisa 类型、定义其 Python binding，应编译进 `_rocisa` 而非 libstinkytofu；仅依赖 StinkyTofu devel 包不够。`1e8e6a5` / `2596d9e` 分别为 hipSPARSELt/hipBLASLt 增加同一 `therock-10.1/stinkytofu.tar.gz`（已核实 acc43368… 校验值），恢复它们预期的 `shared/stinkytofu` 源码相对布局。无需修改转换源码或 CMake，find_package 仍复用系统 StinkyTofu。新 hipSPARSELt 已越过配置进入 `_rocisa` 编译。
+- python-tensile 的实际 RPM 在两个架构均完成 GEMM beta helper 生成，并经实际 LLVM 24 编译、解 bundle，确认 gfx1100/gfx1200 的 ELF machine=AMDGPU；证据 `validation/tensile-generator-x86_64.log` / `tensile-generator-native-riscv64.log`，生成源码、设备 ELF 和 JSON 在对应目录。按上游构建方式启用 `__HIP_HCC_COMPAT_MODE__=1`；可选 joblib 缺失仅导致串行，本检查未声称完整 GEMM 性能调优或 GPU 运算通过。
+- RISC-V 大 worker 仍有其他项目的合法长任务，不能修改/中止它们。SG2044 测试机有 64 个可用 CPU、约 128 GiB 空闲内存，因此额外安排独立原生 Clang 源码预构建，以提前暴露原生问题；它不能替代 OBS RPM 验收。4.24 GB 的 llvm24-static 只在 SG2044 下载，随后转存 `build-dependencies/llvm-static/`，不混入常规运行验证的自动依赖解包。脚本为 `prepare-native-clang.py` / `build-native-clang.sh`；构建日志在 SG 的 `native-clang-prebuild.log`。完整 snapshot 源码已经应用四补丁，不要重复打补丁。
+- 为避免大型原生产物挤满本机，新增任务脚本 `fetch-native-artifacts.py` / `download-native-public.py`：先核实 ROCm10 成功状态、取得 OBS 实际 binary 清单，再在 SG2044 从本项目发布仓下载，校验大小和 RPM digest。后续通过 SG 的 `stage-artifacts.py riscv64 <包>` 进入隔离验证 root；勿在本机解包原生 RPM。全部包继续跟踪，不在此处结束。
