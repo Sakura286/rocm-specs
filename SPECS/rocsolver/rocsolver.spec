@@ -5,9 +5,9 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.2.4
+%global rocm_version 10.1.0
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
 
 # consume too much time
 %bcond test 0
@@ -20,9 +20,11 @@ Release:        %autorelease
 Summary:        Next generation LAPACK implementation for ROCm platform
 License:        BSD-3-Clause AND BSD-2-Clause
 URL:            https://github.com/ROCm/rocSOLVER
-#!RemoteAsset:  sha256:1836ccbeaf3531d6c5e0fc258fb097e484a4c1a016fb84a639386af3c136f986
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:5c8a54fe17245f2d81ccf4f6c3491cfe61448dac44945c13eccf1ffd0cdfee67
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocsolver.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocsolver
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
@@ -50,10 +52,14 @@ BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocblas-devel >= %{rocm_version}
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocprim-devel >= %{rocm_version}
 BuildRequires:  cmake(rocprim)
+BuildRequires:  rocsparse-devel >= %{rocm_version}
 BuildRequires:  cmake(rocsparse)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
