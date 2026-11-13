@@ -39,7 +39,7 @@ BuildRequires:  rocm-llvm-macros
 
 Provides:       hipblas = %{version}-%{release}
 
-%global _description %{expand:
+%description
 hipBLAS is a Basic Linear Algebra Subprograms (BLAS) marshalling
 library, with multiple supported backends. It sits between the
 application and a 'worker' BLAS library, marshalling inputs into
@@ -47,10 +47,6 @@ the backend library and marshalling results back to the
 application. hipBLAS exports an interface that does not require
 the client to change, regardless of the chosen backend. Currently,
 hipBLAS supports rocBLAS and cuBLAS as backends.
-}
-
-%description
-%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
@@ -59,7 +55,7 @@ Requires:       cmake(hip)
 Requires:       cmake(hipblas-common)
 
 %description    devel
-%{_description}
+%{summary}
 
 %prep -a
 # This is a tarball, no .git to query
@@ -69,8 +65,8 @@ sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' library/CM
 rm -f %{buildroot}%{_prefix}/share/doc/hipblas/LICENSE.md
 
 %files
-%doc README.md
 %license LICENSE.md
+%doc README.md
 %{_libdir}/libhipblas.so.3{,.*}
 
 %files devel
