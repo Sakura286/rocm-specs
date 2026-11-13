@@ -85,8 +85,8 @@ DESTDIR=%{buildroot} cmake --build %{_vpath_builddir} --target install-clang ins
 export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
 # Upstream regression checks for wrong-sided calls in static initializers.
 export LD_LIBRARY_PATH="$PWD/%{_vpath_builddir}/lib:%{_libdir}/llvm%{llvm_major}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-%{_vpath_builddir}/bin/clang -cc1 -x cuda -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=expected,host clang/test/SemaCUDA/global-initializers.cu
-%{_vpath_builddir}/bin/clang -cc1 -x cuda -triple nvptx -fcuda-is-device -fsyntax-only -verify=expected,device clang/test/SemaCUDA/global-initializers.cu
+%{_vpath_builddir}/bin/clang -cc1 -internal-isystem %{_libdir}/llvm%{llvm_major}/lib/clang/%{llvm_major}/include -x cuda -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=expected,host clang/test/SemaCUDA/global-initializers.cu
+%{_vpath_builddir}/bin/clang -cc1 -internal-isystem %{_libdir}/llvm%{llvm_major}/lib/clang/%{llvm_major}/include -x cuda -triple nvptx -fcuda-is-device -fsyntax-only -verify=expected,device clang/test/SemaCUDA/global-initializers.cu
 %{_libdir}/llvm%{llvm_major}/bin/llvm-offload-binary -o host-triple.out --image=file=%{SOURCE1},kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx1100
 %{_vpath_builddir}/bin/clang-linker-wrapper --dry-run --host-triple=%{_target_platform} --emit-fatbin-only host-triple.out -o host-triple.hipfb > host-triple.log 2>&1
 grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
