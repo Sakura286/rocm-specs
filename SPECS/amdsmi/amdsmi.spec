@@ -44,6 +44,9 @@ BuildRequires:  cmake
 BuildRequires:  cmake(GTest)
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(libnl-3.0)
+BuildRequires:  pkgconfig(libnl-genl-3.0)
+BuildRequires:  pkgconfig(libmnl)
 BuildRequires:  pkgconfig(libdrm_amdgpu)
 BuildRequires:  pkgconfig(python3)
 
