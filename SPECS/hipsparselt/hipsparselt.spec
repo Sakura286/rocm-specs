@@ -63,6 +63,8 @@ BuildOption(conf):  -DHIPBLASLT_BUNDLE_PYTHON_DEPS=ON
 BuildOption(conf):  -DHIPBLASLT_ENABLE_ROCROLLER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_MXDATAGENERATOR=OFF
 BuildOption(conf):  -DHIPSPARSELT_ENABLE_OPENMP=OFF
+# Apply the same setting to the bundled hipBLASLt generator project.
+BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
 BuildOption(conf):  -DHIPSPARSELT_BUILD_TESTING=OFF
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
