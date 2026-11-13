@@ -48,6 +48,8 @@ BuildRequires:  perl
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  rocm-llvm-macros
 
+Requires:       clang%{llvm_maj_ver}-libs
+
 %description
 HIPIFY is a set of tools to translate CUDA source code into portable
 HIP C++ automatically.
@@ -71,6 +73,11 @@ sed -i 's|\(/usr/bin/\)env perl|\1perl|' %{buildroot}%{_bindir}//hipify-perl
 chrpath %{buildroot}%{_bindir}/hipify-clang -r %rocmllvm_libdir
 
 rm -rf %{buildroot}%{_includedir}
+# Upstream standalone discovery looks in ../include/hipify/include.
+# Reuse the matching system Clang resources instead of copying headers.
+mkdir -p %{buildroot}%{_includedir}
+ln -s ../%{_lib}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver} \
+    %{buildroot}%{_includedir}/hipify
 
 %files
 %doc README.md
@@ -78,6 +85,7 @@ rm -rf %{buildroot}%{_includedir}
 %{_bindir}/hipify-clang
 %{_bindir}/hipify-perl
 %{_libexecdir}/hipify
+%{_includedir}/hipify
 
 %changelog
 %autochangelog
