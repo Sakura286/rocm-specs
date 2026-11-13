@@ -90,6 +90,9 @@ best performance, small operations can be either batched into
 larger operations or aggregated through the API.
 }
 
+%patchlist
+2000-forward-host-target-to-device-linker.patch
+
 %description
 %{_description}
 

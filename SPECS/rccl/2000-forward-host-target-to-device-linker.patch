@@ -1,0 +1,16 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Forward the host compiler target to custom HIP commands
+
+--- a/cmake/DeviceLinker.cmake
++++ b/cmake/DeviceLinker.cmake
+@@ -33,6 +33,10 @@
+ # installs don't set them (amdclang++ auto-discovers from its own location).
+ # We must forward any that exist to every amdclang++ -x hip invocation we make.
+ set(DL_HIP_COMPILER_FLAGS "")
++# Custom commands do not inherit CMake's compiler target automatically.
++if(CMAKE_CXX_COMPILER_TARGET)
++  list(APPEND DL_HIP_COMPILER_FLAGS "--target=${CMAKE_CXX_COMPILER_TARGET}")
++endif()
+ string(REGEX MATCHALL "--hip-path=[^ ]+" _hip_path_flags "${CMAKE_CXX_FLAGS}")
+ list(APPEND DL_HIP_COMPILER_FLAGS ${_hip_path_flags})
+ string(REGEX MATCHALL "--hip-device-lib-path=[^ ]+" _hip_devlib_flags "${CMAKE_CXX_FLAGS}")
