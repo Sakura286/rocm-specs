@@ -1,0 +1,21 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Assemble legacy ExtOp half-register syntax with LLVM 23
+
+Keep the compatibility mode local to ExtOp assembly on RDNA3/4; the
+Tensile GEMM assembler explicitly uses real-true16 and is unchanged.
+
+--- a/device-library/extops/CMakeLists.txt
++++ b/device-library/extops/CMakeLists.txt
+@@ -25,6 +25,12 @@
+         PRIVATE
+             -Wno-unused-command-line-argument -x assembler -target amdgcn-amd-amdhsa -mcode-object-version=4 -mcpu=${offload_arch} ${WAVEFRONT} -c
+     )
++    # These generators still emit 32-bit VGPR names for low-half operations.
++    # LLVM 23 defaults to real-true16 syntax on RDNA3/4, requiring .l/.h.
++    if(arch MATCHES "^gfx(11[0-9][0-9]|120[01])$")
++        target_compile_options(extop-obj-${arch} PRIVATE
++            -Xclangas -target-feature -Xclangas -real-true16)
++    endif()
+     target_sources(extop-obj-${arch}
+         PRIVATE
+             "${CMAKE_CURRENT_BINARY_DIR}/L_256_4_1_${arch}.s"

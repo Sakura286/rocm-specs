@@ -124,6 +124,7 @@ BuildRequires:  cmake(GTest)
 # (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
 2003-use-installed-stinkytofu-conversion-sources.patch
+2004-extops-use-legacy-half-register-syntax.patch
 
 %global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix
