@@ -112,6 +112,7 @@ BuildRequires:  python3dist(nanobind)
 BuildRequires:  python3dist(setuptools)
 BuildRequires:  python3dist(pyyaml)
 BuildRequires:  python3dist(joblib)
+BuildRequires:  python3dist(pytest)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
@@ -177,6 +178,16 @@ find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/am
 export PATH=%{rocmllvm_bindir}:$PATH
 export TENSILE_ROCM_ASSEMBLER_PATH=%{rocmllvm_bindir}/clang++
 export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=%{rocmllvm_bindir}/clang-offload-bundler
+
+%build
+export PATH=%{rocmllvm_bindir}:$PATH
+# Check upstream host-only true16 regressions before generating the full library.
+%cmake_build --target _rocisa
+export PYTHONPATH="$PWD/%{_vpath_builddir}/tensilelite/rocisa:$PWD/tensilelite${PYTHONPATH:+:$PYTHONPATH}"
+ROCISA_BACKEND=rocisa python3 -m pytest -q -o addopts= \
+    --confcutdir=tensilelite/Tensile/Tests/unit \
+    tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py
+%cmake_build
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
