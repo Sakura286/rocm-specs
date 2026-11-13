@@ -1,0 +1,12 @@
+Explicitly include the standard container used by the NIC vendor table.
+
+--- a/src/transport/net.cc
++++ b/src/transport/net.cc
+@@ -7,6 +7,7 @@
+  ************************************************************************/
+ 
+ #include "comm.h"
++#include <map>
+ #include "net.h"
+ #include "graph.h"
+ #include "proxy.h"
