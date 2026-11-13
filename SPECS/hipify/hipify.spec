@@ -70,7 +70,7 @@ sed -i 's|\(/usr/bin/\)env perl|\1perl|' %{buildroot}%{_bindir}//hipify-perl
 
 # Fix
 # /usr/bin/hipify-clang: error while loading shared libraries: libclang-cpp.so.19.0git
-chrpath %{buildroot}%{_bindir}/hipify-clang -r %rocmllvm_libdir
+chrpath %{buildroot}%{_bindir}/hipify-clang -r %{_libdir}/llvm%{llvm_maj_ver}/lib
 
 rm -rf %{buildroot}%{_includedir}
 # Upstream standalone discovery looks in ../include/hipify/include.
