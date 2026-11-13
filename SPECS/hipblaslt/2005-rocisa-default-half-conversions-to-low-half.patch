@@ -1,0 +1,31 @@
+Default scalar half conversions to the low half on true16 architectures.
+Preserve explicit high-half selections and legacy gfx9/10 operands.
+
+--- a/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp
++++ b/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp
+@@ -122,6 +122,13 @@
+             : VCvtInstruction(CvtType::CVT_F16_to_F32, dst, {src}, sdwa, std::nullopt, true16, comment)
+         {
+             setInst("v_cvt_f32_f16");
++            // LLVM 23 requires explicit low-half operands in real-true16 mode.
++            if(this->true16.empty() && rocIsa::getInstance().getArchCaps()["NoSDWA"])
++            {
++                this->true16.emplace_back(-1);
++                this->true16.emplace_back(-1);
++                this->true16.emplace_back(0);
++            }
+         }
+ 
+         VCvtF16toF32(const VCvtF16toF32& other)
+@@ -145,6 +152,11 @@
+             : VCvtInstruction(CvtType::CVT_F32_to_F16, dst, {src}, sdwa, std::nullopt, true16, comment)
+         {
+             setInst("v_cvt_f16_f32");
++            // LLVM 23 requires explicit low-half operands in real-true16 mode.
++            if(this->true16.empty() && rocIsa::getInstance().getArchCaps()["NoSDWA"])
++            {
++                this->true16.emplace_back(0);
++            }
+         }
+ 
+         VCvtF32toF16(const VCvtF32toF16& other)

@@ -125,6 +125,7 @@ BuildRequires:  cmake(GTest)
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
 2003-use-installed-stinkytofu-conversion-sources.patch
 2004-extops-use-legacy-half-register-syntax.patch
+2005-rocisa-default-half-conversions-to-low-half.patch
 
 %global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix
