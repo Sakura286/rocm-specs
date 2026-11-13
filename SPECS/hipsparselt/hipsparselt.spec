@@ -15,6 +15,9 @@
 
 %bcond test 0
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           hipsparselt
 Version:        %{rocm_version}
 Release:        %autorelease
