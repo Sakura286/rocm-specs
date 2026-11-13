@@ -8,11 +8,11 @@
 # hipCUB need GPU to run test
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hipcub
 Version:        %{rocm_version}
@@ -20,10 +20,13 @@ Release:        %autorelease
 Summary:        ROCm port of CUDA CUB (header-only)
 License:        BSD-3-Clause AND MIT
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:2b08b0e7fc8d97717bc9656a0cc0e502dd221770f34deb8721ced2239939d779
-Source:         %{url}/releases/download/rocm-%{version}/hipcub.tar.gz
+#!RemoteAsset:  sha256:affb4b64e88b0b4b589fc8434940afd1c95951203b84cba097277d3218769638
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hipcub.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n hipcub
+
+BuildOption(conf):  -DROCPRIM_FETCH_METHOD=PACKAGE
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
