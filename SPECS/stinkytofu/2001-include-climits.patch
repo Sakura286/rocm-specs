@@ -1,0 +1,13 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Include climits for UINT_MAX
+
+--- a/src/transforms/asm/StinkyWmmaVgprReorderPass.cpp
++++ b/src/transforms/asm/StinkyWmmaVgprReorderPass.cpp
+@@ -46,6 +46,7 @@
+ // Read-only: never mutates any instruction or register operand.
+ // ----------------------------------------------------------------------------
+ 
++#include <climits>
+ #include "stinkytofu/transforms/asm/StinkyWmmaVgprReorderPass.hpp"
+ 
+ #include <algorithm>
