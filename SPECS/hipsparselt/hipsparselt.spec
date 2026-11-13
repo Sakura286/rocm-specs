@@ -75,10 +75,12 @@ BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
+BuildRequires:  hipsparse-devel >= %{rocm_version}
 BuildRequires:  cmake(hipsparse)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(origami)
 BuildRequires:  cmake(rocm_smi)
+BuildRequires:  rocsparse-devel >= %{rocm_version}
 BuildRequires:  cmake(rocsparse)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
