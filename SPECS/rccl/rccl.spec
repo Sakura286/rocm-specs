@@ -95,6 +95,7 @@ larger operations or aggregated through the API.
 
 %patchlist
 2000-forward-host-target-to-device-linker.patch
+2001-fix-host-header-dependencies.patch
 
 %description
 %{_description}

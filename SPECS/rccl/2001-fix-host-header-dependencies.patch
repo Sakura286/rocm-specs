@@ -1,0 +1,53 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Make RCCL host headers self-contained and share the NVTX domain
+
+The device runtime includes nvtx_stub.h with NVTX_DISABLE while host
+sources can also include nvtx.h. Guard their identical domain definition.
+Include the tuner constants and iostream where they are used directly.
+
+--- a/src/include/nvtx.h
++++ b/src/include/nvtx.h
+@@ -53,7 +53,10 @@
+ 
+ extern const nvtxDomainHandle_t ncclNvtxDomainHandle;
+ 
++#ifndef NCCL_NVTX_DOMAIN_DEFINED_
++#define NCCL_NVTX_DOMAIN_DEFINED_
+ struct nccl_domain{static constexpr char const* name{"NCCL"};};
++#endif
+ 
+ extern int64_t ncclParamNvtxDisable();
+ 
+--- a/src/include/nvtx_stub.h
++++ b/src/include/nvtx_stub.h
+@@ -9,7 +9,10 @@
+ 
+ #include <nvtx3/nvToolsExtPayload.h>
+ 
++#ifndef NCCL_NVTX_DOMAIN_DEFINED_
++#define NCCL_NVTX_DOMAIN_DEFINED_
+ struct nccl_domain{static constexpr char const* name{"NCCL"};};
++#endif
+ 
+ #define NVTX3_FUNC_RANGE_IN(domain)
+ #define nvtxNameOsThreadA(syscall, thread)
+--- a/src/include/rccl_common.h
++++ b/src/include/rccl_common.h
+@@ -22,6 +22,7 @@
+ #ifndef RCCL_COMMON_H_
+ #define RCCL_COMMON_H_
+ #include "nccl_common.h"
++#include "nccl_tuner.h"
+ #include "nccl.h"
+ #include "param.h"
+ #include "core.h"
+--- a/src/ipc_init.cu
++++ b/src/ipc_init.cu
+@@ -14,6 +14,7 @@
+ #include "ipc_mem_handler.h"
+ 
+ #include <cuda_runtime.h>
++#include <iostream>
+ 
+ using nccl_dda_ipc_detail::DdaIpcBarrierState;
+ using nccl_dda_ipc_detail::ddaMaxNBlocksForScratch;
