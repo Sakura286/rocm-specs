@@ -125,6 +125,8 @@ sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-am
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
+# CMake try_compile reloads the toolchain without the parent ROCM_PATH cache.
+export ROCM_PATH=%{_prefix}
 
 %build
 %ifarch riscv64
