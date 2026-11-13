@@ -35,10 +35,10 @@ BuildSystem:    cmake
 
 BuildOption(prep):  -n hipblaslt
 
-%if %{with test}
 # LLVM 23's HIP bundler requires the host triple's environment field.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+%if %{with test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=ON
 %else
@@ -47,6 +47,7 @@ BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=OFF
 %endif
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
+BuildOption(conf):  -DHIPBLASLT_ENABLE_HIPBLAS_DIRECT=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_MARKER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_ROCROLLER=OFF
@@ -68,15 +69,11 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
 BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  hipblas-common-devel >= 7.14.1
-BuildRequires:  cmake(hipblas)
-BuildRequires:  hipblas-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(msgpack)
 BuildRequires:  cmake(origami)
 BuildRequires:  rocm-origami-devel >= 7.14.1
-BuildRequires:  cmake(rocblas)
-BuildRequires:  rocblas-devel >= 7.14.1
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
@@ -101,6 +98,10 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 
 %if %{with test}
+BuildRequires:  cmake(hipblas)
+BuildRequires:  hipblas-devel >= 7.14.1
+BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel >= 7.14.1
 BuildRequires:  cmake(openblas)
 BuildRequires:  cmake(GMock)
 BuildRequires:  cmake(GTest)
