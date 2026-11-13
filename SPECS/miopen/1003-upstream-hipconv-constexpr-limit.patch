@@ -1,0 +1,26 @@
+From: Ben Richard <143630488+benrichard-amd@users.noreply.github.com>
+Subject: [PATCH] MIOpen: backport hipconv constexpr evaluation fix
+
+Upstream: https://github.com/ROCm/rocm-libraries/commit/37920953b271d40f1cce9f2ab38d5e4d68c0cd2b
+Upstream-PR: https://github.com/ROCm/rocm-libraries/pull/11989 (merged)
+Upstream-Commit: 37920953b271d40f1cce9f2ab38d5e4d68c0cd2b
+
+Backport the complete merged change, stripping only projects/miopen.
+The PR description proposed raising -fconstexpr-steps, but the merged
+commit removes the expensive rounds_are_rungs assertion. Keep the actual
+upstream change; the other layout assertions and runtime algorithm remain.
+No prerequisite source changes are needed on therock-10.1.
+
+diff --git a/src/hipconv/src/arch/cdna4/direct/direct_wgrad/lds_layout.h b/src/hipconv/src/arch/cdna4/direct/direct_wgrad/lds_layout.h
+--- a/src/hipconv/src/arch/cdna4/direct/direct_wgrad/lds_layout.h
++++ b/src/hipconv/src/arch/cdna4/direct/direct_wgrad/lds_layout.h
+@@ -284,9 +284,6 @@ struct TransposeSwizzle
+     static_assert(addressings_agree(),
+                   "TransposeSwizzle::offset_uint2_shifted does not reach the slot "
+                   "offset_uint2 names for the same element");
+-    static_assert(rounds_are_rungs(),
+-                  "a round of the transpose read is not a filter shift of the round before "
+-                  "it, so the read is not a ladder and displacement() does not describe it");
+ 
+     static constexpr bool is_bank_conflict_free(int num_shifts)
+     {

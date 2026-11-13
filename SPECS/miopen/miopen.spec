@@ -104,6 +104,11 @@ Requires:       gcc-c++
 # BF16 MFMA argument bit patterns: merged upstream PR 13016, one file only.
 # https://github.com/ROCm/rocm-libraries/commit/d7b6c31cb268642a7b8f97cc202fa418ea3d4190
 1001-upstream-hipconv-bf16-mfma.patch
+# Same merged commit: FP8 MFMA/WMMA conversions and their vector aliases.
+1002-upstream-hipconv-fp8-operands.patch
+# GCC 14+ std::array exceeds Clang constexpr steps: merged upstream PR 11989.
+# https://github.com/ROCm/rocm-libraries/commit/37920953b271d40f1cce9f2ab38d5e4d68c0cd2b
+1003-upstream-hipconv-constexpr-limit.patch
 
 %global _description %{expand:
 AMD's library for high performance machine learning primitives.

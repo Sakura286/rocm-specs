@@ -1,0 +1,124 @@
+From: amd-alavin <andrew.lavin@amd.com>
+Subject: [PATCH] MIOpen: backport hipconv FP8 builtin operand conversions
+
+Upstream: https://github.com/ROCm/rocm-libraries/commit/d7b6c31cb268642a7b8f97cc202fa418ea3d4190
+Upstream-PR: https://github.com/ROCm/rocm-libraries/pull/13016 (merged)
+Upstream-Commit: d7b6c31cb268642a7b8f97cc202fa418ea3d4190
+
+Carry the independent FP8 MFMA/WMMA argument compatibility hunks and their
+signed-vector aliases from the hipconv v0.3.2 sync. The companion BF16
+wrapper fix is carried in 1001. No new kernels, tensor operations or
+solver algorithms are needed. The newer batched-BF16 wrapper is absent
+in the release snapshot and is not introduced by this backport.
+Strip projects/miopen from paths and adapt two trailing context lines
+to the closing class in place of a batched wrapper absent in this release; hunk offsets differ on the older
+vendored snapshot. No additional prerequisite source changes are needed.
+
+diff --git a/src/hipconv/src/arch/cdna4/bunnies_cdna4.hpp b/src/hipconv/src/arch/cdna4/bunnies_cdna4.hpp
+--- a/src/hipconv/src/arch/cdna4/bunnies_cdna4.hpp
++++ b/src/hipconv/src/arch/cdna4/bunnies_cdna4.hpp
+@@ -3,6 +3,7 @@
+ #include "bunnies.hpp"
+ #include "detail.h"
+ 
++#include <bit>
+ #include <type_traits>
+ 
+ namespace bunnies
+@@ -310,8 +366,16 @@ struct arch_cdna4
+                                     matrix<fpfmt::e8m23, 16, 16, use::Acc>& c)
+         {
+             constexpr int scale = 0;
+-            d.data              = __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(
+-                a.data, b.data, c.data, 0, 0, 0, scale, 0, scale);
++            d.data =
++                __builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4(std::bit_cast<int32x8>(a.data),
++                                                                 std::bit_cast<int32x8>(b.data),
++                                                                 c.data,
++                                                                 0,
++                                                                 0,
++                                                                 0,
++                                                                 scale,
++                                                                 0,
++                                                                 scale);
+         }
+     };
+ 
+diff --git a/src/hipconv/src/arch/cdna5/bunnies_mi400.hpp b/src/hipconv/src/arch/cdna5/bunnies_mi400.hpp
+--- a/src/hipconv/src/arch/cdna5/bunnies_mi400.hpp
++++ b/src/hipconv/src/arch/cdna5/bunnies_mi400.hpp
+@@ -464,8 +464,12 @@ struct arch_mi400
+                                     matrix<fpfmt::e4m3, 128, 16, use::B>& b,
+                                     matrix<fpfmt::e8m23, 16, 16, use::Acc>& c)
+         {
+-            d.data = __builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8(
+-                a.data, b.data, 0, c.data, A_reuse, B_reuse);
++            d.data = __builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8(std::bit_cast<int32x16>(a.data),
++                                                                 std::bit_cast<int32x16>(b.data),
++                                                                 0,
++                                                                 c.data,
++                                                                 A_reuse,
++                                                                 B_reuse);
+         }
+         __device__ static void wmma_scale(matrix<fpfmt::e8m23, 16, 16, use::Acc>& d,
+                                           matrix<fpfmt::e4m3, 16, 128, use::A>& a,
+@@ -474,20 +478,21 @@ struct arch_mi400
+                                           matrix<fpfmt::ue8m0, 16, 4, use::A>& a_scale,
+                                           matrix<fpfmt::ue8m0, 4, 16, use::B>& b_scale)
+         {
+-            d.data = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(0,
+-                                                                      a.data,
+-                                                                      0,
+-                                                                      b.data,
+-                                                                      0,
+-                                                                      c.data,
+-                                                                      0,
+-                                                                      0,
+-                                                                      a_scale.data[0],
+-                                                                      0,
+-                                                                      0,
+-                                                                      b_scale.data[0],
+-                                                                      A_reuse,
+-                                                                      B_reuse);
++            d.data =
++                __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(0,
++                                                                 std::bit_cast<int32x16>(a.data),
++                                                                 0,
++                                                                 std::bit_cast<int32x16>(b.data),
++                                                                 0,
++                                                                 c.data,
++                                                                 0,
++                                                                 0,
++                                                                 a_scale.data[0],
++                                                                 0,
++                                                                 0,
++                                                                 b_scale.data[0],
++                                                                 A_reuse,
++                                                                 B_reuse);
+         }
+         __device__ static void wmma_scale(matrix<fpfmt::e8m23, 32, 32, use::Acc>& d,
+                                           matrix<fpfmt::e4m3, 32, 128, use::A>& a,
+@@ -498,8 +503,8 @@ struct arch_mi400
+         {
+             static_unroll<2>([&](auto nb) {
+                 static_unroll<2>([&](auto mb) {
+-                    auto asub             = reinterpret_cast<uint32x16*>(&a.data) + mb;
+-                    auto bsub             = reinterpret_cast<uint32x16*>(&b.data) + nb;
++                    auto asub             = reinterpret_cast<int32x16*>(&a.data) + mb;
++                    auto bsub             = reinterpret_cast<int32x16*>(&b.data) + nb;
+                     auto csub             = reinterpret_cast<floatx8*>(&c.data) + mb + 2 * nb;
+                     auto dsub             = reinterpret_cast<floatx8*>(&d.data) + mb + 2 * nb;
+                     constexpr int opsel_b = nb;
+diff --git a/src/hipconv/src/bunnies.hpp b/src/hipconv/src/bunnies.hpp
+--- a/src/hipconv/src/bunnies.hpp
++++ b/src/hipconv/src/bunnies.hpp
+@@ -17,6 +19,9 @@ namespace bunnies
+ 
+ using int16x4   = __attribute__((ext_vector_type(4))) int16_t;
+ using int32x2   = __attribute__((ext_vector_type(2))) int32_t;
++using int32x4   = __attribute__((ext_vector_type(4))) int32_t;
++using int32x8   = __attribute__((ext_vector_type(8))) int32_t;
++using int32x16  = __attribute__((ext_vector_type(16))) int32_t;
+ using uint32x2  = __attribute__((ext_vector_type(2))) uint32_t;
+ using uint32x3  = __attribute__((ext_vector_type(3))) uint32_t;
+ using uint32x4  = __attribute__((ext_vector_type(4))) uint32_t;
