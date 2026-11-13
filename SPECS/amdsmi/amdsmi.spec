@@ -7,12 +7,12 @@
 # amdSMI's gtest client (amdsmitst) needs GPU/driver to run
 %bcond run_test 0
 
-%global rocm_release 7.14
-%global rocm_patch 1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global esmi_ver 5.2.1.1
-%global pkg_library_version 26
+%global esmi_commit d494a3194ceb4cc4dbb2debf9fcbe8773c6d3bef
+%global pkg_library_version 27
 
 Name:           amdsmi
 Version:        %{rocm_version}
@@ -27,13 +27,15 @@ Summary:        AMD System Management Interface
 # Bundled esmi_ib_library is NCSA
 License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 URL:            https://github.com/ROCm/amdsmi
-#!RemoteAsset:  sha256:6c814c8e44a627a114327375472c92a2586cd1b57fd0a6e13385475280dbc8ce
-Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/amdsmi.tar.gz
-#!RemoteAsset:  sha256:f369d15cefc68d06c246881e8eba3c6091e532cb9de02d7f079a6686c1801e5e
-Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
+# ROCm 10.1.0 source release uses the therock-10.1 tag.
+#!RemoteAsset:  sha256:550ecc98dd7e73f7b70fb0c0eeb66fa3bc9fba19644622e76dfb67f8529e1a70
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/amdsmi.tar.gz
+#!RemoteAsset:  sha256:8f9cf10922276ca35872ca0bc27e29e717a472ba704a575c5497622b62049e75
+Source1:        https://github.com/amd/esmi_ib_library/archive/%{esmi_commit}/esmi_ib_library-%{esmi_commit}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -G Ninja
+BuildOption(conf):  -DAMDSMI_SYSTEM_PYTHON_SITELIB=%{python3_sitearch}
 BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
 %ifnarch x86_64
@@ -56,9 +58,6 @@ Requires:       python3dist(pyyaml)
 # -DENABLE_ESMI_LIB=OFF is not enough
 # Goamdshim calls CPU/ESMI-only APIs; skip building it when ESMI is off
 2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
-# libamd_smi.so may lack ESMI symbols; the generated ctypesgen wrapper
-# binds them eagerly at import — patch it to lazy-load them instead
-2002-Tolerate-missing-CPU-E-SMI-symbols.patch
 
 %global _description %{expand:
 The AMD System Management Interface Library, or AMD SMI library, is a C
@@ -92,22 +91,16 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 tar xf %{SOURCE1}
 mv esmi_ib_library-* esmi_ib_library
 mv esmi_ib_library/License.txt esmi_ib_library_License.txt
-# The esmi version check uses git tags, but we use tar's without git files.
-# Just inject in the tag that we've pulled into the version check:
-sed -i 's/NOT latest_esmi_tag/NOT "esmi_pkg_ver-%{esmi_ver}"/' CMakeLists.txt
 %endif
 
 # Fix script shebang
 sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
 
 %install -a
-mkdir -p %{buildroot}%{python3_sitearch}
-mv %{buildroot}%{_datadir}/amdsmi %{buildroot}%{python3_sitearch}
-mv %{buildroot}%{_datadir}/pyproject.toml %{buildroot}%{python3_sitearch}/amdsmi/
+# Upstream installs the module directly into the configured Python sitearch.
+# Remove the duplicate relocatable-tree copy; use the system SONAME loader.
+rm -rf %{buildroot}%{_datadir}/amd_smi
 
-# W: unstripped-binary-or-object .../amdsmi/libamd_smi.so
-# Does an explicit open, so can not just rm it; strip it instead
-strip %{buildroot}%{python3_sitearch}/amdsmi/*.so
 # E: non-executable-script .../amdsmi_cli/amdsmi_cli_exceptions.py 644 /usr/bin/env python3
 chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
 
