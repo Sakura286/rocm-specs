@@ -4,14 +4,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；rocm-llvm 主库已在 x86_64 链接，正在修复测试集成并跟进两个架构构建。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 第六轮核心检查通过，正在修复最后四项 lit 适配及跟进 RISC-V worker 故障，尚未验收。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 构建／测试适配中 | 已修复 ClangIR 依赖、AMDGPU bitset API、unbundle 缓存类型；第四轮停在 unit 测试 LLVM 依赖链接，修复后继续 |
+| rocm-llvm | 构建／测试适配中 | 当前包提交 `e6ca86f`，推送 HEAD `3548400`；OBS revision `7` / srcmd5 `301b1ad79a8de21071aec8eef48d887d`，x86_64 剩 4 项 lit 失败；riscv64 worker 初始化失败，未执行配方 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -154,7 +154,7 @@ x86_64 用于快速检查构建、依赖解析及下述核心编译功能并修�
 3. 按检查点中的 OBS 修订和日志路径重新查询在途作业，不因上下文缺失重复创建包、重复推送或无依据触发构建。
 4. 若阶段状态与 Git／OBS 实际状态不同，先补齐证据并修正检查点，再执行明确记录的下一步。
 
-当前下一步：跟踪 `874d465` 的 OBS 构建，诊断编译及 CTest 失败；随后验证实际 RPM。两架构 LLVM 24 运行依赖已下载至 `tmp/rocm10-rocm-llvm/dependencies/`，校验和见 `logs/runtime-dependencies.json`。本机 LLVM 24 已在隔离环境启动成功；本地 device-libs CMake 配置因未下载大型静态开发库而停止，不能计作功能验证。
+当前下一步：推送最后四项 lit 测试适配，跟踪新修订的双架构 OBS 构建；x86_64 成功后检查实际 RPM，riscv64 必须另行完成构建和目标机功能验收。两架构 LLVM 24 运行依赖及隔离环境已就绪。测试入口为 `tests/validate-artifacts.py`、`tests/cmake/`，远端 `/home/openruyi/tmp/rocm10-rocm-llvm/`。不要把旧日志或本地诊断构建计作最终验收。
 
 ## rocm-cmake 最终验收记录
 
@@ -186,3 +186,9 @@ riscv64 已用解包的 bubblewrap 建立隔离挂载环境，默认 `/usr/lib64
 - lit 适配 canonical AMDGPU subarch triple 和 gfx1250 XNACK 能力，libstdc++ 头文件共存夹具使用 constexpr array，以免依赖 GNU 运行时访问器的 device 注解。补丁 `2007`。所有补丁在干净源码子集应用成功，postopt 补丁整理前后源码完全一致。
 
 本地调试入口：`tmp/rocm10-rocm-llvm/run-build.sh`（允许系统 C++ 头文件，用于编译诊断工具）与 `run-runtime.sh`（隐藏宿主 C++ 头文件，检查嵌入 libc++）。本地 device-libs 源码／构建位于 `sources/llvm-project-therock-10.1/amd/device-libs/`、`build/local-device-libs/`。`tests/pristine-device-tests/` 保存未修改测试用于差异审查。
+
+第六轮已经推送：包提交 `e6ca86f`，推送 HEAD `3548400`，OBS revision `7` / srcmd5 `301b1ad79a8de21071aec8eef48d887d`。上一轮 unit 共 310 项全部通过；lit 为 169 passed、27 unsupported、1 expected failure、8 failed。原始日志均保留。riscv64 原生 LLVM 特性查询也已通过（`logs/target-features-riscv64.log`），仍不计作 COMGR RPM 验收。
+
+第六轮结果：x86_64 device-libs 33/33、COMGR CTest 32/32（包括两个未修改的 OpenCL 测试）、unit 310/310 通过；lit 205 项中 173 passed、27 unsupported、1 expected failure、4 failed。日志 `logs/build-x86_64-sixth-final.log`。三项解包测试失败是因为 LLVM 24 将 CPU 编入 canonical triple，不再保留冗余 target-cpu 属性；改为精确检查 gfx900/gfx1030 的 triple。GNU 头文件共存测试的 constexpr array 仍调用 host-only bounds assertion，改用静态索引 `std::get`，本地相同 Clang 24 探针通过（`logs/libstdcxx-get-probe.log`）。未关闭任何 lit 测试。
+
+riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失败：`build-preinstall/dev/null` 挂载无法清理、目录已存在，未执行 SPEC。日志 `logs/build-riscv64-sixth-final.log`。须观察后续修订是否分配到可用 worker；不能把基础设施失败写成编译失败或验收完成。
