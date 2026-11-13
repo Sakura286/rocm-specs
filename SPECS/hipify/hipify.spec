@@ -55,7 +55,7 @@ HIP C++ automatically.
 %check
 echo "void f(int *a, const cudaDeviceProp *b) { cudaChooseDevice(a,b); }" > b.cu
 echo "void f(int *a, const hipDeviceProp_t *b) { hipChooseDevice(a,b); }" > e.hip
-./bin/hipify-perl b.cu -o t.hip
+perl ./bin/hipify-perl b.cu -o t.hip
 diff e.hip t.hip
 
 %install -a
