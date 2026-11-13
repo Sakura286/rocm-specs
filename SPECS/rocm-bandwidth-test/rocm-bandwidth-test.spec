@@ -6,8 +6,8 @@
 # SPDX-License-Identifier: MulanPSL-2.0
 
 %global upstreamname rocm_bandwidth_test
-%global rocm_release 6.4
-%global rocm_patch 2
+%global rocm_release 7.2
+%global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # GPU HW is required to run %check, and needs to run locally
@@ -21,16 +21,19 @@ Summary:        Bandwidth test for ROCm
 # https://github.com/ROCm/rocm_bandwidth_test/issues/127
 License:        NCSA AND MIT
 URL:            https://github.com/ROCm/rocm_bandwidth_test
-#!RemoteAsset:  sha256:70cd7918dd07564241576e4ae8a4c5d007f87aa3d93589baded49022dc2cf27b
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:abba532eeb43f0740ed9bbacc39ff738a55acae0f01ba5d75a899e313ddc35ea
+Source0:        %{url}/archive/06dd9df114855ed2dc38cd731ad214066a62d6da/rocm_bandwidth_test-06dd9df114855ed2dc38cd731ad214066a62d6da.tar.gz
 # From base_test.cpp
 Source1:        LICENSE.NCSA.txt
 BuildSystem:    cmake
 
+# No therock-10.1 release exists for this standalone tool; use latest tagged source.
+BuildOption(prep):  -n rocm_bandwidth_test-06dd9df114855ed2dc38cd731ad214066a62d6da
+
 BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
-BuildRequires:  rocr-runtime-devel >= %{rocm_release}.0
+BuildRequires:  rocr-runtime-devel >= 10.1.0
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
