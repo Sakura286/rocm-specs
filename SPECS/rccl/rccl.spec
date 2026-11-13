@@ -167,15 +167,20 @@ rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
 %files data
 %{_datadir}/rccl/msccl-algorithms/
 %{_datadir}/rccl/msccl-unit-test-algorithms/
+%{_datadir}/rccl/tuner/
 
 %files devel
 %doc README.md
 %{_includedir}/rccl/
+%{_includedir}/nccl.h
+%{_includedir}/nccl_device.h
+%{_includedir}/nccl_device/
 %{_libdir}/cmake/rccl/
 %{_libdir}/librccl.so
 
 %files test
-%{_bindir}/rccl-UnitTests
+%{_bindir}/rccl-UnitTests*
+%{_bindir}/rccl/
 
 %changelog
 %autochangelog
