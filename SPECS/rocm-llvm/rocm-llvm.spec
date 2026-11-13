@@ -21,6 +21,7 @@
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
 %global llvm_triple %{_target_platform}
 %global amd_device_libs_prefix %{bundle_prefix}/lib/clang/%{llvm_maj_ver}
+%global amd_device_libs_install_dir %{_lib}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/amdgcn
 
 %global toolchain clang
 
@@ -79,6 +80,7 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 2005-comgr-preserve-postopt-device-linking.patch
 2006-device-libs-update-llvm24-checks.patch
 2007-comgr-update-llvm24-test-expectations.patch
+2008-comgr-test-cached-device-linking.patch
 
 %description
 %{summary}
@@ -183,7 +185,7 @@ export INCLUDE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/include
 %define _vpath_builddir build-devicelibs
 #TODO ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_* should be removed in ROCm 7.0:
 %cmake -DCMAKE_PREFIX_PATH=%{bundle_prefix} \
-    -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
+    -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_install_dir}" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld"
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -211,9 +213,9 @@ check_status=0
 # Test device-libs
 %define _vpath_srcdir amd/device-libs
 %define _vpath_builddir build-devicelibs
-# OCL.cmake mirrors the absolute install path below the build directory.
+# OCL.cmake mirrors the relative install path below the build directory.
 # Point Clang's --rocm-path at those freshly built libraries, not the host.
-ln -s .%{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
+ln -s %{amd_device_libs_install_dir} build-devicelibs/amdgcn
 # Full lgamma_r folding assumes AMD-specific folding of reciprocal intrinsics.
 # Keep those fixtures, but run the supported special-value checks instead.
 %{?with_device_libs_test:%ctest --exclude-regex '^constant_fold_lgamma_r__' || check_status=1}

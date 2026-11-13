@@ -23,7 +23,7 @@ internalization without modifying callers or building a private compiler.
      if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
                                              Diags)) {
        return AMD_COMGR_STATUS_ERROR;
-@@ -967,8 +975,43 @@
+@@ -967,8 +975,45 @@
      if (!Clang->hasDiagnostics()) {
        return AMD_COMGR_STATUS_ERROR;
      }
@@ -31,10 +31,12 @@ internalization without modifying callers or building a private compiler.
 +    // propagation/internalization. First optimize without those libraries,
 +    // then link them in a second IR invocation with optimizations disabled.
 +    std::shared_ptr<CompilerInvocation> PostoptInvocation;
-+    if (LinkPostopt) {
++    // Cached compilation also preprocesses separately; the marker has no
++    // effect on that job. Only bitcode emission needs the second phase.
++    if (LinkPostopt &&
++        Clang->getFrontendOpts().ProgramAction == frontend::EmitBC) {
 +      const auto &Frontend = Clang->getFrontendOpts();
-+      if (Frontend.ProgramAction != frontend::EmitBC ||
-+          Frontend.OutputFile.empty() || Frontend.OutputFile == "-") {
++      if (Frontend.OutputFile.empty() || Frontend.OutputFile == "-") {
 +        LogS << "postopt device linking requires bitcode file output\n";
 +        return AMD_COMGR_STATUS_ERROR;
 +      }

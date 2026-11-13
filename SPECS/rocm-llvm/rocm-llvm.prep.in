@@ -24,9 +24,6 @@ replace_once('amd/hipcc/src/hipBin_amd.h',
 replace_once('amd/hipcc/src/hipBin_amd.h',
              'amdgcnBitcode = roccmPath',
              'amdgcnBitcode = "%{amd_device_libs_prefix}/"')
-replace_once('amd/device-libs/AMDDeviceLibsConfig.cmake.in',
-             '@AMD_DEVICE_LIBS_PREFIX_CODE@',
-             'set(AMD_DEVICE_LIBS_PREFIX "%{amd_device_libs_prefix}")')
 # CMP0053 OLD is only needed on Windows and was removed in CMake 4.
 replace_once('amd/device-libs/cmake/OCL.cmake',
              'cmake_policy(SET CMP0053 OLD)',

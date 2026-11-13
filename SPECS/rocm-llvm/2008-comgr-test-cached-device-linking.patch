@@ -1,0 +1,47 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: cover embedded libc++ and cached postopt compilation
+
+Enable the standalone embedded-header CTest and run OpenCL/VFS/HIP device
+library compilation with caching enabled, including a repeated invocation.
+The original tests disable caching and cannot catch preprocessing regressions.
+
+Force embedded headers for the dedicated libc++ test so installed host GNU
+headers cannot accidentally turn it into a libstdc++ device-runtime test.
+
+--- a/amd/comgr/test/CMakeLists.txt
++++ b/amd/comgr/test/CMakeLists.txt
+@@ -244,7 +244,7 @@
+ add_comgr_test(name_expression_map_test c)
+ add_comgr_test(compile_hip_test c)
+ add_comgr_test(compile_hip_to_relocatable c)
+-#add_comgr_test(compile_hip_with_libcxx_test c)
++add_comgr_test(compile_hip_with_libcxx_test c)
+ add_comgr_test(mangled_names_hip_test c)
+ #add_comgr_test(unbundle_hip_test c)
+
+@@ -257,3 +257,25 @@
+   PROPERTIES
+     ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1"
+     TIMEOUT 120)
++
++# Exercise the preprocessing job used by default cached compilation as well
++# as repeated calls. The normal COMGR CTests explicitly disable caching.
++if(UNIX)
++  set_tests_properties(comgr_compile_hip_with_libcxx_test PROPERTIES
++    ENVIRONMENT "AMD_COMGR_CACHE=0;AMD_COMGR_USE_EMBEDDED_LIBCXX=force")
++  foreach(test compile_source_with_device_libs_to_bc_test
++               compile_source_with_device_libs_to_bc_with_vfs_test
++               compile_hip_with_libcxx_test)
++    set(cache_env "AMD_COMGR_CACHE=1;AMD_COMGR_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/${test}-cache")
++    if(test STREQUAL "compile_hip_with_libcxx_test")
++      list(APPEND cache_env "AMD_COMGR_USE_EMBEDDED_LIBCXX=force")
++    endif()
++    foreach(mode cached cached_repeat)
++      add_test(NAME comgr_${test}_${mode} COMMAND $<TARGET_FILE:${test}>)
++      set_tests_properties(comgr_${test}_${mode} PROPERTIES ENVIRONMENT
++        "${cache_env}")
++    endforeach()
++    set_tests_properties(comgr_${test}_cached_repeat PROPERTIES
++      DEPENDS comgr_${test}_cached)
++  endforeach()
++endif()
