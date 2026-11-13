@@ -131,6 +131,9 @@ export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %prep -a
+# hip::device explicitly supplies the installed compiler-rt builtins archive.
+# Keep the system default host runtime when using the complete HIP target.
+sed -i 's/ --rtlib=compiler-rt//g' library/CMakeLists.txt
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt
 
 # no git in this build
