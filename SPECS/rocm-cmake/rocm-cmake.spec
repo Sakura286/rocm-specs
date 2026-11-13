@@ -29,6 +29,8 @@ BuildSystem:    cmake
 Patch0:         0001-rocm-cmake-follow-cmake-install-rules.patch
 # Keep upstream test paths explicit and tolerate intentional absolute test installs.
 Patch1:         2000-make-tests-independent-of-system-libdir.patch
+# The version suffix is empty when a release archive has no Git history.
+Patch2:         2001-fix-release-archive-version-test.patch
 
 BuildOption(prep):  -n %{name}-%{source_tag}
 # PRIVATE/PREFIX tests assume upstream's non-FHS layout; version-parent requires
@@ -54,6 +56,12 @@ is required for building some of the libraries that are a part of ROCm.
 # Fix hardcoding of libdir
 sed -i -e "s@set(CMAKE_INSTALL_LIBDIR \"lib\"@set(CMAKE_INSTALL_LIBDIR \"%{_lib}\"@" share/rocmcmakebuildtools/cmake/ROCMCreatePackage.cmake
 sed -i -e "s@set(CMAKE_INSTALL_LIBDIR \"lib\"@set(CMAKE_INSTALL_LIBDIR \"%{_lib}\"@" share/rocmcmakebuildtools/cmake/ROCMInstallTargets.cmake
+
+%check -p
+# Version tests create local Git repositories inside the isolated build tree.
+export GIT_AUTHOR_NAME="CHEN Xuan" GIT_AUTHOR_EMAIL="chenxuan@iscas.ac.cn"
+export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+export GIT_CEILING_DIRECTORIES="%{_builddir}"
 
 %install -a
 

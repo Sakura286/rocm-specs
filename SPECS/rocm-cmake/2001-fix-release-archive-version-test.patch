@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] tests: expect an empty version suffix outside Git
+
+ROCMSetupVersion intentionally leaves the Git suffix empty outside a
+repository. The release-archive test incorrectly expected zero and passed
+an unquoted empty argument to its assertion. Match the documented behavior
+of rocm_get_git_commit_tag without changing the installed module.
+
+--- a/test/pass/version-norepo.cmake
++++ b/test/pass/version-norepo.cmake
+@@ -14,7 +14,7 @@ execute_process(
+     OUTPUT_VARIABLE GIT_TAG
+     RESULT_VARIABLE RESULT)
+ if(NOT ${RESULT} EQUAL 0)
+-    set(GIT_TAG 0)
++    set(GIT_TAG "")
+ endif()
+ write_version_cmake(
+     ${TMP_DIR}/repo
+@@ -23,7 +23,7 @@ write_version_cmake(
+     test_expect_eq(\${PROJECT_VERSION_MAJOR} 1)
+     test_expect_eq(\${PROJECT_VERSION_MINOR} 0)
+     test_expect_eq(\${PROJECT_VERSION_PATCH} 0)
+-    test_expect_eq(\${PROJECT_VERSION_TWEAK} ${GIT_TAG})
++    test_expect_eq(\"\${PROJECT_VERSION_TWEAK}\" \"${GIT_TAG}\")
+     test_expect_eq(\${PROJECT_VERSION}
+         \${PROJECT_VERSION_MAJOR}.\${PROJECT_VERSION_MINOR}.\${PROJECT_VERSION_PATCH})
+ ")
