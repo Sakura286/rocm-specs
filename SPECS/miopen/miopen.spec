@@ -33,6 +33,8 @@ BuildOption(prep):  -n miopen
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -G Ninja
+# Use the declared system dependencies instead of fetching third-party sources.
+BuildOption(conf):  -DMIOPEN_STANDALONE_BUILD=OFF
 # Do not run developer clang-tidy analysis during distribution builds.
 BuildOption(conf):  -DCLANG_TIDY_EXE=/usr/bin/true
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
