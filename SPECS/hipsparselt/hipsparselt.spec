@@ -30,6 +30,9 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/hipsparselt.tar.gz
 #!RemoteAsset:  sha256:5b2bf3102ef1c04f9e5afad61f8da077e8fb6f34d6395d32d11906f7987d04ff
 Source1:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/hipblaslt.tar.gz
+# rocisa compiles the release-matched conversion glue into its Python module.
+#!RemoteAsset:  sha256:acc43368e45179c66492e90ba766f4a1001342f3eb244e378291baa4afa160ca
+Source2:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/stinkytofu.tar.gz
 # Patches for hipBLASLt's tensilelite (applied during prep inside hipBLASLt/)
 Source3:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source4:        0001-hipblaslt-find-origami-package.patch
@@ -152,6 +155,10 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %autosetup -p1 -n %{name}
 tar xf %{SOURCE1}
 cd hipblaslt
+# Restore the monorepo sibling source layout for rocisa conversion glue only.
+# find_package still links the separately built system StinkyTofu library.
+mkdir -p ../../shared
+tar -xf %{SOURCE2} -C ../../shared
 patch -p1 < %{SOURCE3}
 patch -p1 < %{SOURCE4}
 patch -p1 < %{SOURCE5}
