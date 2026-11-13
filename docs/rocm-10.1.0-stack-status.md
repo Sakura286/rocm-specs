@@ -20,7 +20,7 @@
 | hipsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/Jacobi 配置与非法参数 API | unresolvable；依赖待解 |
 | hipsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | unresolvable；依赖待解 |
 | hipsparselt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 property/version/error API | unresolvable；依赖待解 |
-| miopen | 继续构建／实际 RPM 验证 | failed；跟踪新结果 | unresolvable；依赖待解 |
+| miopen | 继续构建／实际 RPM 验证 | blocked；跟踪新结果 | blocked；跟踪新结果 |
 | python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
@@ -44,7 +44,7 @@
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-13T22:30:27.374121+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-13T22:46:11.424837+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -202,3 +202,13 @@
 - SG2044 rocSPARSE 独立原生源码预构建已完成全部 622 个任务，覆盖四个 GPU target；配置须把实际 rocm-cmake foundation `/home/openruyi/tmp/rocm10-rocm-cmake/tests/root/usr` 放入 CMAKE_PREFIX_PATH，开启 FETCHCONTENT_FULLY_DISCONNECTED。源码预构建通过不能替代 OBS RPM 验收，见 `preflight-native-rocsparse-with-sdk.log`。
 - MIOpen `3afd96c` 关闭上游默认 standalone fetch，并显式使用系统依赖及空 toolchain，解决离线 Eigen 下载。`a68fc29` 使用私有 Clang>=13 及其已验证的原生 distro triple，HIP 编译器探测通过，不再使用 GNU triple 导致的 compiler-rt 路径错误。新完整 x86_64 编译到 hipconv 时暴露 BF16 向量 builtin 类型转换差异：mfma_dispatch.h 的 bf16x4_t 传入 short 向量参数。LLVM main 与 ROCm therock-10.1 的 builtin 都仍采用 short；正检查两边的 _Vector/_ExtVector 与源代码/上游配置差异，不自行写 bitcast 补丁。
 - 当前 x86_64 34 succeeded、MIOpen failed；riscv64 24 succeeded、rocm-clang building，其余 10 包等待主链。继续正式 Clang→rocSPARSE/FFT→solver/Lt/MIOpen 和全部实际 RPM 验收，不在此检查点停止。
+
+### BF16 MFMA 已回移（0a7320f，继续完整构建）
+
+- 已确认 LLVM main 与 ROCm therock-10.1 的 legacy BF16 MFMA builtin 均接收 short 向量；这不是需要改动 LLVM IR ABI 的差异。ROCm 已合入 [PR 13016](https://github.com/ROCm/rocm-libraries/pull/13016)，提交 `d7b6c31cb268642a7b8f97cc202fa418ea3d4190`（2026-10-06），在 hipconv 的 mfma_dispatch.h 使用 std::bit_cast 保持 BF16 位模式。`0a7320f` 仅回移这个文件的全部三处 hunk，不引入同步版本中的额外新内核/solver 功能，不自行写类型转换方案。原 int16x4_t 和 C++20 已具备，无额外源码前置依赖。
+- 在精确发布归档上 fuzz=0 应用；原源码 negative control 重现错误。x86_64 实际 Clang RPM 和 riscv64 独立 Clang 源码工具分别编译两项原失败 TU、四个打包 target，并确认 gfx950 生成两种预期 BF16 MFMA 指令。证据 `validation/hipconv-bf16-x86_64.log` / `hipconv-bf16-source-riscv64.log`。后者仍非正式 RPM 验收。GitHub Actions 43520458924 已成功，MIOpen 随后的完整 x86_64 构建又发现 FP8 builtin 参数差异，尚未通过。
+- `finish-native-pending.py` 串行跟进 11 个待验收包：OBS succeeded 后才下载实际 RPM、校验 digest、在 SG staging 并运行对应消费者。日志 `finish-native-pending.log`，通过账本 `validation/native-pending-acceptance.json`。失败会停止并保留具体包日志，不提前标记验收。脚本正在等待正式 rocm-clang；勿并发改写同一个 native runtime-root。
+- x86 MIOpen 数据 RPM 预计较大，本机只剩约 3 GB。已备好 `fetch-miopen-x86-subset.py`：完整 x86 RPM 流式保留到 SG 独立 artifacts/miopen/x86_64，校验 metadata/digest，仅同步库/头文件/CMake/helper 做快速 API 检查。绝不在 SG 用 x86 的 stage-artifacts.py 覆盖 native runtime-root。最终 riscv64 仍需完整实际 RPM。
+
+- 同一 PR 13016 还包含 FP8 MFMA/WMMA 的 signed-vector 参数转换。当前新增 `1002-upstream-hipconv-fp8-operands.patch`，只取三文件的独立兼容 hunk 及 int32x4/8/16 别名；cdna4 hunk 的尾部两行上下文调整为旧版 closing class，不改上游新增语句。精确 release 上 fuzz=0 应用。gfx950 FP8 fixture 已生成 v_mfma_f32_16x16x128_f8f6f4，见 `validation/hipconv-fp8-codegen-x86_64.log` / `hipconv-fp8-gfx950.s`。
+- 为减少完整 MIOpen 重建次数，新增完整 hipconv 子库四目标本地预构建；发现 std::array constexpr 在 GCC 15 headers 下达到 Clang 1048576 步上限，其他 host-variable 错误是其级联诊断。已取得合入的 PR 11989 / `37920953b271d40f1cce9f2ab38d5e4d68c0cd2b`，完整单文件 hunk 为 `1003-upstream-hipconv-constexpr-limit.patch`。其 PR 描述仍说提高 fconstexpr-steps，但实际 merged commit 删除昂贵 rounds_are_rungs static_assert；按实际代码回移，保留其余布局断言和运行算法。完整 hipconv 四目标 x86_64 预构建已通过并生成 libhipconv.a，见 `validation/hipconv-full-constexpr-x86_64.log` / `hipconv-full-x86_64.json`。1002/1003 已随 `010d325` 提交推送，MIOpen 完整 RPM 重建仍待结果。原生预构建重现同一 constexpr 上限，待当前任务结束后应用 1003 再复测，不把预构建结果当成 RPM 验收。
