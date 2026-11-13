@@ -4,23 +4,23 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 配方和本地检查已完成，准备推送 OBS 构建。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；开始 rocm-llvm 源码适配。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；完整归档 SHA-256 和补丁适用性待核实 |
-| rocm-cmake | 配方已升级，准备 OBS 构建 | 10.1.0 归档 SHA-256 为 `41b034780028684a3ee281fcc2b8ed0573a64b55a5ef38d10bb59deddd3d9710`；32 项 CTest 通过，4 项按原因排除，见任务 logs/ |
-| rocm-llvm | 等待 rocm-cmake 快速验证 | 本地 SPEC 仍是 7.14.1／LLVM 23；只做了目标标签和 LLVM 主版本核实 |
+| rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
+| rocm-llvm | 源码适配中 | 源码 AMD 子树已取得，COMGR API 为 3.5；完整归档下载及补丁审查中 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
 
-已创建 ROCm10/rocm-cmake 的包和 revision=rocm10 服务配置；正式升级推送和构建结果待记录。本地初次全量 CTest 的失败及修正后日志保留在 `tmp/rocm10-rocm-cmake/logs/`。初始配置证据位于工作区 `tmp/rocm10-setup/`。旧主线构建结果不计入本任务验收。
+ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初次全量 CTest 的失败及修正后日志保留在 `tmp/rocm10-rocm-cmake/logs/`。初始配置证据位于工作区 `tmp/rocm10-setup/`。旧主线构建结果不计入本任务验收。
 
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
-| rocm-cmake | 未开始 | 未开始 | 未开始 | 未通过 |
+| rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
 | rocm-llvm | 未开始 | 未开始 | 未开始 | 未通过 |
 
 ## 固定边界和目标环境
@@ -79,12 +79,12 @@ AMD 将 [ROCm 10.1.0](https://rocm.docs.amd.com/en/docs-10.1.0/release/versions.
 
 x86_64 快速验证要求源码与配方前置检查通过、真实取源链路正确、`amd64_build/x86_64` 构建及发布成功、实际 RPM 的模块发现和最小下游项目测试通过。达到这些条件即可推进 rocm-llvm 的快速验证；以下清单用于最终验收。
 
-- [ ] 配方对应确定的 ROCm 10.1.0 源码，校验和及补丁审查完成。
-- [ ] Git 提交已推送，workflow 确实调用 ROCm10 项目；OBS `.obsinfo` 中的 Git SHA 与该次配方提交匹配。
-- [ ] `riscv64_build/riscv64` 构建成功，产物已在本项目对应仓库可用；保留 OBS revision、srcmd5 和发布状态。
-- [ ] 在 riscv64 环境中，实际 RPM 的模块发现、下游最小项目及安装路径验证通过。
-- [ ] 测试报告列明执行、失败、跳过项目及理由；核心行为无未解决失败。
-- [ ] 更新本计划的双架构状态和证据索引，将 rocm-cmake 标记为最终验收通过。
+- [x] 配方对应确定的 ROCm 10.1.0 源码，校验和及补丁审查完成。
+- [x] Git 提交已推送，workflow 确实调用 ROCm10 项目；OBS `.obsinfo` 中的 Git SHA 与该次配方提交匹配。
+- [x] `riscv64_build/riscv64` 构建成功，产物已在本项目对应仓库可用；保留 OBS revision、srcmd5 和发布状态。
+- [x] 在 riscv64 环境中，实际 RPM 的模块发现、下游最小项目及安装路径验证通过。
+- [x] 测试报告列明执行、失败、跳过项目及理由；核心行为无未解决失败。
+- [x] 更新本计划的双架构状态和证据索引，将 rocm-cmake 标记为最终验收通过。
 
 rocm-cmake 尚在等待 riscv64 最终验收时，可推进已具备依赖的 rocm-llvm 快速验证，但不能将 rocm-cmake 标记为完成。单纯观察到 `succeeded` 不满足最终验收。
 
@@ -154,4 +154,10 @@ x86_64 用于快速检查构建、依赖解析及下述核心编译功能并修�
 3. 按检查点中的 OBS 修订和日志路径重新查询在途作业，不因上下文缺失重复创建包、重复推送或无依据触发构建。
 4. 若阶段状态与 Git／OBS 实际状态不同，先补齐证据并修正检查点，再执行明确记录的下一步。
 
-本轮计划完成后的下一步：只处理 `rocm-cmake` 的目标源码下载、SHA-256 和安装路径补丁审查，随后进入阶段一的配方修改与 OBS 接入。
+当前下一步：完成 rocm-llvm 的源码及补丁适配，配置 LLVM 24 与 COMGR 3.5，接入 OBS 并先进行 x86_64 快速构建。
+
+## rocm-cmake 最终验收记录
+
+配方提交 `eb9267d`，OBS revision `3`，展开 srcmd5 `e34e934fba9b87f10617c31ac9d8c882`，RPM `10.1.0-3.1.nor`。两个架构均构建并发布成功，各执行 32 项 CTest，通过；4 项排除及原因记录在 SPEC 和 `tmp/rocm10-rocm-cmake/audit.json`。
+
+x86_64 与 `sh-plct-sg2044` 的 riscv64 实际 RPM 均通过模块发现、共享库编译、lib64 安装、CMake 导出与下游导入，以及下游程序运行验证。远端目录 `/home/openruyi/tmp/rocm10-rocm-cmake/`；本地日志、校验和与审计摘要位于 `tmp/rocm10-rocm-cmake/`。验证使用独立解包目录，未替换目标机现有系统包；不是系统升级事务测试。
