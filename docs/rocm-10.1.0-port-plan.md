@@ -4,14 +4,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 第七轮 x86_64 构建成功，实际 RPM 验证发现缓存预处理与 CMake 导出路径问题，正在修复，尚未验收。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm x86_64 实际 RPM 功能验证通过；riscv64 已修复调度约束，等待匹配 worker，尚未最终验收，尚未验收。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 构建／测试适配中 | 当前包提交 `8f7ba19`，推送 HEAD `f645733`；OBS revision `9` / srcmd5 `614409c9e4b5ca3696a5249eabb9df6b`，两架构构建中 |
+| rocm-llvm | 构建／测试适配中 | 当前包提交 `2fe0c57`，推送 HEAD `cfb4212`；OBS revision `11` / srcmd5 `2c4acc1c617ce69d8a6b9a3ea1c6c72f`，riscv64 等待 6 个匹配 worker |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -21,7 +21,7 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
 | rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | 构建中 | 构建中 | 未开始 | 未通过 |
+| rocm-llvm | `11.1.nor` 构建／发布及实际 RPM 验证通过 | 等待 6 个匹配 worker | 未开始 | 未通过 |
 
 ## 固定边界和目标环境
 
@@ -154,7 +154,7 @@ x86_64 用于快速检查构建、依赖解析及下述核心编译功能并修�
 3. 按检查点中的 OBS 修订和日志路径重新查询在途作业，不因上下文缺失重复创建包、重复推送或无依据触发构建。
 4. 若阶段状态与 Git／OBS 实际状态不同，先补齐证据并修正检查点，再执行明确记录的下一步。
 
-当前下一步：推送最后四项 lit 测试适配，跟踪新修订的双架构 OBS 构建；x86_64 成功后检查实际 RPM，riscv64 必须另行完成构建和目标机功能验收。两架构 LLVM 24 运行依赖及隔离环境已就绪。测试入口为 `tests/validate-artifacts.py`、`tests/cmake/`，远端 `/home/openruyi/tmp/rocm10-rocm-llvm/`。不要把旧日志或本地诊断构建计作最终验收。
+当前下一步：跟踪 OBS revision 11（srcmd5 `2c4acc1c617ce69d8a6b9a3ea1c6c72f`）的 riscv64 调度和构建，取得最新双架构 RPM；在 `ssh sh-plct-sg2044` 的 `/home/openruyi/tmp/rocm10-rocm-llvm/` 运行实际 RPM 检查及 `tests/validate-artifacts.py`、`tests/cmake/` 下游测试。x86_64 已通过实际产物功能验证，本轮只有调度约束变化，但仍复核最新产物。缓存测试需使用脚本直接传入的环境变量，隔离环境内不依赖 env 命令。所有临时内容和日志保留于工作区 `tmp/rocm10-rocm-llvm/`；未启动其余 ROCm 包。
 
 ## rocm-cmake 最终验收记录
 
@@ -210,3 +210,7 @@ riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失�
 第九轮仅增加调度约束：包提交 `0a274eb` / HEAD `bf438f1`，OBS revision `10` / srcmd5 `7e2a63b4181e0f6c3cb372f3dde1229d`。实际核查发现 `_service:obs_scm:_constraints` 未被此实例调度器识别，远端 checkconstraints 仍包含 pico worker，不能声称约束生效。按 [OBS 官方构建约束文档](https://openbuildservice.org/help/manuals/obs-user-guide/cha-obs-build-constraints) 改为 `%ifarch riscv64` 内的 `#!BuildConstraint: hardware:jobs 32`；删除不起作用的 XML 并恢复原 pre-commit 规则。源码与构建触发方式保持不变。
 
 第八轮 x86_64 实际 RPM `10.1.0-9.1.nor` 功能已全部通过：原始 OpenCL/VFS/HIP 嵌入 libc++ 测试、缓存开启及重复调用、COMGR API 3.5/61 ISAs、hipcc gfx1100 链接后无未解析符号、CMake 导出及下游运行。日志 `logs/artifact-validation-run-x86_64-rev9-fixed-harness.log`、`logs/artifact-cmake-*-rev9.log`。测试脚本曾尝试在隔离环境运行不可用的 env 命令，已改为直接传 subprocess 环境；该失败不是 RPM 缺陷。当前仅等待最终调度修订的双架构构建与 riscv64 功能验收。
+
+第十轮 OBS revision `11` 已确认生效：调度状态为 `scheduled` / `waiting for 6 compliant workers`，不再进入 pico 小型 worker。`osc checkconstraints` 不带 XML 的远端查询在本实例仍列出未合并 recipe directive 的名单，因此以调度器的匹配数、实际 worker 及源码修订联合验证，不能只依赖该命令输出。源码证明及 buildinfo 保存为 `logs/source-final.obsinfo`、`logs/buildinfo-final-<arch>.xml`。
+
+x86_64 最新实际产物 `10.1.0-11.1.nor` 已全部复验通过，`_statistics` 的 srcmd5 与 revision 11 一致。证据：`logs/artifacts-x86_64.json`、`logs/artifact-validation-final-x86_64.log`、`logs/cmake-validation-final-x86_64.log`；宏展开指向 LLVM 24。当前 riscv64 排队监视脚本 `tests/wait-riscv-build.py`，进度保存在 `logs/result-monitor.jsonl`，进入构建后脚本退出，届时跟踪新日志和实际 worker。
