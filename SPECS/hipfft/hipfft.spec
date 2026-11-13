@@ -7,11 +7,11 @@
 
 %bcond test 1
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hipfft
 Version:        %{rocm_version}
@@ -20,10 +20,11 @@ Summary:        ROCm FFT marshalling library
 URL:            https://github.com/ROCm/rocm-libraries
 VCS:            git:https://github.com/ROCm/hipFFT.git
 License:        MIT
-#!RemoteAsset:  sha256:65d08232b0f83dda214c96e869db4b68380a12a7f6526ae008ec5faf19ec30e9
-Source:         %{url}/releases/download/rocm-%{version}/hipfft.tar.gz
-Patch1:         0001-hipfft-hipfftw-soversion.patch
+#!RemoteAsset:  sha256:1f9e7e3248c635894917785e14522294a5107a30bac67764696d75687552a22e
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hipfft.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipfft
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -39,10 +40,15 @@ BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hiprand)
+BuildRequires:  hiprand-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocfft)
+BuildRequires:  rocfft-devel >= 7.14.1
 BuildRequires:  cmake(rocrand)
+BuildRequires:  rocrand-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
