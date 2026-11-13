@@ -120,9 +120,13 @@ sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependen
 sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%{lto_partitions}" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
 %conf -p
+# The toolchain is reloaded by CMake compiler probes.
+export ROCM_PATH=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %build
+export ROCM_PATH=%{_prefix}
+export PATH=%{rocmllvm_bindir}:$PATH
 %ifarch riscv64
 # Prevent from being killed by build machine
 timeout 20h bash -c 'while sleep 300; do echo "[heartbeat] $(date)"; done' & TIME_OUT=$!
