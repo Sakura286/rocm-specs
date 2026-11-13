@@ -97,6 +97,7 @@ larger operations or aggregated through the API.
 2000-forward-host-target-to-device-linker.patch
 2001-fix-host-header-dependencies.patch
 2002-include-map-for-network-vendor-table.patch
+2003-keep-nvtx-noop-implementations-when-disabled.patch
 
 %description
 %{_description}

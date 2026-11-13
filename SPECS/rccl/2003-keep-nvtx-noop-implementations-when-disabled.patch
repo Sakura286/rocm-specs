@@ -1,0 +1,13 @@
+NVTX_DISABLE supplies inline no-ops; NVTX_NO_IMPL suppresses their definitions
+and leaves unresolved calls in librccl when the disabled headers are mixed.
+
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -768,7 +768,6 @@
+ if(ROCTX_ENABLE)
+   target_compile_definitions(rccl PRIVATE ROCTX_ENABLE)
+ else()
+-  target_compile_definitions(rccl PRIVATE NVTX_NO_IMPL)
+   target_compile_definitions(rccl PRIVATE NVTX_DISABLE)
+ endif()
+ if(TRACE)
