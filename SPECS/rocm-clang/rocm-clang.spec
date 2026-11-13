@@ -51,6 +51,7 @@ BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  llvm24-devel = %{snapshot_version}
 BuildRequires:  clang24-devel = %{snapshot_version}
+BuildRequires:  clang24-tools-extra = %{snapshot_version}
 BuildRequires:  lld(major) = %{llvm_major}
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(libzstd)
@@ -72,6 +73,7 @@ matching distribution snapshot. Tools install under %{compiler_prefix}.
 DESTDIR=%{buildroot} cmake --build %{_vpath_builddir} --target install-clang install-clang-linker-wrapper install-clang-cpp
 
 %check
+export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
 # Upstream regression checks for wrong-sided calls in static initializers.
 export LD_LIBRARY_PATH="$PWD/%{_vpath_builddir}/lib:%{_libdir}/llvm%{llvm_major}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 %{_vpath_builddir}/bin/clang -cc1 -x cuda -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=expected,host clang/test/SemaCUDA/global-initializers.cu
