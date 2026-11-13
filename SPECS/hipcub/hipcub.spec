@@ -41,6 +41,7 @@ BuildRequires:  cmake(GTest)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocprim-devel >= %{rocm_version}
 BuildRequires:  cmake(rocprim)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
@@ -64,11 +65,6 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
 %{_description}
-
-%prep -a
-# Fix cmake install lib directory
-sed -i -e 's/ROCM_INSTALL_LIBDIR lib/ROCM_INSTALL_LIBDIR %{_lib}/' \
-    cmake/ROCMExportTargetsHeaderOnly.cmake
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
