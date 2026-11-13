@@ -62,6 +62,9 @@ BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+# This release's external-op generators emit legacy Fake16 operands. LLVM 24
+# defaults to Real16; select its supported compatibility mode for these ASM TUs.
+BuildOption(conf):  -DCMAKE_ASM_FLAGS="-Xclangas -target-feature -Xclangas -real-true16"
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 %ifarch riscv64
