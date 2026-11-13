@@ -5,17 +5,19 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
 # ROCclr loads comgr at run time by soversion, so this needs to be checked when
 # updating this package as it's used for the comgr requires for opencl and hip:
 %global comgr_maj_api_ver 3
+# HIP component VERSION remains 7.16.0 in the ROCm 10.1 collection.
+%global hip_soversion 7
 # See the file "rocclr/device/comgrctx.cpp" for reference:
 # https://github.com/ROCm-Developer-Tools/ROCclr/blob/develop/device/comgrctx.cpp#L62
 
-%global rocm_major 7
-%global rocm_minor 14
-%global rocm_patch 1
+%global rocm_major 10
+%global rocm_minor 1
+%global rocm_patch 0
 %global rocm_release %{rocm_major}.%{rocm_minor}
 %global rocm_version %{rocm_release}.%{rocm_patch}
 %global upstreamname clr
@@ -26,10 +28,10 @@ Release:        %autorelease
 Summary:        ROCm Compute Language Runtime
 License:        MIT
 URL:            https://github.com/ROCm/rocm-systems
-#!RemoteAsset:  sha256:c667d644a52b1cbcb4cd12687aa2b79c6a1d5c1c1a4467ea057d7b2e7b369364
-Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/clr.tar.gz
-#!RemoteAsset:  sha256:30b71e77b8ff27fc4916d6c5b249952490d39519b793c710299d26ef7c3e4214
-Source1:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/hip.tar.gz
+#!RemoteAsset:  sha256:1809eda411c9156ca0b66e79acbfc198fd443aa77077fc113d334e545e8880b4
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/clr.tar.gz
+#!RemoteAsset:  sha256:777eef65d8fcf38baf17401097396dbdf5e9d07ba7f9d24268e8f8fa73f6688d
+Source1:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/hip.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
@@ -157,9 +159,9 @@ rm -f %{buildroot}%{_prefix}/share/doc/hip/LICENSE.md
 
 %files -n rocm-hip
 %license hipamd/LICENSE.md
-%{_libdir}/libamdhip64.so.%{rocm_major}{,.*}
-%{_libdir}/libhiprtc.so.%{rocm_major}{,.*}
-%{_libdir}/libhiprtc-builtins.so.%{rocm_major}{,.*}
+%{_libdir}/libamdhip64.so.%{hip_soversion}{,.*}
+%{_libdir}/libhiprtc.so.%{hip_soversion}{,.*}
+%{_libdir}/libhiprtc-builtins.so.%{hip_soversion}{,.*}
 %{_datadir}/hip
 
 %files -n rocm-hip-devel

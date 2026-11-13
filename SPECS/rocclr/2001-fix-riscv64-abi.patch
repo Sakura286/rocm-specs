@@ -1,23 +1,11 @@
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Subject: [PATCH] Preserve RISC-V stack access and memory fences
+Subject: [PATCH] Preserve RISC-V stack pointer access
 
---- a/rocclr/device/rocm/rocvirtual.cpp
-+++ b/rocclr/device/rocm/rocvirtual.cpp
-@@ -4130,7 +4130,11 @@
-   std::memcpy(dst, src, size);
+Rebased existing distribution adaptation onto ROCm therock-10.1.
 
-   // Add memory fence
-+#if !defined(__riscv)
-   _mm_sfence();
-+#else
-+  asm volatile("fence w,w" ::: "memory");
-+#endif
- #else
-   std::memcpy(dst, src, size);
- #endif
 --- a/rocclr/os/os_posix.cpp
 +++ b/rocclr/os/os_posix.cpp
-@@ -765,6 +765,9 @@
+@@ -789,6 +789,9 @@
  #elif defined(ATI_ARCH_ARM)
        "mov %0,sp"
        : "=r"(value)
