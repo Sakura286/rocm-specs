@@ -4,14 +4,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；开始 rocm-llvm 源码适配。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；rocm-llvm 首轮配方已推送，两个架构正在构建。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
-| 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；完整归档 SHA-256 和补丁适用性待核实 |
+| 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 源码适配中 | 源码 AMD 子树已取得，COMGR API 为 3.5；完整归档下载及补丁审查中 |
+| rocm-llvm | 首轮 OBS 构建中 | 配方 `874d465` 已推送，Actions 43412226757 成功；系统 LLVM 24，COMGR API 3.5，device-libs 和 COMGR CTest 已启用 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -21,7 +21,7 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
 | rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | 未开始 | 未开始 | 未开始 | 未通过 |
+| rocm-llvm | 构建中 | 构建中 | 未开始 | 未通过 |
 
 ## 固定边界和目标环境
 
@@ -154,10 +154,18 @@ x86_64 用于快速检查构建、依赖解析及下述核心编译功能并修�
 3. 按检查点中的 OBS 修订和日志路径重新查询在途作业，不因上下文缺失重复创建包、重复推送或无依据触发构建。
 4. 若阶段状态与 Git／OBS 实际状态不同，先补齐证据并修正检查点，再执行明确记录的下一步。
 
-当前下一步：完成 rocm-llvm 的源码及补丁适配，配置 LLVM 24 与 COMGR 3.5，接入 OBS 并先进行 x86_64 快速构建。
+当前下一步：跟踪 `874d465` 的 OBS 构建，诊断编译及 CTest 失败；随后验证实际 RPM。两架构 LLVM 24 运行依赖已下载至 `tmp/rocm10-rocm-llvm/dependencies/`，校验和见 `logs/runtime-dependencies.json`。本机 LLVM 24 已在隔离环境启动成功；本地 device-libs CMake 配置因未下载大型静态开发库而停止，不能计作功能验证。
 
 ## rocm-cmake 最终验收记录
 
 配方提交 `eb9267d`，OBS revision `3`，展开 srcmd5 `e34e934fba9b87f10617c31ac9d8c882`，RPM `10.1.0-3.1.nor`。两个架构均构建并发布成功，各执行 32 项 CTest，通过；4 项排除及原因记录在 SPEC 和 `tmp/rocm10-rocm-cmake/audit.json`。
 
 x86_64 与 `sh-plct-sg2044` 的 riscv64 实际 RPM 均通过模块发现、共享库编译、lib64 安装、CMake 导出与下游导入，以及下游程序运行验证。远端目录 `/home/openruyi/tmp/rocm10-rocm-cmake/`；本地日志、校验和与审计摘要位于 `tmp/rocm10-rocm-cmake/`。验证使用独立解包目录，未替换目标机现有系统包；不是系统升级事务测试。
+
+## rocm-llvm 首轮适配记录
+
+配方提交 `874d465`，触发 [Actions 43412226757](https://github.com/Sakura286/rocm-specs/actions/runs/43412226757) 成功。OBS `_service` 已接入 `rocm10`；初次 service 创建取得旧配方的构建不计入验收。源码归档 SHA-256 为 `db317aadb90366b61af0fd93b0ccf3cefe70a18e4e37c23744d968ea6f900654`。两架构查询到 snapshot `24.0.0~git20261109.b1de84e-11.1.or`，实际 buildinfo 待构建完成核对。
+
+保留 signed-char 补丁；删除上游已包含的两个 device-libs 补丁。COMGR 系统适配重写为显式 unordered_set 头文件、系统 libc++ 头文件入口及暂时移除 AMD 私有 postopt 选项。最后一项的设备库链接语义仍须修复和验证，不能因编译成功视为完成。hipcc 新版路径初始化已改为必须精确命中一次的替换；保留用户 HIP_CLANG_PATH 覆盖。所有 device-libs 和 COMGR CTest 已启用。
+
+首轮 x86_64 在 CMake 配置阶段失败：ClangTargets 引用的 `libMLIRCIRAnalysis.a` 未安装。当前 snapshot 的 ClangIR 导出还引用 MLIR targets，配方增加 `mlir24-devel`（带静态库依赖）。同时将 device-libs 测试的 amdgcn 链接改为构建目录内的相对路径，避免指向未安装的宿主路径。首轮 OBS revision `2` / srcmd5 `587ceb272d44274e33200e83194ccc01` / `.obsinfo` 已核对为 `874d465db12b3b506574988e4d43728ce04bb918`；buildinfo 确认为本项目 rocm-cmake `10.1.0-3.1.nor` 和 LLVM snapshot `24.0.0~git20261109.b1de84e-11.1.or`。日志 `logs/build-x86_64-first-latest.log`。
