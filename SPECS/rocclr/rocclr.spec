@@ -93,9 +93,6 @@ Summary:        ROCm HIP development package
 Requires:       rocm-hip = %{version}-%{release}
 Requires:       rocm-comgr-devel
 Requires:       rocr-runtime-devel >= %{rocm_release}
-# For roc-obj-ls
-Requires:       binutils
-Requires:       gawk
 
 %description -n rocm-hip-devel
 ROCm HIP development package.
@@ -148,8 +145,9 @@ chmod 755 %{buildroot}%{_libdir}/lib*.so*
 # Unnecessary file and is not FHS compliant:
 rm %{buildroot}%{_libdir}/.hipInfo
 
-# Windows files:
-rm %{buildroot}%{_bindir}/*.bat
+# Tool installation moved into the upstream CPack directory, disabled above.
+install -m 0755 hip/bin/hipdemangleatp \
+    hip/bin/hipcc_cmake_linker_helper %{buildroot}%{_bindir}/
 
 rm -f %{buildroot}%{_prefix}/share/doc/packages/rocclr*/LICENSE.md
 rm -f %{buildroot}%{_prefix}/share/doc/opencl*/LICENSE.md
@@ -164,11 +162,11 @@ rm -f %{buildroot}%{_prefix}/share/doc/hip/LICENSE.md
 %{_datadir}/hip
 
 %files -n rocm-hip-devel
-%{_bindir}/roc-*
 %{_libdir}/libamdhip64.so
 %{_libdir}/libhiprtc.so
 %{_libdir}/libhiprtc-builtins.so
 %{_libdir}/cmake/hip*
+%{_bindir}/hrr-playback
 %{_bindir}/hipdemangleatp
 %{_bindir}/hipcc_cmake_linker_helper
 %{_includedir}/hip
