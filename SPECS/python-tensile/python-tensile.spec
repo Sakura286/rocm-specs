@@ -44,6 +44,7 @@ Provides:       python3-%{srcname} = %{version}-%{release}
 0005-no-amdclang-when-rocm-llvm-is-unbundled.patch
 # /opt is not used on openRuyi packaging
 0006-use-system-path-instead-of-default.patch
+2000-support-true16-register-syntax.patch
 
 %description
 Tensile is a tool for creating benchmark-driven backend libraries for GEMMs,

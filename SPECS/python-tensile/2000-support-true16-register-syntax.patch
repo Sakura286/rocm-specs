@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Detect and emit true16 destination operands for half conversion
+
+--- a/Tensile/Common.py
++++ b/Tensile/Common.py
+@@ -2030,6 +2030,8 @@
+     derivedAsmCaps["HasDirectToLdsNoDest"]  = tryAssembler(isaVersion, "buffer_load_dword v36, s[24:27], s28 offen offset:0 lds") \
+                                            or tryAssembler(isaVersion, "buffer_load_b32 v36, s[24:27], s28 offen offset:0 lds")
+ 
++    # LLVM enables true16 operands by default on newer architectures.
++    derivedAsmCaps["HasRealTrue16"] = tryAssembler(isaVersion, "v_cvt_f16_f32 v0.l, v0")
+     derivedAsmCaps["HasAddLshl"]            = tryAssembler(isaVersion, "v_add_lshl_u32 v47, v36, v34, 0x2")
+     derivedAsmCaps["HasLshlOr"]             = tryAssembler(isaVersion, "v_lshl_or_b32 v47, v36, 0x2, v34")
+     derivedAsmCaps["HasSMulHi"]             = tryAssembler(isaVersion, "s_mul_hi_u32 s47, s36, s34")
+--- a/Tensile/KernelWriterAssembly.py
++++ b/Tensile/KernelWriterAssembly.py
+@@ -15088,7 +15088,10 @@
+           for vi in range(0, gwvw):
+             sumIdxV = ss.elementSumIdx[elementIdx] + vi
+             if kernel["ProblemType"]["DestDataType"].isHalf():
+-              kStr += inst("v_cvt_f16_f32", vgpr("ValuC+%u"%sumIdxV), vgpr("ValuC+%u"%sumIdxV), "convert C to fp16" )
++              dest = vgpr("ValuC+%u"%sumIdxV)
++              if self.asmCaps.get("HasRealTrue16", False):
++                dest += ".l"
++              kStr += inst("v_cvt_f16_f32", dest, vgpr("ValuC+%u"%sumIdxV), "convert C to fp16" )
+               if vi%2 == 1:
+                 assert (gwvw % 2 == 0)
+                 d = ss.elementSumIdx[elementIdx] + vi//2
