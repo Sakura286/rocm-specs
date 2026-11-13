@@ -6,6 +6,11 @@
 
 %global llvm_maj_ver 23
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+%ifarch riscv64
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           stinkytofu
 Version:        7.14.1
 Release:        %autorelease
