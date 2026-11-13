@@ -146,10 +146,14 @@ fi
 
 %files devel
 %{_includedir}/amd_smi/
+%{_includedir}/rocm_smi/rocm_smi_logger.h
+%{_libdir}/libamd_smi_static.a
+%{_libdir}/libamdsminic.a
 %{_libdir}/cmake/amd_smi/
 %{_libdir}/libamd_smi.so
 %ifarch x86_64
 %{_includedir}/*.h
+%{_includedir}/e_smi/
 %{_libdir}/libgoamdsmi_shim64.so
 %endif
 
