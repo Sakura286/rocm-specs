@@ -78,10 +78,13 @@ terms of memory pools and their agents.
 sed -i -e 's/set(BOOST_PACKAGE_NAME "boost")/set(BOOST_PACKAGE_NAME "Boost")/' \
     -e 's/set(CATCH2_PACKAGE_NAME "catch2")/set(CATCH2_PACKAGE_NAME "Catch2")/' \
     cmake/build_utils.cmake
+sed -i 's/find_package(${FMT_PACKAGE_NAME} REQUIRED ${FMT_PKG_MINIMUM_REQUIRED_VERSION})/find_package(${FMT_PACKAGE_NAME} ${FMT_PKG_MINIMUM_REQUIRED_VERSION} REQUIRED)/' cmake/build_utils.cmake
+sed -i 's/find_package(${SPDLOG_PACKAGE_NAME} REQUIRED ${SPDLOG_PKG_MINIMUM_REQUIRED_VERSION})/find_package(${SPDLOG_PACKAGE_NAME} ${SPDLOG_PKG_MINIMUM_REQUIRED_VERSION} REQUIRED)/' cmake/build_utils.cmake
+sed -i 's/find_package(${CATCH2_PACKAGE_NAME} REQUIRED ${CATCH2_PKG_MINIMUM_REQUIRED_VERSION})/find_package(${CATCH2_PACKAGE_NAME} ${CATCH2_PKG_MINIMUM_REQUIRED_VERSION} REQUIRED)/' cmake/build_utils.cmake
 sed -i -e 's/find_package(CLI11 CONFIG QUIT)/find_package(CLI11 CONFIG REQUIRED)\n    set(CLI11_LIBRARIES CLI11::CLI11)/' \
     main/cmdline/CMakeLists.txt
 # Pass the configured GPU set to the separately configured TransferBench engine.
-sed -i '/-DCMAKE_BUILD_TYPE=/a\                                -DGPU_TARGETS="%{rocm_gpu_list_default}" \\' \
+sed -i '/-DCMAKE_BUILD_TYPE=/a\                                -DGPU_TARGETS=%{rocm_gpu_list_default} \\' \
     plugins/tb/transferbench/build_libamd_tb.sh
 # Use conventional install rules rather than upstream's /opt staging packager.
 cat %{SOURCE1} >> CMakeLists.txt
@@ -92,8 +95,8 @@ export ROCM_PATH=%{_prefix}
 
 %build -p
 export ROCM_PATH=%{_prefix}
-export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
-export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu --rocm-device-lib-path=%{_libdir}/llvm24/lib/clang/24/amdgcn/bitcode"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu --rocm-device-lib-path=%{_libdir}/llvm24/lib/clang/24/amdgcn/bitcode"
 
 %install -a
 chrpath --delete %{buildroot}%{_libdir}/libamd_tb.so*
