@@ -10,11 +10,11 @@
 # It is verbose to add them to SOURCE and %%prep section
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hipsparse
 Version:        %{rocm_version}
@@ -22,9 +22,11 @@ Release:        %autorelease
 Summary:        ROCm SPARSE marshalling library
 License:        MIT
 URL:            https://github.com/ROCm/hipSPARSE
-#!RemoteAsset:  sha256:c6ba07bd940b2678ba8a087333f103c1846efb7ffffffc5ed9174aca78d9f090
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:a12cc787fc21361f689d1cc01b0da609853a3f7e14cbc995f651ed674192dfdb
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hipsparse.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipsparse
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
@@ -47,9 +49,13 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocprim)
+BuildRequires:  rocprim-devel >= 7.14.1
 BuildRequires:  cmake(rocsparse)
+BuildRequires:  rocsparse-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
 BuildRequires:  lld(major) = %{llvm_maj_ver}
