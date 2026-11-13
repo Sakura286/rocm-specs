@@ -32,7 +32,7 @@
 | rocm-llvm | 双架构实际 RPM 验收通过 | 通过 | 通过 |
 | rocm-origami | 已提交，构建／验证中 | succeeded；实际 RPM CMake/gfx1100 硬件模型 API 通过 | unresolvable；产物验证待完成 |
 | rocm-smi | 已提交，构建／验证中 | succeeded；CLI 通过（无 GPU） | succeeded；CLI/API 通过（无 GPU） |
-| rocm-stinkytofu | 已提交，构建／验证中 | succeeded；1500 CTest 通过；实际 RPM CMake/API/解析/优化通过 | building；产物验证待完成 |
+| rocm-stinkytofu | 双架构实际 RPM 验收通过 | 1500 CTest；CMake/API/解析/优化通过 | 1500 CTest；SG2044 原生 CMake/API/解析/优化通过 |
 | rocminfo | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocprim | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocprofiler-register | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
@@ -74,3 +74,8 @@
 - StinkyTofu 实际 RPM 的 `stinkytofu-opt` 汇编 round-trip 通过 LLVM FileCheck；优化案例须使用上游自己的 `stinkytofu-check`（其 CHECK-SAME 语义不同于 LLVM FileCheck），`peephole_mul_fma_fusion.stir` 通过。证据 `validation/stinkytofu-*x86_64*`。
 - HIPIFY 10.1.0-6.1 修正先前未展开的 RUNPATH 宏；剔除测试环境的 LLVM LD_LIBRARY_PATH 后，声明夹具翻译仍成功，自动使用 `/usr/include/hipify` 的资源 symlink。日志保留缺失完整 CUDA SDK 的预探测提示，不宣称完整 CUDA SDK 验证。
 - riscv64 HSA 在 pico-itx-hc037 安装 clang24-static 时解包失败，未进入源码编译。已为该包增加 jobs>=32 约束，checkconstraints 确认匹配 4 个 SG2044 和 2 个 v100 worker。曾尝试 disk>=32G，但当前 worker 声明无匹配，已撤掉该条件；HIPIFY 也遇到 MLIR 静态库解包失败，采用同一 jobs 约束。继续跟踪实际调度，不将此次失败归为源码不兼容。
+
+- StinkyTofu 双架构实际 RPM 验收完成：10.1.0-4.1，OBS revision 4；riscv64 全部 1500 CTest 通过。`validation/stinkytofu-native-riscv64.log` 记录 SG2044 原生导入已安装 CMake targets、编译链接/运行、版本一致性和两个上游 stinkytofu-check 案例成功。工具无 GPU 执行依赖，此包的最终功能验收已完成。
+- rocPRIM/rocThrust 实际 x86_64 RPM：`validation/template-kernel-x86_64.o` 包含 gfx1100/gfx1200 编译结果，联合使用 block_reduce 与 thrust::transform；未运行 GPU 内核。
+- rocFFT：`llvm-config --targets-built` 确认系统 LLVM 24 未编入 SPIR-V。检索到的上游 FFT/SPIR-V 提交未提供缺失后端的兼容方案；配方仅移除客户端的额外 `amdgcnspirv` 回退，保留四个原生 GPU 目标，并恢复正常 RPM LTO。这不是 ABI backport，也不声称支持未预编译 GPU 的 SPIR-V 回退。
+- rocBLAS：Tensile CMake 不转发 `Tensile_ASSEMBLER`，实际通过配置期 PATH 选择汇编器；`%conf -p` 中 `buildsubdir` 尚未定义，最终用 `$PWD/tensile-assembler` 并检查 executable 存在。保持原有 HIP/C++ 编译器入口，只改变 Tensile 汇编器模式。验证脚本记录 `validation/tensile-assembler-resolution.json`；同一 Fake16 汇编在 SG2044 原生 Clang 24 也通过。
