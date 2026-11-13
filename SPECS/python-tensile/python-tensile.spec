@@ -7,7 +7,7 @@
 
 %global srcname tensile
 %global upstreamname Tensile
-%global rocm_version 7.2.4
+%global rocm_version 7.14.1
 
 Name:           python-%{srcname}
 Version:        %{rocm_version}
@@ -15,10 +15,12 @@ Release:        %autorelease
 Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 License:        MIT
 URL:            https://github.com/ROCm/Tensile
-#!RemoteAsset:  sha256:a514e11ea6a53ab41d68e335c1dd730d1a480c74d49084450fbeef09f2df2b39
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:ab722d21fbc2d36c36999cb86a50956afb3a45d0e85e4073ddf9687d4f7cfac7
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/tensile.tar.gz
 BuildArch:      noarch
 BuildSystem:    pyproject
+
+BuildOption(prep):  -n tensile
 
 BuildOption(install):  -l %{upstreamname}
 
@@ -37,8 +39,6 @@ Provides:       python3-%{srcname} = %{version}-%{release}
 %patchlist
 0001-fix-python-shebang.patch
 0002-fix-tensile-get-path.patch
-# TODO: joblib is not enabled on openRuyi
-0003-reduce-requirements.patch
 0004-ignore-asm-cap-cache.patch
 # no bundled clang is used on openRuyi
 0005-no-amdclang-when-rocm-llvm-is-unbundled.patch
@@ -76,7 +76,6 @@ mv %{buildroot}%{_datadir}/cmake/Tensile/*.cmake %{buildroot}%{python3_sitelib}/
 
 %check
 # 1. tensile requires GPU hardware at runtime
-# 2. optional dependencies (joblib) are intentionally excluded
 
 %files -f %{pyproject_files}
 %doc README.md
