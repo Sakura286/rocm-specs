@@ -9,11 +9,16 @@
 # rocFFT needs a GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
+
+%ifarch riscv64
+# Generated GPU kernels require native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
+%endif
 
 Name:           rocfft
 Version:        %{rocm_version}
@@ -21,12 +26,13 @@ Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 License:        MIT
 URL:            https://github.com/ROCm/rocFFT
-#!RemoteAsset:  sha256:3a01fab8e598e16d42dbcbd3ce942b9b55a86d1c2ce383dec829835f42b42222
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:d6aa41ab83a20dd75f754800f1997c64b97caf81dfcb5827fe48b7b8c2c98df6
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocfft.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n rocfft
+
 Patch0:         0001-cmake-use-gnu-installdirs.patch
-Patch2000:      2000-relax-sqlite-version-requirement.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -42,10 +48,13 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
+BuildRequires:  hiprand-devel >= %{rocm_version}
 BuildRequires:  cmake(hiprand)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(GTest)
+BuildRequires:  rocrand-devel >= %{rocm_version}
 BuildRequires:  cmake(rocrand)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  libomp-devel(major) = %{llvm_maj_ver}
@@ -54,7 +63,7 @@ BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(fftw3)
 BuildRequires:  pkgconfig(python3)
-BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(sqlite3) >= 3.51.3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
