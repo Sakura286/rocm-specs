@@ -206,3 +206,7 @@ riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失�
 第八轮已推送：包提交 `8f7ba19` / HEAD `f645733`，Actions 43419797505 成功；OBS revision `9` / srcmd5 `614409c9e4b5ca3696a5249eabb9df6b`。相对安装布局生成的配置已在本地 CMake 下游证明能找到四个实际 bitcode 文件（`logs/cmake-relative-config-proof.log`），最终仍需重测本轮 RPM。
 
 第八轮 x86_64 已通过 device-libs 33/33、COMGR CTest 39/39（新增缓存／嵌入头文件回归），等待完整打包结果。riscv64 又在 pico-itx-box02:0 的同一 preinstall 挂载清理步骤失败，日志 `logs/build-riscv64-eighth-final.log`。决定添加包级、仅 riscv64 的 jobs>=32 约束，匹配 6 个 worker（`logs/constraints-final-riscv64.log`），避免反复进入故障小型 worker，同时改善这类 LLVM 开发依赖较重的构建调度。约束放入 Git 配方，由同一 service 提取；pre-commit 禁止约束文件的旧规则仅对此包设置例外，不放开其他包。
+
+第九轮仅增加调度约束：包提交 `0a274eb` / HEAD `bf438f1`，OBS revision `10` / srcmd5 `7e2a63b4181e0f6c3cb372f3dde1229d`。实际核查发现 `_service:obs_scm:_constraints` 未被此实例调度器识别，远端 checkconstraints 仍包含 pico worker，不能声称约束生效。按 [OBS 官方构建约束文档](https://openbuildservice.org/help/manuals/obs-user-guide/cha-obs-build-constraints) 改为 `%ifarch riscv64` 内的 `#!BuildConstraint: hardware:jobs 32`；删除不起作用的 XML 并恢复原 pre-commit 规则。源码与构建触发方式保持不变。
+
+第八轮 x86_64 实际 RPM `10.1.0-9.1.nor` 功能已全部通过：原始 OpenCL/VFS/HIP 嵌入 libc++ 测试、缓存开启及重复调用、COMGR API 3.5/61 ISAs、hipcc gfx1100 链接后无未解析符号、CMake 导出及下游运行。日志 `logs/artifact-validation-run-x86_64-rev9-fixed-harness.log`、`logs/artifact-cmake-*-rev9.log`。测试脚本曾尝试在隔离环境运行不可用的 env 命令，已改为直接传 subprocess 环境；该失败不是 RPM 缺陷。当前仅等待最终调度修订的双架构构建与 riscv64 功能验收。
