@@ -74,6 +74,8 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 2000-comgr-support-system-llvm.patch
 2001-comgr-use-llvm24-feature-bitsets.patch
 2002-comgr-use-independent-unbundle-cache-class.patch
+2003-comgr-separate-lit-and-tool-paths.patch
+2004-comgr-link-unit-test-llvm-dependencies.patch
 
 %description
 %{summary}

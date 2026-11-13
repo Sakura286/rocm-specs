@@ -1,0 +1,18 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: resolve LLVM tools independently of the lit runner
+
+A standalone lit Python script need not live in the LLVM binary directory.
+Use the configured system LLVM tools directory for tool substitutions and
+resource lookup, regardless of where the test runner is installed.
+
+--- a/amd/comgr/test-lit/CMakeLists.txt
++++ b/amd/comgr/test-lit/CMakeLists.txt
+@@ -26,7 +26,7 @@
+ if (NOT LLVM_LIT_PATH)
+   set(LLVM_LIT_PATH "${LLVM_TOOLS_BINARY_DIR}/llvm-lit")
+ endif()
+-get_filename_component(COMGR_LIT_LLVM_TOOLS_DIR "${LLVM_LIT_PATH}" DIRECTORY)
++set(COMGR_LIT_LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
+ message("-- LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
+
+ configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
