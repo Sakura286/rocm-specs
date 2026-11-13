@@ -129,10 +129,7 @@ sed -i -e 's@find_package(Git REQUIRED)@find_package(Git)@' library/CMakeLists.t
 #   279 | #error C++ versions less than C++14 are not supported.
 sed -i -e 's@CXX_STANDARD 11@CXX_STANDARD 17@' clients/samples/CMakeLists.txt
 sed -i "s@/opt/rocm@%{_prefix}@g" \
-    clients/cmake/FindROCmSMI.cmake \
     clients/CMakeLists.txt \
-    rmake.py \
-    rmake.py \
     rmake.py \
     toolchain-linux.cmake \
     header_compilation_tests.sh \
