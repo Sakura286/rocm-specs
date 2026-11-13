@@ -62,7 +62,7 @@ BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 # Upstream PR 233925 fixes static constexpr device initializer diagnostics.
-BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e
+BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e-8
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  compiler-rt24
 BuildRequires:  cmake
