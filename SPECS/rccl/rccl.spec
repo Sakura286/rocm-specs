@@ -165,8 +165,6 @@ rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
 %{_bindir}/rcclras
 
 %files data
-%{_datadir}/rccl/msccl-algorithms/
-%{_datadir}/rccl/msccl-unit-test-algorithms/
 %{_datadir}/rccl/tuner/
 
 %files devel
