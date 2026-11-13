@@ -175,23 +175,35 @@ kill $TIME_OUT 2>/dev/null || true
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/rccl/LICENSE.txt
 
+%check
+# Upstream marks these generator/telemetry checks as CPU-only. Micro-tests
+# compile their units directly and satisfy HIP/device symbols with fakes.
+ctest --test-dir %{_vpath_builddir} --output-on-failure \
+    -R '^(rccl-generate-device-table|rccl-generate-ce-reduce|rccl-UnitTestsNetTelemetry)$'
+LLVM_PROFILE_FILE="$PWD/rccl-micro-%%p.profraw" \
+    %{_vpath_builddir}/test/host/rccl-UnitTestsMicro --gtest_brief=1
+
 %files
 %license LICENSE.txt
 %{_libdir}/librccl.so.*
 %{_bindir}/rcclras
 
 %files data
-%{_datadir}/rccl/msccl-algorithms/
-%{_datadir}/rccl/msccl-unit-test-algorithms/
+%{_datadir}/rccl/tuner/
 
 %files devel
 %doc README.md
 %{_includedir}/rccl/
+%{_includedir}/nccl.h
+%{_includedir}/nccl_device.h
+%{_includedir}/nccl_device/
 %{_libdir}/cmake/rccl/
 %{_libdir}/librccl.so
 
 %files test
-%{_bindir}/rccl-UnitTests
+%{_bindir}/rccl-UnitTests*
+%{_bindir}/librccl-test-profiler-stub.so
+%{_bindir}/rccl/
 
 %changelog
 %autochangelog
