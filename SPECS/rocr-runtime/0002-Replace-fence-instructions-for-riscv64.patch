@@ -1,119 +1,266 @@
-From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Subject: [PATCH] Retain RISC-V fence and cache flush adaptations
+From: Joseph Huber <huberjn@outlook.com>
+Subject: [PATCH] rocr: wrap host x86 fences and pause in portable helpers
 
-Rebased existing distribution adaptation onto ROCm therock-10.1.
+Upstream: https://github.com/ROCm/rocm-systems/commit/3a6a0d89e39e2dbcf28b066a31b7d2ec4c020712
+Backport the complete merged PR #11310 diff against its first parent.
+Adjust only paths for the standalone rocr-runtime release archive.
+Supersedes downstream x86 fence/pause replacements. RISC-V fences include
+I/O ordering; upstream has no RISC-V cacheline flush implementation.
 
+diff --git a/runtime/hsa-runtime/core/inc/amd_gpu_agent.h b/runtime/hsa-runtime/core/inc/amd_gpu_agent.h
 --- a/runtime/hsa-runtime/core/inc/amd_gpu_agent.h
 +++ b/runtime/hsa-runtime/core/inc/amd_gpu_agent.h
-@@ -474,9 +474,17 @@
+@@ -480,9 +480,9 @@ class GpuAgent : public GpuAgentInt {
    /// @brief Force a WC flush on PCIe devices by doing a write and then read-back
    __forceinline void PcieWcFlush(void *ptr, size_t size) const {
      if (!xgmi_cpu_gpu_) {
-+#if !defined(__riscv)
-       _mm_sfence();
-+#else
-+      asm volatile("fence w,w" ::: "memory");
-+#endif
+-      _mm_sfence();
++      store_fence();
        *((uint8_t*)ptr + size - 1) = *((uint8_t*)ptr + size - 1);
-+#if !defined(__riscv)
-       _mm_mfence();
-+#else
-+      asm volatile("fence rw,rw" ::: "memory");
-+#endif
+-      _mm_mfence();
++      memory_fence();
        auto readback = *(reinterpret_cast<volatile uint8_t*>(ptr) + size - 1);
        UNUSED(readback);
      }
+
+diff --git a/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp b/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 --- a/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 +++ b/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
-@@ -485,7 +485,11 @@
+@@ -487,7 +487,7 @@ void AqlQueue::StoreRelaxed(hsa_signal_value_t value) {
      HSAKMT_CALL(hsaKmtQueueRingDoorbell(queue_id_, value));
    } else {
      // Hardware doorbell supports AQL semantics.
-+#if !defined(__riscv)
-     _mm_sfence();
-+#else
-+    asm volatile("fence w,w" ::: "memory");
-+#endif
+-    _mm_sfence();
++    store_fence();
      *(signal_.hardware_doorbell_ptr) = uint64_t(value);
      /* signal_ is allocated as uncached so we do not need read-back to flush WC */
    }
-@@ -1732,7 +1736,11 @@
+@@ -1737,7 +1737,7 @@ void AqlQueue::ExecutePM4(uint32_t* cmd_data, size_t cmd_size_b, hsa_fence_scope
    memcpy(&queue_slot[1], &slot_data[1], slot_size_b - sizeof(uint32_t));
    if (IsDeviceMemRingBuf() && needsPcieOrdering()) {
      // Ensure the packet body is written as header may get reordered when writing over PCIE
-+#if !defined(__riscv)
-     _mm_sfence();
-+#else
-+    asm volatile("fence w,w" ::: "memory");
-+#endif
+-    _mm_sfence();
++    store_fence();
    }
    atomic::Store(&queue_slot[0], slot_data[0], std::memory_order_release);
  
+
+diff --git a/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp b/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp
 --- a/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp
 +++ b/runtime/hsa-runtime/core/runtime/amd_blit_kernel.cpp
-@@ -919,7 +919,11 @@
+@@ -923,7 +923,7 @@ void BlitKernel::PopulateQueue(uint64_t index, uint64_t code_handle, void* args,
    std::atomic_thread_fence(std::memory_order_release);
    if (queue_->IsDeviceMemRingBuf() && queue_->needsPcieOrdering()) {
      // Ensure the packet body is written as header may get reordered when writing over PCIE
-+#if !defined(__riscv)
-     _mm_sfence();
-+#else
-+    asm volatile("fence w,w" ::: "memory");
-+#endif
+-    _mm_sfence();
++    store_fence();
    }
  #if defined(__linux__)
    __atomic_store_n(&(queue_buffer[index & queue_bitmask_].full_header),
+
+diff --git a/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp b/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp
+--- a/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp
++++ b/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp
+@@ -1990,7 +1990,7 @@ char* BlitSdma<useGCR, scopeFields>::AcquireWriteAddress(uint32_t cmd_size, uint
+ 
+     // CAS failed -- reuse the observed value directly, skip redundant atomic Load.
+     curr_index = observed;
+-    _mm_pause();
++    cpu_relax();
+   }
+ 
+   return nullptr;
+@@ -2065,7 +2065,7 @@ void BlitSdma<useGCR, scopeFields>::PadRingToEnd(uint64_t curr_index) {
+   // Check whether the engine has finished using this region.
+   if (CanWriteUpto(new_index) == false) {
+     // Engine hasn't freed this region yet.  Pause briefly.
+-    _mm_pause();
++    cpu_relax();
+     return;
+   }
+ 
+
+diff --git a/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp b/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
+--- a/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
++++ b/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
+@@ -4673,11 +4673,7 @@ hsa_status_t GpuAgent::PcSamplingFlushDeviceBuffersPerXCC(
+         to_copy = sample_count * session.sample_size();
+         break;
+       }
+-#if defined(_MSC_VER)
+-      _mm_pause();
+-#elif defined(__x86_64__) || defined(__i386__)
+-      __builtin_ia32_pause();
+-#endif
++      cpu_relax();
+     }
+ 
+     // NOTE: Caller (PcSamplingFlush or PcSamplingThreadPerXCC) must hold host_buffer_mutex.
+
+diff --git a/runtime/hsa-runtime/core/runtime/intercept_queue.cpp b/runtime/hsa-runtime/core/runtime/intercept_queue.cpp
 --- a/runtime/hsa-runtime/core/runtime/intercept_queue.cpp
 +++ b/runtime/hsa-runtime/core/runtime/intercept_queue.cpp
-@@ -270,7 +270,11 @@
+@@ -270,7 +270,7 @@ uint64_t InterceptQueue::Submit(const AqlPacket* packets, uint64_t count) {
        ring[barrier & mask].barrier_and.completion_signal = Signal::Convert(retry_doorbell_);
        if (wrapped->IsDeviceMemRingBuf() && needsPcieOrdering()) {
          // Ensure the packet body is written as header may get reordered when writing over PCIE
-+#if !defined(__riscv)
-         _mm_sfence();
-+#else
-+        asm volatile("fence w,w" ::: "memory");
-+#endif
+-        _mm_sfence();
++        store_fence();
        }
        // Release-publish the header, then ring the doorbell.
        atomic::Store(&ring[barrier & mask].barrier_and.header, kBarrierHeader,
-@@ -314,7 +318,11 @@
+@@ -314,7 +314,7 @@ uint64_t InterceptQueue::Submit(const AqlPacket* packets, uint64_t count) {
        if (write_index != 0) {
          if (wrapped->IsDeviceMemRingBuf() && needsPcieOrdering()) {
            // Ensure the packet body is written as header may get reordered when writing over PCIE
-+#if !defined(__riscv)
-           _mm_sfence();
-+#else
-+          asm volatile("fence w,w" ::: "memory");
-+#endif
+-          _mm_sfence();
++          store_fence();
          }
          atomic::Store(&ring[write & mask].packet.header, packets[first_written_packet_index].packet.header,
                        std::memory_order_release);
-@@ -415,7 +423,11 @@
+@@ -415,7 +415,7 @@ void InterceptQueue::StoreRelaxed(hsa_signal_value_t value) {
  
      if (IsDeviceMemRingBuf() && needsPcieOrdering()) {
        // Ensure the packet body is written as header may get reordered when writing over PCIE
-+#if !defined(__riscv)
-       _mm_sfence();
-+#else
-+      asm volatile("fence w,w" ::: "memory");
-+#endif
+-      _mm_sfence();
++      store_fence();
      }
    }
    i = next_packet_;
+
+diff --git a/runtime/hsa-runtime/core/util/lnx/os_linux.cpp b/runtime/hsa-runtime/core/util/lnx/os_linux.cpp
+--- a/runtime/hsa-runtime/core/util/lnx/os_linux.cpp
++++ b/runtime/hsa-runtime/core/util/lnx/os_linux.cpp
+@@ -755,9 +755,9 @@ uint64_t SystemClockFrequency() {
+ }
+ 
+ bool ParseCpuID(cpuid_t* cpuinfo) {
++  memset(cpuinfo, 0, sizeof(*cpuinfo));
+ #if defined(__i386__) || defined(__x86_64__)
+   uint32_t eax, ebx, ecx, edx, max_eax = 0;
+-  memset(cpuinfo, 0, sizeof(*cpuinfo));
+ 
+   /* Make sure current CPU supports at least EAX 4 */
+   if (!__get_cpuid_max(0x80000004, NULL)) return false;
+
+diff --git a/runtime/hsa-runtime/core/util/locks.h b/runtime/hsa-runtime/core/util/locks.h
+--- a/runtime/hsa-runtime/core/util/locks.h
++++ b/runtime/hsa-runtime/core/util/locks.h
+@@ -72,7 +72,7 @@ class HybridMutex {
+     while (!lock_.compare_exchange_strong(old, 1)) {
+       cnt--;
+       if (cnt > maxSpinIterPause) {
+-        _mm_pause();
++        cpu_relax();
+       } else if (cnt-- > maxSpinIterYield) {
+         os::YieldThread();
+       } else {
+
+diff --git a/runtime/hsa-runtime/core/util/utils.h b/runtime/hsa-runtime/core/util/utils.h
 --- a/runtime/hsa-runtime/core/util/utils.h
 +++ b/runtime/hsa-runtime/core/util/utils.h
-@@ -449,7 +449,13 @@
+@@ -60,6 +60,10 @@
+ #include <thread>
+ #include <locale>
+ 
++#ifndef __has_builtin
++#define __has_builtin(x) 0
++#endif
++
+ #if defined(__GNUC__)
+ #if defined(__i386__) || defined(__x86_64__)
+ #include <x86intrin.h>
+@@ -422,6 +426,53 @@ static __forceinline std::string& rtrim(std::string& s) {
+ 
+ static __forceinline std::string& trim(std::string& s) { return ltrim(rtrim(s)); }
+ 
++static __forceinline void cpu_relax() {
++#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || defined(__powerpc64__)
++  _mm_pause();
++#elif __has_builtin(__builtin_arm_yield)
++  __builtin_arm_yield();
++#elif __has_builtin(__builtin_riscv_pause)
++  __builtin_riscv_pause();
++#else
++#warning "No cpu_relax() implementation for this processor"
++#endif
++}
++
++static __forceinline void store_fence() {
++#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || defined(__powerpc64__)
++  _mm_sfence();
++#elif __has_builtin(__builtin_arm_dmb)
++  __builtin_arm_dmb(0x2);  // oshst
++#elif defined(__riscv)
++  __asm__ __volatile__("fence ow, ow" ::: "memory");
++#else
++  __atomic_thread_fence(__ATOMIC_SEQ_CST);
++#endif
++}
++
++static __forceinline void memory_fence() {
++#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || defined(__powerpc64__)
++  _mm_mfence();
++#elif __has_builtin(__builtin_arm_dsb)
++  __builtin_arm_dsb(0xf);  // sy
++#elif defined(__riscv)
++  __asm__ __volatile__("fence iorw, iorw" ::: "memory");
++#else
++  __atomic_thread_fence(__ATOMIC_SEQ_CST);
++#endif
++}
++
++static __forceinline void cacheline_flush(const void* p) {
++#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) || defined(__powerpc64__)
++  _mm_clflush(p);
++#elif defined(__aarch64__) && defined(__linux__)
++  __asm__ __volatile__("dc civac, %0" ::"r"(p) : "memory");
++#else
++#warning "No cacheline_flush() implementation for this processor"
++  (void)p;
++#endif
++}
++
+ /// @brief: Flush the cachelines associated with the
+ /// provided address, offset, and length
+ /// @param: base(Input), base address to flush
+@@ -452,7 +503,7 @@ inline void FlushCpuCache(const void* base, size_t offset, size_t len) {
    cur += offset;
    uintptr_t lastline = (uintptr_t)(cur + len - 1) | (cacheline_size - 1);
    do {
-+#if !defined(__riscv)
-     _mm_clflush((const void*)cur);
-+#elif defined(__riscv_zicbom)
-+    asm volatile("cbo.flush (%0)" :: "r"((const void*)cur) : "memory");
-+#else
-+    asm volatile("fence rw,rw" ::: "memory");
-+#endif
+-    _mm_clflush((const void*)cur);
++    cacheline_flush(cur);
      cur += cacheline_size;
    } while (cur <= (const char*)lastline);
  }
+
+diff --git a/runtime/hsa-runtime/image/util.h b/runtime/hsa-runtime/image/util.h
+--- a/runtime/hsa-runtime/image/util.h
++++ b/runtime/hsa-runtime/image/util.h
+@@ -77,7 +77,10 @@ namespace image {
+ #include "mm_malloc.h"
+ #if defined(__i386__) || defined(__x86_64__)
+ #include <x86intrin.h>
+-#elif defined(__loongarch64)
++#elif defined(__powerpc64__) || defined(__PPC64__)
++#define NO_WARN_X86_INTRINSICS
++#include <x86intrin.h>
++#elif defined(__loongarch64) || defined(__aarch64__) || defined(__arm__) || defined(__riscv)
+ #else
+ #error                                                                                             \
+     "Processor not identified.  " \
+
+diff --git a/runtime/hsa-runtime/inc/hsa.h b/runtime/hsa-runtime/inc/hsa.h
+--- a/runtime/hsa-runtime/inc/hsa.h
++++ b/runtime/hsa-runtime/inc/hsa.h
+@@ -83,8 +83,8 @@
+ #define LITTLEENDIAN_CPU
+ #elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+ #define BIGENDIAN_CPU
+-#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || \
+-      defined(_M_X64) || defined(__loongarch64) || defined(__riscv)
++#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64) ||           \
++    defined(__loongarch64) || defined(__riscv) || defined(__aarch64__) || defined(__arm__)
+ #define LITTLEENDIAN_CPU
+ #endif
+ #endif

@@ -37,6 +37,7 @@ Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-1
 BuildSystem:    cmake
 
 Patch0:         0001-Add-riscv64-support.patch
+# Merged upstream PR #11310; replaces distribution fence/pause overrides.
 Patch1:         0002-Replace-fence-instructions-for-riscv64.patch
 
 BuildOption(prep):  -n rocr-runtime
