@@ -11,7 +11,7 @@
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 构建／测试适配中 | 当前包提交 `57532ab`，推送 HEAD `d3ad129`；OBS revision `8` / srcmd5 `80a3d342891bf24c995b6666e2c86686`，两架构构建中 |
+| rocm-llvm | 构建／测试适配中 | 当前包提交 `8f7ba19`，推送 HEAD `f645733`；OBS revision `9` / srcmd5 `614409c9e4b5ca3696a5249eabb9df6b`，两架构构建中 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -202,3 +202,7 @@ riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失�
 - AMDDeviceLibs CMake 导出将两个绝对路径重复拼接。删除旧模板前缀覆盖，按上游要求将安装目录传为相对 `/usr` 的路径；对应调整构建内 bitcode 目录软链接。诊断 `logs/artifact-cmake-configure-lib64.log`。本机 pip CMake 默认不搜索 lib64，测试需显式 `CMAKE_PREFIX_PATH=/usr;/usr/lib64/cmake`；目标机 openRuyi CMake 另行验证。
 
 第七轮 riscv64 仍在 pico-itx-box08:1 执行；在线日志返回 IncompleteRead，状态尚不能计作完成。后续若新源码触发重建，最终只验收最新配方产物。
+
+第八轮已推送：包提交 `8f7ba19` / HEAD `f645733`，Actions 43419797505 成功；OBS revision `9` / srcmd5 `614409c9e4b5ca3696a5249eabb9df6b`。相对安装布局生成的配置已在本地 CMake 下游证明能找到四个实际 bitcode 文件（`logs/cmake-relative-config-proof.log`），最终仍需重测本轮 RPM。
+
+第八轮 x86_64 已通过 device-libs 33/33、COMGR CTest 39/39（新增缓存／嵌入头文件回归），等待完整打包结果。riscv64 又在 pico-itx-box02:0 的同一 preinstall 挂载清理步骤失败，日志 `logs/build-riscv64-eighth-final.log`。决定添加包级、仅 riscv64 的 jobs>=32 约束，匹配 6 个 worker（`logs/constraints-final-riscv64.log`），避免反复进入故障小型 worker，同时改善这类 LLVM 开发依赖较重的构建调度。约束放入 Git 配方，由同一 service 提取；pre-commit 禁止约束文件的旧规则仅对此包设置例外，不放开其他包。
