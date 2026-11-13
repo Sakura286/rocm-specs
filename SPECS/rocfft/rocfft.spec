@@ -9,11 +9,11 @@
 # rocFFT needs a GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocfft
 Version:        %{rocm_version}
@@ -21,12 +21,13 @@ Release:        %autorelease
 Summary:        ROCm Fast Fourier Transforms library
 License:        MIT
 URL:            https://github.com/ROCm/rocFFT
-#!RemoteAsset:  sha256:3a01fab8e598e16d42dbcbd3ce942b9b55a86d1c2ce383dec829835f42b42222
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:80485f95e83d8773f4d401fdfd0e3ca39c10e81c5f160afbeb67ac0c7ed88340
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocfft.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n rocfft
+
 Patch0:         0001-cmake-use-gnu-installdirs.patch
-Patch2000:      2000-relax-sqlite-version-requirement.patch
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -43,10 +44,14 @@ BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hiprand)
+BuildRequires:  hiprand-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(rocrand)
+BuildRequires:  rocrand-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  libomp-devel(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
