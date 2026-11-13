@@ -55,6 +55,7 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
 BuildRequires:  llvm-static(major) = %{llvm_maj_ver}
 BuildRequires:  cmake(rocprofiler-register)
