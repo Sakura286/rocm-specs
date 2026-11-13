@@ -96,6 +96,8 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 
 %conf -p
+# Preserve compiler and OpenMP probe diagnostics when configuration fails.
+trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
