@@ -57,7 +57,8 @@ BuildRequires:  rocm-device-libs >= 10.1.0
 BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  llvm24-devel = %{snapshot_version}
-BuildRequires:  clang24-devel = %{snapshot_version}
+# Standalone Clang builds its own headers/components; avoid the system Clang
+# devel dependency, which pulls in an unused multi-gigabyte static archive.
 BuildRequires:  clang24-tools-extra = %{snapshot_version}
 BuildRequires:  lld(major) = %{llvm_major}
 BuildRequires:  pkgconfig(python3)
