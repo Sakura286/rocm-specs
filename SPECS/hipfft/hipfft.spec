@@ -27,6 +27,9 @@ BuildSystem:    cmake
 BuildOption(prep):  -n hipfft
 
 BuildOption(conf):  -G Ninja
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS_OPENMP=OFF
