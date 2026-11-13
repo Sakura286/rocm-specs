@@ -51,6 +51,10 @@ BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  rocm-cmake >= 7.14.1
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
+BuildRequires:  lld(major) = %{llvm_maj_ver}
+BuildRequires:  rocm-device-libs >= 7.14.1
+BuildRequires:  rocminfo >= 7.14.1
 BuildRequires:  git
 BuildRequires:  cmake(fmt)
 BuildRequires:  boost-devel
