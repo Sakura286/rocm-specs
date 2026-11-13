@@ -33,13 +33,15 @@ BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gn
 BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DCMAKE_INSTALL_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
+BuildOption(conf):  -DHIPSPARSE_ENABLE_CLIENT=ON
+BuildOption(conf):  -DHIPSPARSE_ENABLE_SAMPLES=OFF
+BuildOption(conf):  -DHIPSPARSE_ENABLE_BENCHMARKS=ON
 %if %{with test}
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=on
+BuildOption(conf):  -DHIPSPARSE_BUILD_TESTING=ON
 %else
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=off
+BuildOption(conf):  -DHIPSPARSE_BUILD_TESTING=OFF
 %endif
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
@@ -60,6 +62,7 @@ BuildRequires:  rocsparse-devel >= %{rocm_version}
 BuildRequires:  cmake(rocsparse)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
+BuildRequires:  libomp-devel(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
@@ -105,7 +108,11 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %conf -p
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 export PATH=%{rocmllvm_bindir}:$PATH
+
+%build -p
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
@@ -132,6 +139,7 @@ rm -f %{buildroot}%{_datadir}/doc/hipsparse/LICENSE.md
 %files test
 %{_bindir}/hipsparse*
 %{_datadir}/hipsparse/
+%{_libexecdir}/hipsparse/
 %endif
 
 %changelog
