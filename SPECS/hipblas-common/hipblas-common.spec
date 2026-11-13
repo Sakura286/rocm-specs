@@ -22,19 +22,15 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  rocm-cmake
 
-%global _description %{expand:
-Common files shared by hipBLAS and hipBLASLt
-}
-
 %description
-%{_description}
+%summary
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Provides:       %{name}-static = %{version}-%{release}
 
 %description    devel
-%{_description}
+%{summary}
 
 %install -a
 rm -f %{buildroot}%{_prefix}/share/doc/hipblas-common/LICENSE.md
