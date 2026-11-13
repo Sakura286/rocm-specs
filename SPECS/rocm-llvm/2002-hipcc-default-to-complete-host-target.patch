@@ -1,0 +1,16 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Give hipcc a complete default host target
+
+--- a/amd/hipcc/src/hipBin_amd.h
++++ b/amd/hipcc/src/hipBin_amd.h
+@@ -890,6 +890,10 @@
+     CMD = "\"" + var.hipClangLauncher_ + "\" \"" + compiler + "\"";
+   }
+ 
++  // Include the environment field required by the HIP offload bundler.
++  // Explicit user target options occur later and can override this default.
++  CMD += " --target=@HIP_HOST_TARGET@";
++
+   if (needCFLAGS) {
+     CMD += " " + HIPCFLAGS;
+   }

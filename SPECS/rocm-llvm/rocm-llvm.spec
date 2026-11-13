@@ -78,6 +78,8 @@ BuildRequires:  rocm-cmake >= %{rocm_release}
 2000-comgr-support-system-llvm.patch
 # Link the multilib HIP runtime instead of assuming prefix/lib.
 2001-hipcc-use-distribution-runtime-directory.patch
+# LLVM 23 bundling requires the GNU environment field in the host target.
+2002-hipcc-default-to-complete-host-target.patch
 
 %description
 %{summary}
