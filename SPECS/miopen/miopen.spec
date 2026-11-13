@@ -8,11 +8,11 @@
 # Need GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           miopen
 Version:        %{rocm_version}
@@ -20,11 +20,15 @@ Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
 URL:            https://github.com/ROCm/MIOpen
-#!RemoteAsset:  sha256:983fda99d67d57f1354123101bea3af0f11f746d7ff3306bfc2700e6f6f5bb0f
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:afd9fe9121e3a64a8e2b8d4bc021d00e171f029c84631c576eb190fbe645fb97
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/miopen.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n miopen
+
 BuildOption(conf):  -G Ninja
+# Do not run developer clang-tidy analysis during distribution builds.
+BuildOption(conf):  -DCLANG_TIDY_EXE=/usr/bin/true
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBoost_USE_STATIC_LIBS=OFF
 BuildOption(conf):  -DMIOPEN_BUILD_DRIVER=OFF
@@ -46,10 +50,15 @@ BuildRequires:  boost-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hipblaslt)
+BuildRequires:  hipblaslt-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel >= 7.14.1
 BuildRequires:  cmake(rocrand)
+BuildRequires:  rocrand-devel >= 7.14.1
 %if %{with test}
 BuildRequires:  cmake(GTest)
 %endif
@@ -76,7 +85,6 @@ Requires:       cmake(rocrand)
 Requires:       gcc-c++
 
 %patchlist
-2001-disable-clang-tidy.patch
 2002-workaround-half-float-expr-deduction.patch
 2003-disable-fno-offload-uniform-block.patch
 2004-fix-clang-rel-path.patch
