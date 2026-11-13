@@ -150,8 +150,10 @@ chmod 755 %{buildroot}%{_libdir}/lib*.so*
 # Unnecessary file and is not FHS compliant:
 rm %{buildroot}%{_libdir}/.hipInfo
 
-# Windows files:
-rm %{buildroot}%{_bindir}/*.bat
+# Upstream now copies HIP common tools only on Windows. FindHIP still uses
+# the linker helper on Linux; retain both portable tools in the devel package.
+install -Dm755 hip/bin/hipcc_cmake_linker_helper %{buildroot}%{_bindir}/hipcc_cmake_linker_helper
+install -Dm755 hip/bin/hipdemangleatp %{buildroot}%{_bindir}/hipdemangleatp
 
 rm -f %{buildroot}%{_prefix}/share/doc/packages/rocclr*/LICENSE.md
 rm -f %{buildroot}%{_prefix}/share/doc/opencl*/LICENSE.md
@@ -164,9 +166,9 @@ rm -f %{buildroot}%{_prefix}/share/doc/hip/LICENSE.md
 %{_libdir}/libhiprtc.so.%{hip_soversion}{,.*}
 %{_libdir}/libhiprtc-builtins.so.%{hip_soversion}{,.*}
 %{_datadir}/hip
+%{_bindir}/hrr-playback
 
 %files -n rocm-hip-devel
-%{_bindir}/roc-*
 %{_libdir}/libamdhip64.so
 %{_libdir}/libhiprtc.so
 %{_libdir}/libhiprtc-builtins.so
