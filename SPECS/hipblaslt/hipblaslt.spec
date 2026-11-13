@@ -23,6 +23,9 @@
 # The problem with the fork has been raised here.
 # https://github.com/ROCm/hipBLASLt/issues/908
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           hipblaslt
 Version:        %{rocm_version}
 Release:        %autorelease
