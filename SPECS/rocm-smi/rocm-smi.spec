@@ -38,15 +38,11 @@ BuildRequires:  pkgconfig(gtest)
 %endif
 BuildRequires:  pkgconfig(libdrm)
 
-%global _description %{expand:
+%description
 The ROCm System Management Interface Library, or ROCm SMI library, is part of
 the Radeon Open Compute ROCm software stack . It is a C library for Linux that
 provides a user space interface for applications to monitor and control GPU
 applications.
-}
-
-%description
-%{_description}
 
 %package        devel
 Summary:        ROCm SMI Library development files
@@ -63,7 +59,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{_description}
+%{summary}
 %endif
 
 %prep -a
