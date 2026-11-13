@@ -1,0 +1,76 @@
+Use explicit low-half operands for scalar VOP1/VOP2 operations on true16 targets.
+Keep packed, VOP3 and legacy SDWA forms unchanged.
+
+--- a/tensilelite/rocisa/rocisa/include/instruction/instruction.hpp
++++ b/tensilelite/rocisa/rocisa/include/instruction/instruction.hpp
+@@ -435,10 +435,32 @@
+ 
+         virtual std::string getArgStr() const
+         {
++            // VOP1/VOP2 scalar-half instructions need explicit VGPR halves in
++            // LLVM 23 real-true16 mode. Packed and VOP3 instructions keep their
++            // existing operand-selection syntax; gfx9/10 still use SDWA.
++            const bool scalarHalf = getArchCaps()["NoSDWA"]
++                && (instStr == "v_add_f16" || instStr == "v_mul_f16"
++                    || instStr == "v_exp_f16" || instStr == "v_rcp_f16"
++                    || instStr == "v_rsq_f16" || instStr == "v_max_f16"
++                    || instStr == "v_min_f16" || instStr == "v_lshlrev_b16");
++            const auto operand = [scalarHalf](const InstructionInput& input) {
++                auto text = InstructionInputToString(input);
++                if(scalarHalf && std::holds_alternative<std::shared_ptr<Container>>(input))
++                {
++                    auto reg = std::dynamic_pointer_cast<RegisterContainer>(
++                        std::get<std::shared_ptr<Container>>(input));
++                    if(reg && reg->regType == "v" && !reg->isOff)
++                    {
++                        // Preserve abs(-vN) modifiers around the selected half.
++                        text.insert(text.size() - (reg->isAbs ? 1 : 0), ".l");
++                    }
++                }
++                return text;
++            };
+             std::string kStr;
+             if(dst && !dst->toString().empty())
+             {
+-                kStr += dst->toString();
++                kStr += operand(dst);
+             }
+             if(dst1 && !dst1->toString().empty())
+             {
+@@ -446,7 +468,7 @@
+                 {
+                     kStr += ", ";
+                 }
+-                kStr += dst1->toString();
++                kStr += operand(dst1);
+             }
+             if(!srcs.empty())
+             {
+@@ -454,11 +476,11 @@
+                 {
+                     kStr += ", ";
+                 }
+-                kStr += InstructionInputToString(srcs[0]);
++                kStr += operand(srcs[0]);
+             }
+             for(size_t i = 1; i < srcs.size(); ++i)
+             {
+-                kStr += ", " + InstructionInputToString(srcs[i]);
++                kStr += ", " + operand(srcs[i]);
+             }
+             return kStr;
+         }
+--- a/device-library/extops/CMakeLists.txt
++++ b/device-library/extops/CMakeLists.txt
+@@ -25,6 +25,11 @@
+         PRIVATE
+             -Wno-unused-command-line-argument -x assembler -target amdgcn-amd-amdhsa -mcode-object-version=4 -mcpu=${offload_arch} ${WAVEFRONT} -c
+     )
++    # Match the explicit half-register syntax emitted by rocISA on RDNA3/4.
++    if(arch MATCHES "^gfx(11[0-9][0-9]|120[01])$")
++        target_compile_options(extop-obj-${arch} PRIVATE
++            "SHELL:-Xclangas -target-feature -Xclangas +real-true16")
++    endif()
+     target_sources(extop-obj-${arch}
+         PRIVATE
+             "${CMAKE_CURRENT_BINARY_DIR}/L_256_4_1_${arch}.s"
