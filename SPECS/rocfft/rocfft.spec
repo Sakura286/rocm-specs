@@ -55,10 +55,12 @@ BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin/clang++
 
 BuildRequires:  boost-devel
 BuildRequires:  clang(major) = %{llvm_maj_ver}
+# LLVM PR 168164 propagates the lp64d host features to RDC registration objects.
+BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e-12
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
@@ -114,10 +116,13 @@ sed -i '/target_.*_options(.*--offload-arch=amdgcnspirv/d' clients/tests/CMakeLi
 %conf -p
 # Preserve compiler and OpenMP probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
-export PATH=%{rocmllvm_bindir}:$PATH
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %build -p
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a
