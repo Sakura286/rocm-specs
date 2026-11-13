@@ -22,6 +22,11 @@
 %global rocm_version %{rocm_release}.%{rocm_patch}
 %global upstreamname clr
 
+%ifarch riscv64
+# LLVM static development packages need the large native worker build roots.
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           rocclr
 Version:        %{rocm_version}
 Release:        %autorelease
