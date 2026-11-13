@@ -6,8 +6,8 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.14
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 %global upstreamname rocm_smi_lib
 
@@ -20,9 +20,11 @@ Release:        %{autorelease}
 Summary:        ROCm System Management Interface Library
 License:        MIT AND NCSA
 URL:            https://github.com/ROCm/rocm_smi_lib
-#!RemoteAsset:  sha256:bf28d4ae385aad841474240510b6c52c44cc387bad30749b464b2b0cb8f59626
-Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:8f0ad7a13ce1fe810d3d55efbc89d4d50f6a22669d8357dead05401d97b6895f
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rocm-smi-lib.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocm-smi-lib
 
 BuildOption(conf):  -DFILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=TRUE
