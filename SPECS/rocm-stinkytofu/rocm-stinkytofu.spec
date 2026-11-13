@@ -60,7 +60,10 @@ sed -i 's/DESTINATION lib/DESTINATION %{_lib}/g' \
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %check
-%ctest
+# PatternParserTest cases share fixed temporary filenames; run serially.
+mkdir -p %{_vpath_builddir}/test-tmp
+export TMPDIR="$PWD/%{_vpath_builddir}/test-tmp"
+%ctest --parallel 1
 
 %files
 %doc README.md
