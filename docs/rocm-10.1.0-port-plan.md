@@ -4,14 +4,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 第六轮核心检查通过，正在修复最后四项 lit 适配及跟进 RISC-V worker 故障，尚未验收。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 第七轮 x86_64 构建成功，实际 RPM 验证发现缓存预处理与 CMake 导出路径问题，正在修复，尚未验收。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 构建／测试适配中 | 当前包提交 `e6ca86f`，推送 HEAD `3548400`；OBS revision `7` / srcmd5 `301b1ad79a8de21071aec8eef48d887d`，x86_64 剩 4 项 lit 失败；riscv64 worker 初始化失败，未执行配方 |
+| rocm-llvm | 构建／测试适配中 | 当前包提交 `57532ab`，推送 HEAD `d3ad129`；OBS revision `8` / srcmd5 `80a3d342891bf24c995b6666e2c86686`，两架构构建中 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -192,3 +192,13 @@ riscv64 已用解包的 bubblewrap 建立隔离挂载环境，默认 `/usr/lib64
 第六轮结果：x86_64 device-libs 33/33、COMGR CTest 32/32（包括两个未修改的 OpenCL 测试）、unit 310/310 通过；lit 205 项中 173 passed、27 unsupported、1 expected failure、4 failed。日志 `logs/build-x86_64-sixth-final.log`。三项解包测试失败是因为 LLVM 24 将 CPU 编入 canonical triple，不再保留冗余 target-cpu 属性；改为精确检查 gfx900/gfx1030 的 triple。GNU 头文件共存测试的 constexpr array 仍调用 host-only bounds assertion，改用静态索引 `std::get`，本地相同 Clang 24 探针通过（`logs/libstdcxx-get-probe.log`）。未关闭任何 lit 测试。
 
 riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失败：`build-preinstall/dev/null` 挂载无法清理、目录已存在，未执行 SPEC。日志 `logs/build-riscv64-sixth-final.log`。须观察后续修订是否分配到可用 worker；不能把基础设施失败写成编译失败或验收完成。
+
+第七轮已推送：`57532ab` / HEAD `d3ad129`，Actions 43418484519 成功；OBS revision `8` / srcmd5 `80a3d342891bf24c995b6666e2c86686`，`.obsinfo` 已核对。两架构 buildinfo 保存在 `logs/buildinfo-seventh-<arch>.xml`。riscv64 调度到 pico-itx-box08:1；评估 jobs=32 约束时匹配 6 个 worker，暂未添加约束，先观察新 worker 的实际情况。
+
+第七轮 x86_64 构建／发布成功（`10.1.0-8.1.nor`）：device-libs 33/33、COMGR CTest 32/32、unit 310/310、lit 177 passed / 27 unsupported / 1 xfail。日志 `logs/build-x86_64-seventh-test.log`。实际 RPM 的 hipcc 编译 gfx1100、拆包、ELF 检查及无未解析符号验证通过，COMGR API 3.5 / 61 ISAs 正常；尚不能验收，发现以下问题并准备第八轮：
+
+- 上游 CTest 全部禁用缓存，实际默认缓存会先运行预处理 job，postopt 适配错误拒绝该 job。改为仅在 EmitBC 阶段执行第二阶段链接；新增 OpenCL、VFS、嵌入 libc++ 的缓存开启及重复调用回归。诊断 `logs/artifact-opencl-diagnostic.log`。
+- 原有 HIP libc++ CTest 被上游注释；现在启用并强制嵌入头文件，避免误用宿主 GNU runtime。实际 RPM 在缓存关闭／强制嵌入模式通过（`logs/artifact-libcxx-forced-nocache.log`）。本地隔离宿主的多架构 GNU 头文件探测会误判，这是使用 force 模式的原因；并非声称自动探测已在任意宿主通过。
+- AMDDeviceLibs CMake 导出将两个绝对路径重复拼接。删除旧模板前缀覆盖，按上游要求将安装目录传为相对 `/usr` 的路径；对应调整构建内 bitcode 目录软链接。诊断 `logs/artifact-cmake-configure-lib64.log`。本机 pip CMake 默认不搜索 lib64，测试需显式 `CMAKE_PREFIX_PATH=/usr;/usr/lib64/cmake`；目标机 openRuyi CMake 另行验证。
+
+第七轮 riscv64 仍在 pico-itx-box08:1 执行；在线日志返回 IncompleteRead，状态尚不能计作完成。后续若新源码触发重建，最终只验收最新配方产物。
