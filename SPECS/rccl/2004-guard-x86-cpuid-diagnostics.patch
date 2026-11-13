@@ -1,0 +1,37 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Restrict CPUID and x86 BIOS diagnostics to x86 hosts
+
+The BIOS and iommu=pt checks use x86 CPUID and x86 firmware paths.
+Guard both the header and the diagnostics so other host architectures
+can compile and do not require x86 DMI firmware files at runtime.
+Keep the generic HSA environment check on all architectures.
+
+--- a/src/init.cc
++++ b/src/init.cc
+@@ -77,7 +77,9 @@
+ #include "latency_profiler/CollTraceFunc.h"
+ #include "dda_all_reduce_ipc.h"
+ #include "ipc_init.h"
+-#include  <cpuid.h>
++#if defined(__i386__) || defined(__x86_64__)
++#include <cpuid.h>
++#endif
+ 
+ #ifndef STR2
+   #define STR2(v) #v
+@@ -284,6 +286,7 @@
+     }
+     INFO(NCCL_INIT, "Kernel version: %s", verStr);
+     if (strstr(verStr, "cray") == NULL) {
++#if defined(__i386__) || defined(__x86_64__)
+       unsigned int eax, ebx, ecx, edx;
+       if (!__get_cpuid(1, &eax, &ebx, &ecx, &edx))
+         ecx = 0; // cpuid not supported
+@@ -301,6 +304,7 @@
+         if (strstr(strValue, "iommu=pt") == NULL)
+           WARN("Missing \"iommu=pt\" from kernel command line which can lead to system instablity or hang!");
+       }
++#endif
+ #ifndef HIP_UNCACHED_MEMORY
+       char *env = getenv("HSA_FORCE_FINE_GRAIN_PCIE");
+       if (env == NULL || strcmp(env, "1") != 0)

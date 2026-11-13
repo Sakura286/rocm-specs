@@ -98,6 +98,7 @@ larger operations or aggregated through the API.
 2001-fix-host-header-dependencies.patch
 2002-include-map-for-network-vendor-table.patch
 2003-keep-nvtx-noop-implementations-when-disabled.patch
+2004-guard-x86-cpuid-diagnostics.patch
 
 %description
 %{_description}
