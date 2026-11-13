@@ -154,10 +154,15 @@ ls | grep -xv "amd" | xargs rm -r
 install -pm 755 %{SOURCE1} prep.sh
 sed -i -e 's@%%{_prefix}@%{_prefix}@' prep.sh
 sed -i -e 's@%%{_lib}@%{_lib}@' prep.sh
+sed -i -e 's@%%{_libdir}@%{_libdir}@' prep.sh
+sed -i -e 's@%%{_target_cpu}@%{_target_cpu}@' prep.sh
 sed -i -e 's@%%{amd_device_libs_prefix}@%{amd_device_libs_prefix}@' prep.sh
 sed -i -e 's@%%{bundle_prefix}@%{bundle_prefix}@' prep.sh
 sed -i -e 's@%%{llvm_maj_ver}@%{llvm_maj_ver}@' prep.sh
-grep -v '%%{' prep.sh
+if grep -q '%%{' prep.sh; then
+    echo 'Unexpanded RPM macro in hipcc preparation script' >&2
+    exit 1
+fi
 
 . ./prep.sh
 
