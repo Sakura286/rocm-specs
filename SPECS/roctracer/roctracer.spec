@@ -8,11 +8,11 @@
 # roctracer needs a GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           roctracer
 Version:        %{rocm_version}
@@ -20,9 +20,11 @@ Release:        %autorelease
 Summary:        ROCm Tracer Callback/Activity Library
 License:        MIT
 URL:            https://github.com/ROCm/roctracer
-#!RemoteAsset:  sha256:dbae23414fdb186085072b025d6b233b8ece27dd6e58e4650f5fb1fa2fe1af2a
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:cd24d915f05424cb2d6204b0afd66aa4e94cb24eaa2364e6df742bcb9096de40
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/roctracer.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n roctracer
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
