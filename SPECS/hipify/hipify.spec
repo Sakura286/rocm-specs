@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.14
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hipify
 Version:        %{rocm_version}
@@ -17,15 +17,18 @@ Release:        %autorelease
 Summary:        Convert CUDA to HIP
 License:        MIT
 URL:            https://github.com/ROCm/HIPIFY
-#!RemoteAsset:  sha256:3ffe18218c5bd0311e4359064da68f0a1d699bdc3b43472060d346a885bf8229
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:6adf9be7745f72990ee844451702d8ee54f9cbbd5d229ae9f1a1b2cb377ddda0
+Source0:        https://github.com/ROCm/HIPIFY/archive/6acec7751d2b2bfe162dba9efdcf7c16efb27bd8/HIPIFY-6acec7751d2b2bfe162dba9efdcf7c16efb27bd8.tar.gz
 BuildSystem:    cmake
+
+# Use the distribution LLVM layout.
+Patch0:         0001-prepare-hipify-cmake.patch
+
+BuildOption(prep):  -n HIPIFY-6acec7751d2b2bfe162dba9efdcf7c16efb27bd8
 
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
-
-Patch0:         0001-prepare-hipify-cmake.patch
 
 BuildRequires:  chrpath
 BuildRequires:  clang(major) = %{llvm_maj_ver}
