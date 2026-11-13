@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.2.4
+%global rocm_version 7.14.1
 
 Name:           rocm-core
 Version:        %{rocm_version}
@@ -13,9 +13,11 @@ Release:        %autorelease
 Summary:        A utility to get the ROCm release version
 License:        MIT
 URL:            https://github.com/ROCm/rocm-core
-#!RemoteAsset:  sha256:32dab2f00e22fb5462beffae03cc642403925d22a42662e15ac0f68d8e885dea
-Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:bd4fa9162282136a897c616141b9e37a63edec754bae9666d3c88b3fbe0bc7a0
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rocm-core.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocm-core
 
 BuildOption(conf):  -DROCM_VERSION=%{version}
 
