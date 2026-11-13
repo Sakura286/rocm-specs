@@ -57,6 +57,8 @@ BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  lld-devel(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  llvm-static(major) = %{llvm_maj_ver}
+# Clang's exported ClangIR targets reference the MLIR CMake package and archives.
+BuildRequires:  mlir%{llvm_maj_ver}-devel
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzstd)
@@ -171,8 +173,6 @@ export INCLUDE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/include
 # Build device-libs first, hipcc and comgr need it
 %define _vpath_srcdir amd/device-libs
 %define _vpath_builddir build-devicelibs
-# Workaround for bug in cmake tests not finding amdgcn:
-ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 #TODO ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_* should be removed in ROCm 7.0:
 %cmake -DCMAKE_PREFIX_PATH=%{bundle_prefix} \
     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
@@ -201,8 +201,9 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 # Test device-libs
 %define _vpath_srcdir amd/device-libs
 %define _vpath_builddir build-devicelibs
-# Workaround for bug in cmake tests not finding amdgcn:
-ln -s %{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
+# OCL.cmake mirrors the absolute install path below the build directory.
+# Point Clang's --rocm-path at those freshly built libraries, not the host.
+ln -s .%{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
 %{?with_device_libs_test:%ctest}
 
 # Test comgr
