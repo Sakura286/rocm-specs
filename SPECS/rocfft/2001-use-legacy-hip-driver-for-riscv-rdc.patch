@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use the legacy LLVM 23 HIP driver for RISC-V RDC links
+
+LLVM 23's clang-linker-wrapper creates its host registration object with
+empty CPU features, selecting the soft-float ABI on RISC-V. Linking this
+object with the LP64D host libraries fails with both BFD and LLD.
+The legacy HIP driver emits a correctly typed host registration object.
+Select it for compile and link on RISC-V with Clang 23 only, preserving
+all distribution flags and relocatable device code support.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,6 +51,15 @@
+ 
+ project( rocfft LANGUAGES CXX C )
+ 
++# LLVM 23's new HIP linker wrapper emits a soft-float registration object on
++# RISC-V. The legacy HIP driver keeps the host LP64D ABI while retaining RDC.
++if(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64"
++   AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
++   AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "23"
++   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "24")
++  string(APPEND CMAKE_CXX_FLAGS " --no-offload-new-driver")
++endif()
++
+ include(GNUInstallDirs)
+ 
+ # This finds the rocm-cmake project, and installs it if not found

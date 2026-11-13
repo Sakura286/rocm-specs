@@ -31,6 +31,7 @@ BuildSystem:    cmake
 BuildOption(prep):  -n rocfft
 
 Patch0:         0001-cmake-use-gnu-installdirs.patch
+Patch1:         2001-use-legacy-hip-driver-for-riscv-rdc.patch
 
 # LLVM 23's HIP bundler requires the host triple's environment field.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
