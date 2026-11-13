@@ -39,6 +39,7 @@ Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock
 # rocisa compiles the release-matched conversion glue into its Python module.
 #!RemoteAsset:  sha256:acc43368e45179c66492e90ba766f4a1001342f3eb244e378291baa4afa160ca
 Source1:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/stinkytofu.tar.gz
+Source2:        2003-upstream-true16-stinkytofu.patch
 BuildSystem:    cmake
 
 BuildOption(prep):  -n hipblaslt
@@ -62,9 +63,6 @@ BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
-# This release's external-op generators emit legacy Fake16 operands. LLVM 24
-# defaults to Real16; select its supported compatibility mode for these ASM TUs.
-BuildOption(conf):  -DCMAKE_ASM_FLAGS="-Xclangas -target-feature -Xclangas -real-true16"
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 %ifarch riscv64
@@ -82,7 +80,8 @@ BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
-BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}
+# Keep the upstream true16 conversion glue and installed library paired.
+BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}-5
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
@@ -135,6 +134,8 @@ BuildRequires:  cmake(GTest)
 # output the silent phase trips OBS's logidlelimit and times out on slow workers
 # (riscv64 emulation). Same fix as mainline rocm-specs hipblaslt.
 2002-tensilelite-add-heartbeat-during-parallel-map.patch
+# Complete hipBLASLt side of merged upstream true16 operand support.
+2004-upstream-true16-hipblaslt.patch
 
 %global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix
@@ -168,6 +169,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # find_package still links the separately built system StinkyTofu library.
 mkdir -p ../../shared
 tar -xf %{SOURCE1} -C ../../shared
+(cd ../../shared/stinkytofu && patch --fuzz=0 -p1 < %{SOURCE2})
 # Use the system compiler names in source-tree Tensile invocations.
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 

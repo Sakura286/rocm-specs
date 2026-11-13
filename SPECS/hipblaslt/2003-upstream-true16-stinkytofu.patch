@@ -1,0 +1,365 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Backport upstream true16 operand half selection
+
+Upstream: https://github.com/ROCm/rocm-libraries/commit/bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2
+Upstream-PR: https://github.com/ROCm/rocm-libraries/pull/10052 (merged)
+Upstream-Commit: bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2
+
+Carry the complete shared/stinkytofu subtree change; the companion subtree is carried
+by the matching StinkyTofu/hipBLASLt packages. Only strip the monorepo path
+prefix. No prerequisite source changes were needed on therock-10.1.
+
+diff --git a/hardware/src/gfx/Gfx1250/Gfx1250Instructions.def b/hardware/src/gfx/Gfx1250/Gfx1250Instructions.def
+index 8a803dcc029d..cfde56527055 100644
+--- a/hardware/src/gfx/Gfx1250/Gfx1250Instructions.def
++++ b/hardware/src/gfx/Gfx1250/Gfx1250Instructions.def
+@@ -750,6 +750,15 @@ DEF_T(VCndmaskB32Inst, "v_cndmask_b32", .format = VOP2, .logical = "VCndMaskB32"
+         {S2, src2, sreg, M64},
+     },
+ )
++// true16 16-bit select (VOP3-only); half-word (.l/.h) rides on the operands.
++DEF_T(VCndmaskB16Inst, "v_cndmask_b16", .format = VOP3, .logical = "VCndMaskB16",
++    .operand_fields = {
++        {D0, vdst, vgpr, 16},
++        {S0, src0, src, 16},
++        {S1, src1, src, 16},
++        {S2, src2, sreg, M64},
++    },
++)
+ DEF_T(VFmacF32Inst, "v_fmac_f32", .format = VOP2, .logical = "VMacF32",
+     .operand_fields = {
+         {D0, vdst, vgpr, 32, RW},
+diff --git a/hardware/src/gfx/Gfx1250v0/Gfx1250v0Instructions.def b/hardware/src/gfx/Gfx1250v0/Gfx1250v0Instructions.def
+index 00c4332fe8e9..199c57b83976 100644
+--- a/hardware/src/gfx/Gfx1250v0/Gfx1250v0Instructions.def
++++ b/hardware/src/gfx/Gfx1250v0/Gfx1250v0Instructions.def
+@@ -777,6 +777,15 @@ DEF_T(VCndmaskB32Inst, "v_cndmask_b32", .format = VOP2, .logical = "VCndMaskB32"
+         {S2, src2, sreg, M64},
+     },
+ )
++// true16 16-bit select (VOP3-only); half-word (.l/.h) rides on the operands.
++DEF_T(VCndmaskB16Inst, "v_cndmask_b16", .format = VOP3, .logical = "VCndMaskB16",
++    .operand_fields = {
++        {D0, vdst, vgpr, 16},
++        {S0, src0, src, 16},
++        {S1, src1, src, 16},
++        {S2, src2, sreg, M64},
++    },
++)
+ DEF_T(VFmacF32Inst, "v_fmac_f32", .format = VOP2, .logical = "VMacF32",
+     .operand_fields = {
+         {D0, vdst, vgpr, 32, RW},
+diff --git a/hardware/src/gfx/common/Gfx125xRocisaMaps.hpp b/hardware/src/gfx/common/Gfx125xRocisaMaps.hpp
+index 228de3c4a600..428dc7403780 100644
+--- a/hardware/src/gfx/common/Gfx125xRocisaMaps.hpp
++++ b/hardware/src/gfx/common/Gfx125xRocisaMaps.hpp
+@@ -321,6 +321,7 @@ inline void setRocisaToArchMap(GpuArch& registry) {
+         {"VOrB32", "v_or_b32"},
+         {"VXorB32", "v_xor_b32"},
+         {"VCndMaskB32", "v_cndmask_b32"},
++        {"VCndMaskB16", "v_cndmask_b16"},
+         {"VLShiftLeftB16", "v_lshlrev_b16"},
+         {"VLShiftLeftB32", "v_lshlrev_b32"},
+         {"VLShiftRightB32", "v_lshrrev_b32"},
+diff --git a/include/stinkytofu/ir/logical/LogicalInstructions.hpp b/include/stinkytofu/ir/logical/LogicalInstructions.hpp
+index ff1400d4b901..621771a58c25 100644
+--- a/include/stinkytofu/ir/logical/LogicalInstructions.hpp
++++ b/include/stinkytofu/ir/logical/LogicalInstructions.hpp
+@@ -90,6 +90,7 @@ class LogicalInstruction : public IRBase {
+     std::optional<DSModifiers> ds;             ///< LDS/GDS modifier
+     std::optional<MUBUFModifiers> mubuf;       ///< MUBUF (buffer load/store) modifier
+     std::optional<VOP3PModifiers> vop3;        ///< VOP3P (op_sel) modifier
++    std::optional<True16Modifiers> true16;     ///< True16 (.l/.h half-select) modifier
+     std::optional<std::vector<int>> memtoken;  ///< Memory token IDs for LDS dependency tracking
+     std::optional<std::array<int, 5>>
+         swaitcnt;  ///< s_waitcnt values {vlcnt,vscnt,dlcnt,dscnt,kmcnt} for gfx12+ split
+diff --git a/python_module/src/python_bindings.cpp b/python_module/src/python_bindings.cpp
+index f1fb3f3598f5..c4af4ba4ed31 100644
+--- a/python_module/src/python_bindings.cpp
++++ b/python_module/src/python_bindings.cpp
+@@ -634,6 +634,17 @@ NB_MODULE(_stinkytofu, m) {
+             nb::arg("op_sel") = std::vector<int>{}, nb::arg("op_sel_hi") = std::vector<int>{},
+             nb::arg("byte_sel") = std::vector<int>{},
+             "Set VOP3P (op_sel/op_sel_hi/byte_sel) modifiers")
++        .def(
++            "set_true16",
++            [](LogicalInstruction& inst, int dst0, int dst1, const std::vector<int>& srcs) {
++                std::vector<HighBitSel> srcSels;
++                srcSels.reserve(srcs.size());
++                for (int s : srcs) srcSels.push_back(static_cast<HighBitSel>(s));
++                inst.true16 = True16Modifiers(static_cast<HighBitSel>(dst0),
++                                              static_cast<HighBitSel>(dst1), srcSels);
++            },
++            nb::arg("dst0") = -1, nb::arg("dst1") = -1, nb::arg("srcs") = std::vector<int>{},
++            "Set True16 (.l/.h half-select) modifiers (HighBitSel ints: NONE=-1, LOW=0, HIGH=1)")
+         .def(
+             "set_memtoken",
+             [](LogicalInstruction& inst, const std::vector<int>& tokens) {
+diff --git a/src/conversion/rocisa/ToStinkyTofuUtils.cpp b/src/conversion/rocisa/ToStinkyTofuUtils.cpp
+index be521351686e..7acc06316e1f 100644
+--- a/src/conversion/rocisa/ToStinkyTofuUtils.cpp
++++ b/src/conversion/rocisa/ToStinkyTofuUtils.cpp
+@@ -659,41 +659,49 @@ void handleSWaitLoadcntModifiers(StinkyInstruction* stinkyInst,
+     }
+ }
+ 
+-/// Helper to handle VCvt instruction True16 modifiers
+-void handleVCvtTrue16Modifiers(StinkyInstruction* stinkyInst,
+-                               const rocisa::VCvtInstruction* vcvtInst) {
+-    if (vcvtInst->true16.empty()) {
+-        return;
+-    }
+-
+-    // Convert rocisa::True16Modifiers to stinkytofu True16Modifiers
+-    // rocisa uses indices: DST=0, DST1=1, SRC0=2, SRC1=3, ...
+-    stinkytofu::HighBitSel dst0 = stinkytofu::HighBitSel::NONE;
+-    stinkytofu::HighBitSel dst1 = stinkytofu::HighBitSel::NONE;
+-    std::vector<stinkytofu::HighBitSel> srcs;
++/// Derive true16 ".l"/".h" selects from operand halfSelect and attach a
++/// True16Modifiers so the suffixes survive lowering.
++void attachTrue16ModifiersFromOperands(StinkyInstruction* stinkyInst,
++                                       const std::shared_ptr<rocisa::Container>& dst,
++                                       const std::shared_ptr<rocisa::Container>& dst1,
++                                       const std::vector<InstructionInput>& srcs) {
++    // rocisa and stinkytofu share the same HighBitSel values (NONE=-1, LOW=0, HIGH=1).
++    auto regHalf = [](const rocisa::Container* cont) -> stinkytofu::HighBitSel {
++        auto* reg = dynamic_cast<const rocisa::RegisterContainer*>(cont);
++        if (reg && reg->halfSelect.has_value()) {
++            return static_cast<stinkytofu::HighBitSel>(static_cast<int>(*reg->halfSelect));
++        }
++        return stinkytofu::HighBitSel::NONE;
++    };
++    auto inputHalf = [&](const InstructionInput& in) -> stinkytofu::HighBitSel {
++        if (auto pptr = std::get_if<std::shared_ptr<rocisa::Container>>(&in)) {
++            return regHalf(pptr->get());
++        }
++        return stinkytofu::HighBitSel::NONE;
++    };
+ 
+-    for (size_t i = 0; i < vcvtInst->true16.size(); ++i) {
+-        stinkytofu::HighBitSel highBit =
+-            static_cast<stinkytofu::HighBitSel>(static_cast<int>(vcvtInst->true16[i].high_bit));
++    stinkytofu::HighBitSel dst0 = regHalf(dst.get());
++    stinkytofu::HighBitSel dstHi = regHalf(dst1.get());
++    std::vector<stinkytofu::HighBitSel> srcSels;
++    for (const auto& src : srcs) {
++        srcSels.push_back(inputHalf(src));
++    }
+ 
+-        if (i == 0)  // DST
+-        {
+-            dst0 = highBit;
+-        } else if (i == 1)  // DST1
+-        {
+-            dst1 = highBit;
+-        } else  // SRC0, SRC1, ...
+-        {
+-            srcs.push_back(highBit);
+-        }
++    // No operand tagged -> legacy / non-true16 op; emit no true16 modifier.
++    bool any = dst0 != stinkytofu::HighBitSel::NONE || dstHi != stinkytofu::HighBitSel::NONE;
++    for (auto s : srcSels) {
++        any = any || s != stinkytofu::HighBitSel::NONE;
++    }
++    if (!any) {
++        return;
+     }
+ 
+     // Assert that source count is within the 2-bit encoding limit (max 6 sources)
+-    assert(srcs.size() <= 6 &&
++    assert(srcSels.size() <= 6 &&
+            "True16Modifiers: source count must be <= 6 for uint16_t 2-bit encoding");
+ 
+     stinkyInst->addModifier<stinkytofu::True16Modifiers>(
+-        stinkytofu::True16Modifiers(dst0, dst1, srcs));
++        stinkytofu::True16Modifiers(dst0, dstHi, srcSels));
+ }
+ 
+ /// Add modifiers to StinkyInstruction (DS, FLAT, MUBUF, SMEM, WaitCnt, DelayAlu)
+@@ -753,11 +761,17 @@ void addModifiersToInstruction(StinkyInstruction* stinkyInst, const rocisa::Inst
+             TRY_ADD_MOD(CommonInstruction, sdwa, stinkytofu::SDWAModifiers, convertSDWAModifiers)
+             TRY_ADD_MOD(CommonInstruction, dpp, stinkytofu::DPPModifiers, convertDPPModifiers)
+ 
++            // true16: 16-bit operands carry their half-word select as a .l/.h suffix
++            // on the register. Attach generically; no-op when no operand is tagged,
++            // so packed (v_pk_*) and 32-bit ops are unaffected.
++            HANDLE_INST_TYPE(rocisa::CommonInstruction,
++                             attachTrue16ModifiersFromOperands(stinkyInst, typedInst->dst,
++                                                               typedInst->dst1, typedInst->srcs))
++
+             // VOP/SOP instructions - these can overlap with CommonInstruction base class
+             HANDLE_INST_TYPE(rocisa::MXMFMAInstruction, handleMXMFMAModifiers(stinkyInst, itemToString(inst)))
+             else HANDLE_INST_TYPE(rocisa::MFMAInstruction, handleMFMAModifiers(stinkyInst, itemToString(inst)))
+             else HANDLE_INST_TYPE(rocisa::SMFMAInstruction, handleSMFMAModifiers(stinkyInst, itemToString(inst)))
+-            else HANDLE_INST_TYPE(rocisa::VCvtInstruction, handleVCvtTrue16Modifiers(stinkyInst, typedInst))
+ 
+             // Control/Synchronization instructions, separate from VOP/SOP
+             else HANDLE_INST_TYPE(rocisa::SDelayAlu,
+diff --git a/src/ir/logical/LogicalInstructionDefs.inc b/src/ir/logical/LogicalInstructionDefs.inc
+index c6bd78705699..850fa59a5b56 100644
+--- a/src/ir/logical/LogicalInstructionDefs.inc
++++ b/src/ir/logical/LogicalInstructionDefs.inc
+@@ -683,6 +683,16 @@
+              true,
+              true,
+              false,
++             "IF_VALU"},
++
++                                    {"VCndMaskB16",
++             "VCndMaskB16",
++             3,
++             true,
++             "Vector Other",
++             true,
++             true,
++             false,
+              "IF_VALU"},
+ 
+                                     {"VLShiftLeftB16",
+diff --git a/src/transforms/logical/ToStinkyAsmPass.cpp b/src/transforms/logical/ToStinkyAsmPass.cpp
+index 7f575e41ad3b..c6e4f0133a6d 100644
+--- a/src/transforms/logical/ToStinkyAsmPass.cpp
++++ b/src/transforms/logical/ToStinkyAsmPass.cpp
+@@ -362,6 +362,9 @@ StinkyInstruction* createAsmFromIR(LogicalInstruction* irInst, GfxArchID arch) {
+     if (irInst->vop3.has_value()) {
+         asmInst->addModifier<VOP3PModifiers>(irInst->vop3.value());
+     }
++    if (irInst->true16.has_value()) {
++        asmInst->addModifier<True16Modifiers>(irInst->true16.value());
++    }
+     if (irInst->memtoken.has_value()) {
+         asmInst->addModifier<MemTokenData>(MemTokenData{irInst->memtoken.value()});
+     }
+diff --git a/tests/unit/logical/LogicalToAsmMultiArchTest.cpp b/tests/unit/logical/LogicalToAsmMultiArchTest.cpp
+index cb54ea61d0b8..5ac6308995dd 100644
+--- a/tests/unit/logical/LogicalToAsmMultiArchTest.cpp
++++ b/tests/unit/logical/LogicalToAsmMultiArchTest.cpp
+@@ -160,6 +160,8 @@ static LogicalInstruction* createTestInstruction(logical::Opcode opcode) {
+             return VPrngB32(vgpr(0), vgpr(1));
+         case logical::VCndMaskB32:
+             return VCndMaskB32(vgpr(0), vgpr(1), vgpr(2), vgpr(3));
++        case logical::VCndMaskB16:
++            return VCndMaskB16(vgpr(0), vgpr(1), vgpr(2), vgpr(3));
+         case logical::VLShiftLeftB16:
+             return VLShiftLeftB16(vgpr(0), vgpr(1), vgpr(2));
+         case logical::VLShiftLeftB32:
+@@ -867,6 +869,7 @@ static const std::vector<OpcodeMnemonicPair> EXPECTED_LOWERING_GFX1250 = {
+     {logical::VXorB32, "v_xor_b32"},
+     {logical::VAndOrB32, "v_and_or_b32"},
+     {logical::VCndMaskB32, "v_cndmask_b32"},
++    {logical::VCndMaskB16, "v_cndmask_b16"},
+     // Vector Shift
+     {logical::VLShiftLeftB32, "v_lshlrev_b32"},
+     {logical::VLShiftRightB32, "v_lshrrev_b32"},
+diff --git a/tests/unit/logical/LogicalToAsmPipelineTest.cpp b/tests/unit/logical/LogicalToAsmPipelineTest.cpp
+index bbe7e9b4e5bf..2cfae8d44ba3 100644
+--- a/tests/unit/logical/LogicalToAsmPipelineTest.cpp
++++ b/tests/unit/logical/LogicalToAsmPipelineTest.cpp
+@@ -114,3 +114,107 @@ TEST_F(IRToAsmPipelineTest, SimpleVectorALU) {
+ 
+     // TODO: Step 4: Emit assembly string and verify output
+ }
++
++/**
++ * True16Modifiers set on a LogicalInstruction must survive logical->asm
++ * lowering and render as the .l/.h operand suffix, for every instruction shape
++ * that can carry a half. The modifier is the channel a half-select has to ride
++ * on through the logical IR, because op_sel would bypass stinkytofu's
++ * true16-aware SSA/wait passes.
++ *
++ * Scope: this covers lowering and emission only. Producers are tested where
++ * they live -- the pure-Python rocisa_stinkytofu_adaptor's
++ * t16 -> _apply_true16 -> to_stinky_logical chain in its own
++ * tests/test_true16.py and tests/test_emission_consistency.py (the t16-tagged
++ * three-path cases), and the C++ bridge's
++ * attachTrue16ModifiersFromOperands in the rocisa conversion tests. Do not
++ * read a pass here as coverage of either.
++ */
++TEST_F(IRToAsmPipelineTest, True16HalfSelectSurvivesLowering) {
++    using H = HighBitSel;
++    Function func("kernel");
++    BasicBlock* entryBB = func.createBasicBlock("entry");
++
++    // Inject an already-derived modifier: this test deliberately starts after
++    // the derivation step, so it says nothing about whether a producer tags its
++    // operands correctly (see the scope note above).
++    auto add = [&](LogicalInstruction* inst, H dst0, const std::vector<H>& srcs) {
++        inst->true16 = True16Modifiers(dst0, H::NONE, srcs);
++        entryBB->appendIR(static_cast<IRBase*>(inst));
++    };
++
++    // Binary f16 ALU (dst, src0, src1) -- HIGH and LOW both exercised.
++    add(VAddF16(v0, v1, v2), H::HIGH, {H::HIGH, H::HIGH});
++    add(VMulF16(v0, v1, v2), H::HIGH, {H::HIGH, H::HIGH});
++    add(VMaxF16(v0, v1, v2), H::LOW, {H::LOW, H::LOW});
++    add(VMinF16(v0, v1, v2), H::LOW, {H::LOW, H::LOW});
++    // Unary f16 transcendentals (dst, src0).
++    add(VExpF16(v0, v1), H::HIGH, {H::HIGH});
++    add(VRcpF16(v0, v1), H::LOW, {H::LOW});
++    // Ternary fma (dst, src0, src1, src2).
++    add(VFmaF16(v0, v1, v2, v3), H::HIGH, {H::HIGH, H::HIGH, H::HIGH});
++    // f16 compares (mask dst has no half; both srcs do).
++    add(VCmpGTF16(v0, v1, v2), H::NONE, {H::HIGH, H::HIGH});
++    add(VCmpGEF16(v0, v1, v2), H::NONE, {H::LOW, H::LOW});
++    // b16 select (src2 is VCC -> no half) and b16 shift (shift amount is src0).
++    add(VCndMaskB16(v0, v1, v2, v3), H::HIGH, {H::HIGH, H::HIGH});
++    add(VLShiftLeftB16(v0, v1, v2), H::HIGH, {H::NONE, H::HIGH});
++    // Conversions: half rides on whichever operand carries the 16-bit value.
++    add(VCvtF16toF32(v0, v1), H::NONE, {H::HIGH});     // f16 src -> f32 dst
++    add(VCvtF32toF16(v0, v1), H::HIGH, {H::NONE});     // f32 src -> f16 dst
++    add(VCvtPkFP8toF32(v0, v1), H::NONE, {H::HIGH});   // packed-fp8 src
++    add(VCvtPkBF8toF32(v0, v1), H::NONE, {H::HIGH});   // packed-bf8 src
++    add(PVCvtBF16toFP32(v0, v1), H::NONE, {H::HIGH});  // bf16 src
++
++    PassManager pm;
++    GemmTileConfig config;
++    config.arch = {12, 5, 0};  // Gfx1250
++    config.TileA0 = 16;
++    config.TileB0 = 16;
++    config.TileM0 = 16;
++    config.NumGRA = 4;
++    config.NumGRB = 4;
++    config.NumGRM = 4;
++    config.NumWaves = 1;
++    pm.setGemmTileConfig(config);
++    pm.addPass(createCompositeInstructionLoweringPass());
++    pm.addPass(createToStinkyAsmPass());
++    pm.run(func);
++
++    StinkyAsmEmitter emitter;
++    std::string asmText;
++    for (BasicBlock& bb : func) {
++        for (IRBase& ir : bb) {
++            if (ir.getType() == IRBase::IRType::StinkyTofu) {
++                asmText += emitter.emit(static_cast<StinkyInstruction&>(ir)) + "\n";
++            }
++        }
++    }
++
++    // Every expected line must appear verbatim; a dropped half-select would
++    // silently strip the .l/.h suffix (the exact bug this guards against).
++    const std::vector<std::string> expected = {
++        "v_add_f16 v0.h, v1.h, v2.h",
++        "v_mul_f16 v0.h, v1.h, v2.h",
++        "v_max_f16 v0.l, v1.l, v2.l",
++        "v_min_f16 v0.l, v1.l, v2.l",
++        "v_exp_f16 v0.h, v1.h",
++        "v_rcp_f16 v0.l, v1.l",
++        "v_fma_f16 v0.h, v1.h, v2.h, v3.h",
++        "v_cmp_gt_f16 v0, v1.h, v2.h",
++        "v_cmp_ge_f16 v0, v1.l, v2.l",
++        "v_cndmask_b16 v0.h, v1.h, v2.h",
++        "v_lshlrev_b16 v0.h, v1, v2.h",
++        "v_cvt_f32_f16 v0, v1.h",
++        "v_cvt_f16_f32 v0.h, v1",
++        "v_cvt_pk_f32_fp8 v0, v1.h",
++        "v_cvt_pk_f32_bf8 v0, v1.h",
++        "v_cvt_f32_bf16 v0, v1.h",
++    };
++    for (const std::string& want : expected) {
++        EXPECT_NE(asmText.find(want), std::string::npos)
++            << "true16 half-select missing/dropped; expected line:\n  " << want
++            << "\nfull assembly:\n"
++            << asmText;
++    }
++}
