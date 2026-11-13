@@ -25,6 +25,7 @@ Source0:        %{url}/archive/%{source_commit}.tar.gz
 Source1:        static-device-constexpr.hip
 Patch0:         0000-llvm-pr-216938.patch
 Patch1:         0001-llvm-pr-233925.patch
+Patch2:         0002-llvm-pr-168164.patch
 %if "%{openruyi_riscv_arch}" == "-march=rva23u64"
 Patch2000:      2000-Add-riscv64-openruyi-linux-triple-and-set-it-to-rva2.patch
 %endif
@@ -75,7 +76,7 @@ Requires:       clang24-libs = %{snapshot_version}
 
 %description
 An isolated Clang frontend and linker wrapper built from the openRuyi LLVM
-snapshot, with upstream pull requests 216938 and 233925. The pull requests
+snapshot, with upstream pull requests 216938, 233925 and 168164. The pull requests
 are experimental and were not merged when backported. LLVM libraries,
 compiler runtime, resource headers and device libraries come from the
 matching distribution snapshot. Tools install under %{compiler_prefix}.
@@ -103,6 +104,9 @@ export LD_LIBRARY_PATH="$PWD/%{_vpath_builddir}/lib:%{_libdir}/llvm%{llvm_major}
 %{_vpath_builddir}/bin/clang-linker-wrapper --dry-run --host-triple=%{_target_platform} --emit-fatbin-only host-triple.out -o host-triple.hipfb > host-triple.log 2>&1
 grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
 %{_vpath_builddir}/bin/clang -x hip --offload-arch=gfx1100 -fsyntax-only %{SOURCE1}
+# Upstream host-feature forwarding, checked even by the x86_64 build.
+%{_vpath_builddir}/bin/clang --target=riscv64-unknown-linux-gnu -march=rv64gc -mabi=lp64d -x hip -fgpu-rdc --offload-arch=gfx1100 -### %{SOURCE1} -o riscv-features.out > riscv-features.log 2>&1
+grep -q -- '--host-features=.*+f.*+d' riscv-features.log
 
 # Exercise the installed tool set, without the build-tree component libraries.
 # Linker-wrapper links clangBasic directly; individual Clang components must be
@@ -110,6 +114,11 @@ grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
 LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
     %{buildroot}%{compiler_prefix}/bin/clang -x hip \
     --offload-arch=gfx1100 -fPIC -c %{SOURCE1} -o deployed-device-constexpr.o
+
+# RDC creates a host registration object; it must use the native floating ABI.
+LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
+    %{buildroot}%{compiler_prefix}/bin/clang++ -x hip -fgpu-rdc \
+    --offload-arch=gfx1100 -fPIC -shared %{SOURCE1} -lamdhip64 -o deployed-rdc.so
 
 printf 'int main(void) { return 0; }\n' > installed-lto.c
 LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
