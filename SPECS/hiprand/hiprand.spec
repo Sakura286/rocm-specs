@@ -15,6 +15,11 @@
 
 %global llvm_maj_ver 23
 
+%ifarch riscv64
+# Avoid the 4-job emulated pool: repeated preinstall /dev/null mount failures.
+#!BuildConstraint: hardware:jobs 8
+%endif
+
 Name:           hiprand
 Version:        %{rocm_version}
 Release:        %autorelease
