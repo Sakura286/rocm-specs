@@ -8,9 +8,14 @@
 # Tests consumes too much time and space
 %bcond test 0
 
-%global rocm_version 7.2.4
+%global rocm_version 10.1.0
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
+
+%ifarch riscv64
+# Generated GPU kernels require native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
+%endif
 
 Name:           rocblas
 Summary:        BLAS implementation for ROCm
@@ -18,9 +23,11 @@ Version:        %{rocm_version}
 Release:        %autorelease
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocBLAS
-#!RemoteAsset:  sha256:39ccaf6a0009a131b7daf3b21e14517f864f7642f109fa2da6dec1127b4a85e0
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:2f75fdc285a80f0e7dfaf807a15288961427c8867141fd39c4dbef0ee6fff802
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocblas.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocblas
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/cblas
@@ -59,12 +66,12 @@ BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
 # https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
-Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(msgpack)
@@ -126,10 +133,7 @@ sed -i -e 's@find_package(Git REQUIRED)@find_package(Git)@' library/CMakeLists.t
 #   279 | #error C++ versions less than C++14 are not supported.
 sed -i -e 's@CXX_STANDARD 11@CXX_STANDARD 17@' clients/samples/CMakeLists.txt
 sed -i "s@/opt/rocm@%{_prefix}@g" \
-    clients/cmake/FindROCmSMI.cmake \
     clients/CMakeLists.txt \
-    rmake.py \
-    rmake.py \
     rmake.py \
     toolchain-linux.cmake \
     header_compilation_tests.sh \
