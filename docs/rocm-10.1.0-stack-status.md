@@ -146,3 +146,15 @@
 - rocRAND 与 hipRAND 原生构建完成，实际 RPM 的联合 CMake/API/Philox 验证通过：版本 API 均 500000、256 个样本可重复且两接口一致；同一消费者的 StinkyTofu/Origami/ROCtracer API 通过，见 `validation/math-consumer-native-riscv64.log`。构建目录首次新建并实际编译、链接、执行；SG2044 时钟比 RPM mtime 慢约 319 秒，Make 有 clock-skew 提示，未修改机器全局时钟。
 - rocminfo 实际 riscv64 RPM 在无 GPU 环境正常给出 ROCk 未加载诊断并返回 1；显式 ROCM_TARGET_LST 配置枚举正确输出 gfx1100/gfx1200。证据 `validation/rocminfo-native-riscv64.log`，GPU agent 发现未验证。
 - 原生 rocBLAS 完成全部 Tensile 生成（约 2322 秒），现编译库本体；RCCL、hipCUB、FFT、带宽工具及 Clang 的原生构建继续跟踪。后续仍先修 Clang→rocSPARSE 主链，并及时验证已发布的实际 RPM。
+
+### 主链继续推进（最新记录）
+
+- RCCL 原生后段在 net/coll_net 的通用路径缺少 ncclGdrCudaRead。`9d1ba71` 回移已合并 ROCm 提交 `6305765daacadbbef27e921c1907f13674e71fbd`（PR 10519，2026-09-14 合并），仅去掉 projects/rccl 路径前缀；两文件 fuzz=0 应用，无源码前置提交。上游在 PPC64LE/MI210 验证过，当前 RISC-V 仅做构建/CPU 范围，不声称 GPU DMA ordering 已验证。两个架构正在重建。
+- rocSOLVER 源码明确强制 --rtlib=compiler-rt，`b28c3e3` 提前复用已验证的构建内 resource-dir aliases，覆盖 CXX/HIP 及 RISC-V GCC 参数；未等待全库编译完再处理同类路径错误。
+- `78c2091` 给安装目录 HIP 集成检查补上真实 HIP runtime 声明及设备库依赖；先前 raw fixture 在 codegen 阶段缺少 hipLaunchKernel 声明，属于测试夹具缺项。`8c5eb6b` 过滤私有 cpp 的全局 Provides，实际 10.1 RPM 只提供包名/ISA，见 `validation/rocm-clang-provides-x86_64.log`。
+- Clang 10.1 RPM 的完整 HIP 编译/链接通过，但 rocSPARSE 默认 LTO 探测暴露私有前缀无 LLVMgold.so。`34d32ed` 加入指向同 snapshot 系统 LLVMgold.so 的 symlink，补齐运行工具依赖并新增安装目录默认 LTO 编译/执行检查。Clang 11.1 x86_64 出包/检查及实际 RPM 验证通过：资源目录为系统 /usr/lib64/llvm24/lib/clang/24，constexpr 复现、gfx1100/gfx1200 编译和共享库链接成功，见 `validation/rocm-clang-rpm-x86_64.log`。原系统编译器对同一真实 HIP 夹具仍报 global initializer 错误，negative control 日志已保存。
+- 注意验证环境 /usr/lib64 下本来就有指向系统 cpp 的 SONAME symlink，所以不能仅移除 LLVM 专用 LD_LIBRARY_PATH 而保留 /usr/lib64 优先；那仍会误载旧前端。`validation/private-clang.py` 最终恢复私有 cpp 首位选择，实际测试已成功；继承该环境的系统子工具可能有无版本信息提示，ABI 源码基线一致，保留日志。常规 OBS 环境不带该 runner 的路径覆盖。
+- rocSPARSE 的新 buildinfo 已解析到 rocm-clang 11.1，但旧失败未自动重试，已仅对 amd64_build/x86_64 执行一次 osc rebuild。现完整构建已推进到 618/622，原 constexpr 诊断消失；尚未将全库标记成功。
+- hipCUB 原生完整构建成功，实际 6.1 RPM 的独立 CMake 导入及 BlockReduce gfx1100/gfx1200 编译通过（`validation/cub-consumer-native-riscv64.log`）。此前底层 LP64D note 未令链接失败，不将该 note 误报为构建错误。
+- 原生 bandwidth 7.2.4 工具的四项 CPU CLI/插件检查全部通过，补入验证 root 的依赖为 parent spdlog 1.15.3-4.21。证据 `validation/bandwidth-cli-native-riscv64.log`、`bandwidth-cli-cpu-riscv64.json`；GPU engine 不在本阶段验证范围。
+- 当前仍需完成全部 35 包；原生 rocBLAS 已至 485/489，FFT 正在编译，Clang/RCCL 需等待大型 worker。继续主链、实际 RPM 验证及最新 source/build revision 核对，不在记录点结束。
