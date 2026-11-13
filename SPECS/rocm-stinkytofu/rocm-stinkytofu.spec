@@ -14,6 +14,7 @@ License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
 #!RemoteAsset:  sha256:acc43368e45179c66492e90ba766f4a1001342f3eb244e378291baa4afa160ca
 Source0:        %{url}/releases/download/therock-10.1/stinkytofu.tar.gz
+Patch0:         2003-upstream-true16-stinkytofu.patch
 BuildSystem:    cmake
 
 BuildOption(prep):  -n stinkytofu
