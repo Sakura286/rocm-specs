@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 # Linking AMD device libs code takes too much time
 # Set --lto-partitions can accelerate, but even --lto-partitions=4 is killed for OOM on riscv64
@@ -30,9 +30,11 @@ Summary:        ROCm Communication Collectives Library
 # The URL for NVIDIA in the License.txt https://github.com/NVIDIA/NVTX is Apache-2.0
 License:        BSD-3-Clause AND MIT AND Apache-2.0
 URL:            https://github.com/ROCm/rccl
-#!RemoteAsset:  sha256:e8927c61f76e70801e660a3482d383b30159d6f2a9e0580e5cdf168f2503e8c7
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:63372d58033da2eae69517dd8fabb9168d271586fc83b9ab86d25adff2243142
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rccl.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rccl
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -50,7 +52,9 @@ BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(fmt)
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  cmake(rocm-core)
 BuildRequires:  cmake(rocprofiler-register)
