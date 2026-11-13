@@ -44,6 +44,10 @@ BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+%ifarch riscv64
+# The native GCC directory omits the GNU environment required by offload IDs.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform}"
+%endif
 BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 
 BuildRequires:  make
@@ -103,6 +107,11 @@ export ROCM_PATH=%{_prefix}
 export ROCM_PATH=%{_prefix}
 export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu --rocm-device-lib-path=%{_libdir}/llvm24/lib/clang/24/amdgcn/bitcode"
 export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu --rocm-device-lib-path=%{_libdir}/llvm24/lib/clang/24/amdgcn/bitcode"
+
+%ifarch riscv64
+export HIPCC_COMPILE_FLAGS_APPEND="$HIPCC_COMPILE_FLAGS_APPEND --gcc-triple=%{_target_platform}"
+export HIPCC_LINK_FLAGS_APPEND="$HIPCC_LINK_FLAGS_APPEND --gcc-triple=%{_target_platform}"
+%endif
 
 %install -a
 chrpath --delete %{buildroot}%{_libdir}/libamd_tb.so*
