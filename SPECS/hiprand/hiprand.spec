@@ -29,6 +29,9 @@ BuildOption(prep):  -n hiprand
 
 BuildOption(conf):  -DROCRAND_FETCH_METHOD=PACKAGE
 BuildOption(conf):  -G Ninja
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_TEST=ON
@@ -43,6 +46,7 @@ BuildRequires:  cmake(GTest)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocrand-devel >= %{rocm_version}
 BuildRequires:  cmake(rocrand)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
