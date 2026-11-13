@@ -35,6 +35,9 @@ BuildOption(prep):  -n rocfft
 Patch0:         0001-cmake-use-gnu-installdirs.patch
 
 BuildOption(conf):  -G Ninja
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
