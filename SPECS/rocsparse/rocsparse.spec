@@ -31,6 +31,7 @@ BuildOption(prep):  -n rocsparse
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_WITH_OFFLOAD_COMPRESS=ON
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
+BuildOption(conf):  -DCMAKE_HIP_COMPILER=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin/clang++
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_LINKER=%{rocmllvm_bindir}/ld.lld
 BuildOption(conf):  -DCMAKE_AR=%{rocmllvm_bindir}/llvm-ar
@@ -60,6 +61,8 @@ BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 %endif
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
+# Upstream PR 233925 fixes static constexpr device initializer diagnostics.
+BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  compiler-rt24
 BuildRequires:  cmake
@@ -111,6 +114,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{summary}
 %endif
+
+%conf -p
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
+
+%build -p
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
 
 %prep -a
 # /usr/include/gtest/internal/gtest-port.h:273:2: error: C++ versions less than C++17 are not supported.
