@@ -26,6 +26,9 @@ BuildSystem:    cmake
 
 BuildOption(prep):  -n miopen
 
+# LLVM 23's HIP bundler requires the host triple's environment field.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -G Ninja
 # Do not run developer clang-tidy analysis during distribution builds.
 BuildOption(conf):  -DCLANG_TIDY_EXE=/usr/bin/true
@@ -124,7 +127,15 @@ sed -i -e 's@add_subdirectory(speedtests)@#add_subdirectory(speedtests)@' CMakeL
 # Use the standard data directory for the MIOpen kernel database
 sed -i -e 's@GetLibPath().parent_path() / "share/miopen/db"@"%{_datadir}/miopen/db"@' src/db_path.cpp.in
 
+%build -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+
 %conf -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %install -a
