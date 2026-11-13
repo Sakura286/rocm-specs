@@ -50,6 +50,9 @@ BuildOption(conf):  -DCLANG_RESOURCE_DIR=%{_libdir}/llvm%{llvm_major}/lib/clang/
 BuildOption(conf):  -DCMAKE_INSTALL_RPATH='%{compiler_prefix}/lib;%{_libdir}/llvm%{llvm_major}/lib'
 
 BuildRequires:  gcc-c++
+# The installed-tool integration check generates a real HIP host stub.
+BuildRequires:  rocm-hip-devel >= 10.1.0
+BuildRequires:  rocm-device-libs >= 10.1.0
 BuildRequires:  cmake
 BuildRequires:  ninja
 BuildRequires:  llvm24-devel = %{snapshot_version}
@@ -93,13 +96,13 @@ export LD_LIBRARY_PATH="$PWD/%{_vpath_builddir}/lib:%{_libdir}/llvm%{llvm_major}
 %{_libdir}/llvm%{llvm_major}/bin/llvm-offload-binary -o host-triple.out --image=file=%{SOURCE1},kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx1100
 %{_vpath_builddir}/bin/clang-linker-wrapper --dry-run --host-triple=%{_target_platform} --emit-fatbin-only host-triple.out -o host-triple.hipfb > host-triple.log 2>&1
 grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
-%{_vpath_builddir}/bin/clang -x hip -nogpuinc -nogpulib --offload-arch=gfx1100 -fsyntax-only %{SOURCE1}
+%{_vpath_builddir}/bin/clang -x hip --offload-arch=gfx1100 -fsyntax-only %{SOURCE1}
 
 # Exercise the installed tool set, without the build-tree component libraries.
 # Linker-wrapper links clangBasic directly; individual Clang components must be
 # static while the driver uses the shipped monolithic clang-cpp shared library.
 LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
-    %{buildroot}%{compiler_prefix}/bin/clang -x hip -nogpuinc -nogpulib \
+    %{buildroot}%{compiler_prefix}/bin/clang -x hip \
     --offload-arch=gfx1100 -fPIC -c %{SOURCE1} -o deployed-device-constexpr.o
 
 %files
