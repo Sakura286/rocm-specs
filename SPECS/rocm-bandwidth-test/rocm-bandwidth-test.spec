@@ -29,6 +29,7 @@ BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gn
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
+BuildOption(conf):  -DCMAKE_SKIP_RPATH=ON
 BuildOption(conf):  -DAMD_APP_ROCM_BUILD_AUTO_DETECT=OFF
 BuildOption(conf):  -DAMD_APP_SUBMODULES_TRY_CHECKOUT=OFF
 BuildOption(conf):  -DAMD_APP_COMPILER_TRY_CLANG=OFF
@@ -97,7 +98,7 @@ ln -s rocm_bandwidth_test %{buildroot}%{_bindir}/rocm-bandwidth-test
 
 %check
 # The command line parser can be checked without a GPU.
-%{_vpath_builddir}/rocm_bandwidth_test --help
+LD_LIBRARY_PATH=%{buildroot}%{_libdir} %{buildroot}%{_bindir}/rocm_bandwidth_test --help
 
 %files
 %doc README.md
