@@ -44,7 +44,17 @@ BuildOption(prep):  -n rccl
 BuildOption(conf):  -G Ninja
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
+%ifarch riscv64
+# The native GCC directory omits the GNU environment required by offload IDs.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
+%else
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="-resource-dir=$PWD/clang-resource"
+%endif
+%ifarch riscv64
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
+%else
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu -resource-dir=$PWD/clang-resource"
+%endif
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
@@ -127,6 +137,9 @@ sed -i '/^set(ENV{ROCM_PATH} ${ROCM_PATH})$/d' CMakeLists.txt
 # The standalone device-linker commands bypass CMAKE_CXX_COMPILER_TARGET.
 # Keep their host bundle triple consistent with CMake's normal HIP commands.
 sed -i 's@set(DL_HIP_COMPILER_FLAGS "")@set(DL_HIP_COMPILER_FLAGS "--target=%{_target_cpu}-openruyi-linux-gnu")@' cmake/DeviceLinker.cmake
+%ifarch riscv64
+sed -i '/^set(DL_HIP_COMPILER_FLAGS /a list(APPEND DL_HIP_COMPILER_FLAGS "--gcc-triple=%{_target_platform}")' cmake/DeviceLinker.cmake
+%endif
 # Do not force install
 sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependencies.cmake
 # -amdgpu-s-branch-bits and -amdgpu-long-branch-factor=2 are needed to avoid 'branch size exceed simm16' error
@@ -134,6 +147,15 @@ sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependen
 sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%{lto_partitions}" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
 %conf -p
+# The explicit GNU host target uses the same native ABI, but compiler-rt is
+# installed under the distribution triple without the environment suffix.
+# Use Clang's resource-dir option with build-local aliases; retain builtins and
+# coverage instrumentation without changing the system LLVM installation.
+mkdir -p clang-resource/lib
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/include clang-resource/include
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/amdgcn clang-resource/amdgcn
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_platform}
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_cpu}-openruyi-linux-gnu
 # Preserve compiler-probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
 export PATH=%{rocmllvm_bindir}:$PATH
