@@ -8,11 +8,16 @@
 # Need GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
+
+%ifarch riscv64
+# Generated kernels need native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
+%endif
 
 Name:           miopen
 Version:        %{rocm_version}
@@ -20,9 +25,11 @@ Release:        %autorelease
 Summary:        AMD's Machine Intelligence Library
 License:        MIT AND BSD-2-Clause AND Apache-2.0
 URL:            https://github.com/ROCm/MIOpen
-#!RemoteAsset:  sha256:983fda99d67d57f1354123101bea3af0f11f746d7ff3306bfc2700e6f6f5bb0f
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:1134726a9ffad9da77db3716031241fbe48f792a268bc83daf01cc6e33fe29d8
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/miopen.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n miopen
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
@@ -45,10 +52,14 @@ BuildOption(conf):  -DMIOPEN_USE_MLIR=OFF
 BuildRequires:  boost-devel
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
+BuildRequires:  hipblaslt-devel >= %{rocm_version}
 BuildRequires:  cmake(hipblaslt)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocblas-devel >= %{rocm_version}
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocrand-devel >= %{rocm_version}
 BuildRequires:  cmake(rocrand)
 %if %{with test}
 BuildRequires:  cmake(GTest)
@@ -66,6 +77,7 @@ BuildRequires:  pkgconfig(bzip2)
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  rocm-core-devel >= %{rocm_version}
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
@@ -76,9 +88,9 @@ Requires:       cmake(rocrand)
 Requires:       gcc-c++
 
 %patchlist
-2001-disable-clang-tidy.patch
+# Keep half conversion explicit for the distribution C++ toolchain.
 2002-workaround-half-float-expr-deduction.patch
-2003-disable-fno-offload-uniform-block.patch
+# Locate LLVM 24 under /usr/lib64, relative to the /usr ROCm prefix.
 2004-fix-clang-rel-path.patch
 
 %global _description %{expand:
