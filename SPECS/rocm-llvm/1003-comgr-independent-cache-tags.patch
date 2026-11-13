@@ -1,0 +1,111 @@
+From 5778526e3e788f8fa60bd8a8b37b2b737a1413ee Mon Sep 17 00:00:00 2001
+From: Jacob Lambert <jacob.lambert@amd.com>
+Date: Tue, 15 Sep 2026 15:48:18 -0700
+Subject: [PATCH] [Comgr] Stop tagging cache entries with clang driver action
+ classes (#4459)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+`UnbundleCommand::getClass()` returned
+`clang::driver::Action::OffloadUnbundlingJobClass` purely as a cache-key
+tag. Comgr never builds that driver action —
+`UnbundleCommand::execute()` calls `llvm::OffloadBundler` directly. The
+enumerator was only there to namespace UnbundleCommand's cache entries
+apart from ClangCommand's and SPIRVCommand's.
+
+Upstream [llvm#221093](https://github.com/llvm/llvm-project/pull/221093)
+removes that enumerator along with the rest of the old offloading driver
+leftovers left dead by llvm#211924. That breaks the comgr build, and
+forced the downstream revert `625c2d5e908b` on `amd-staging`
+(`revert_patches.txt`: *"joseph to modify comgr for unbundle"*).
+
+This is the comgr side of that. Allocate comgr's own tags above clang's
+action range so the cache key no longer depends on clang's enum layout
+at all:
+
+```c++
+enum ComgrActionClass : ActionClass {
+  SPIRVClass = clang::driver::Action::ActionClass::JobClassLast + 1,
+  UnbundleClass,
+};
+```
+
+`SPIRVCommand` keeps its existing `JobClassLast + 1`; `UnbundleCommand`
+takes `+ 2`. `ClangCommand` still reports the real driver action kind,
+which is always `<= JobClassLast`, so the two can't collide.
+
+Renumbering is safe for the cache:
+`CachedCommandAdaptor::getIdentifier()` already hashes
+`getClangFullVersion()` and `getComgrHashIdentifier()`, so an entry
+written by an older build can never be picked up by a newer one
+regardless of the tag value.
+
+### Verification
+
+`OffloadUnbundlingJobClass` is the only thing in `amd/` that llvm#221093
+removes. Rebuilt clang's `Action.h`, `Tool.h` and `CommonArgs.h` with
+that PR's deletions applied and ran `-fsyntax-only` over every comgr
+translation unit against them: one error before this change, none after.
+Nothing in `amd/` references `AddStaticDeviceLibs*`,
+`Tool::ConstructJobMultipleOutputs`,
+`constructGenerateObjFileFromHIPFatBinary` or
+`-fhip-dump-offload-linker-script`.
+
+This builds both with and without `OffloadUnbundlingJobClass` present,
+so it can land ahead of re-applying llvm#221093. That re-apply is a
+follow-up PR.
+---
+ amd/comgr/src/comgr-cache-command.h      | 9 +++++++++
+ amd/comgr/src/comgr-spirv-command.cpp    | 4 +---
+ amd/comgr/src/comgr-unbundle-command.cpp | 2 +-
+ 3 files changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/amd/comgr/src/comgr-cache-command.h b/amd/comgr/src/comgr-cache-command.h
+index 30bed678b967a..8a6b07d0f9340 100644
+--- a/amd/comgr/src/comgr-cache-command.h
++++ b/amd/comgr/src/comgr-cache-command.h
+@@ -25,6 +25,15 @@ class CachedCommandAdaptor {
+ public:
+   using ActionClass =
+       std::underlying_type_t<clang::driver::Action::ActionClass>;
++
++  // Cache-key tags for comgr commands that have no clang driver action.
++  // Allocated above clang's range so they cannot collide with a ClangCommand;
++  // the values only need to be unique within comgr.
++  enum ComgrActionClass : ActionClass {
++    SPIRVClass = clang::driver::Action::ActionClass::JobClassLast + 1,
++    UnbundleClass,
++  };
++
+   using HashAlgorithm = llvm::SHA256;
+   using Identifier = llvm::SmallString<64>;
+ 
+diff --git a/amd/comgr/src/comgr-spirv-command.cpp b/amd/comgr/src/comgr-spirv-command.cpp
+index 9385d774493b4..a30c8594b5e98 100644
+--- a/amd/comgr/src/comgr-spirv-command.cpp
++++ b/amd/comgr/src/comgr-spirv-command.cpp
+@@ -76,9 +76,7 @@ amd_comgr_status_t SPIRVCommand::execute(raw_ostream &LogS) {
+ }
+ 
+ SPIRVCommand::ActionClass SPIRVCommand::getClass() const {
+-  // return an action class that is not allocated to distinguish it from any
+-  // clang action
+-  return clang::driver::Action::ActionClass::JobClassLast + 1;
++  return CachedCommandAdaptor::SPIRVClass;
+ }
+ 
+ void SPIRVCommand::addOptionsIdentifier(HashAlgorithm &H) const {
+diff --git a/amd/comgr/src/comgr-unbundle-command.cpp b/amd/comgr/src/comgr-unbundle-command.cpp
+index 9f1b9f0b82a5c..ea262afbbf8e7 100644
+--- a/amd/comgr/src/comgr-unbundle-command.cpp
++++ b/amd/comgr/src/comgr-unbundle-command.cpp
+@@ -121,7 +121,7 @@ amd_comgr_status_t UnbundleCommand::execute(raw_ostream &LogS) {
+ }
+ 
+ CachedCommandAdaptor::ActionClass UnbundleCommand::getClass() const {
+-  return clang::driver::Action::OffloadUnbundlingJobClass;
++  return CachedCommandAdaptor::UnbundleClass;
+ }
+ 
+ void UnbundleCommand::addOptionsIdentifier(HashAlgorithm &H) const {

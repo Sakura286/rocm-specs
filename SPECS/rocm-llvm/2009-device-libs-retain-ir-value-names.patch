@@ -1,0 +1,19 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] device-libs: retain IR names for textual IR tests
+
+The distribution Clang defaults to discarding IR value names. The upstream
+atomic fence checks require the entry label. Explicitly retain names for
+these tests instead of changing their checks or the compiler implementation.
+The reviewed upstream test history has no corresponding harness fix.
+
+--- a/amd/device-libs/test/compile/RunCompileTest.cmake
++++ b/amd/device-libs/test/compile/RunCompileTest.cmake
+@@ -12,7 +12,7 @@
+ # individual tests.
+ 
+ execute_process(COMMAND
+-  ${CLANG_BIN} -O3 -S -cl-std=CL2.0
++  ${CLANG_BIN} -O3 -S -cl-std=CL2.0 -fno-discard-value-names
+   -target amdgcn-amd-amdhsa -mcpu=${TEST_CPU}
+   -Xclang -finclude-default-header
+   --rocm-path=${BINARY_DIR}

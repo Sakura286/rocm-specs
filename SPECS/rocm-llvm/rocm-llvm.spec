@@ -72,16 +72,35 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 %patchlist
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 0001-Use-signed-char-in-comgr-building.patch
-# Use system libc++ headers; implement postopt linking in COMGR below.
+# https://github.com/ROCm/llvm-project/commit/f327d0b1b4bc61ef9042747ffa77e70b92254c11
+1001-comgr-use-feature-bitsets.patch
+# Follow-up to 1001; retain upstream regression with 10.1 test context.
+# https://github.com/ROCm/llvm-project/commit/6b5ccd0e88b0eb23ba3103e730b8efd26ac9e8f8
+1002-comgr-sramecc-on-off-modes.patch
+# https://github.com/ROCm/llvm-project/commit/5778526e3e788f8fa60bd8a8b37b2b737a1413ee
+1003-comgr-independent-cache-tags.patch
+# https://github.com/ROCm/llvm-project/commit/25affef0d99027aee4dcdf573e6b2b9d174b04eb
+1004-device-libs-update-stale-tests.patch
+# https://github.com/ROCm/llvm-project/commit/3acdcc1e8f1feb831aa7e0238d8c850d2266799c
+1005-comgr-subarch-triples.patch
+# Depends on 1005.
+# https://github.com/ROCm/llvm-project/commit/2bc76dfeecf71b94d0f83487dadc42e75a2d1362
+1006-comgr-unbundle-subarch-tests.patch
+# https://github.com/ROCm/llvm-project/commit/fad9cb3d631c287314e2de2f190274fb8c866a01
+1007-comgr-gfx125-xnack-tests.patch
+# Independent test-unit hunk only; dynamic LLVM linkage is retained.
+# https://github.com/ROCm/llvm-project/commit/feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0
+1008-comgr-gtest-llvm-support.patch
+# Distribution path for the installed libc++ headers.
 2000-comgr-support-system-llvm.patch
-2001-comgr-use-llvm24-feature-bitsets.patch
-2002-comgr-use-independent-unbundle-cache-class.patch
+# Keep source Python lit separate from system LLVM tool paths.
 2003-comgr-separate-lit-and-tool-paths.patch
-2004-comgr-link-unit-test-llvm-dependencies.patch
-2005-comgr-preserve-postopt-device-linking.patch
-2006-device-libs-update-llvm24-checks.patch
+# Avoid host-only libstdc++ runtime assertions in the header coexistence test.
 2007-comgr-update-llvm24-test-expectations.patch
+# Exercise upstream postopt linking with the COMGR cache enabled and disabled.
 2008-comgr-test-cached-device-linking.patch
+# Upstream IR checks require names omitted by distribution Clang defaults.
+2009-device-libs-retain-ir-value-names.patch
 
 %description
 %{summary}
@@ -217,9 +236,8 @@ check_status=0
 # OCL.cmake mirrors the relative install path below the build directory.
 # Point Clang's --rocm-path at those freshly built libraries, not the host.
 ln -s %{amd_device_libs_install_dir} build-devicelibs/amdgcn
-# Full lgamma_r folding assumes AMD-specific folding of reciprocal intrinsics.
-# Keep those fixtures, but run the supported special-value checks instead.
-%{?with_device_libs_test:%ctest --exclude-regex '^constant_fold_lgamma_r__' || check_status=1}
+# Upstream 1004 accounts for non-foldable reciprocal intrinsics in lgamma_r.
+%{?with_device_libs_test:%ctest || check_status=1}
 
 # Test comgr
 %define _vpath_srcdir amd/comgr

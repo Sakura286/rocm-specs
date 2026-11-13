@@ -3,6 +3,7 @@
 本文件适用于 `Sakura286/rocm-specs` 的 `rocm10` 分支。在 openRuyi 工作区中，本分支使用独立副本 `rocm-specs-rocm10/`；工作区公共约定仍适用。
 
 - 实验目标：使用 openruyi 的 `llvm-snapshot`（LLVM 24）构建 ROCm 10.1.0。每个组件的源码标签或固定提交须核实；现有配方版本不代表目标已实现。
+- 兼容性修复优先回移可追溯的 LLVM／ROCm 上游提交，记录来源 URL、完整 SHA、前置依赖及回移时的必要调整。先核查上游方案，再考虑本地适配；分别记录 C++ API／ABI 变化和 AMD 专有功能差异，不以测试通过代替补丁来源及行为语义审查。
 - 持续计划与上下文恢复入口：[ROCm 10.1.0 移植计划](docs/rocm-10.1.0-port-plan.md)。按 `rocm-cmake` → `rocm-llvm` 推进；基础包通过 x86_64 快速验证后可推进下游快速验证，同时跟进 riscv64。两包均完成 riscv64 最终验收后才处理剩余组件。
 - Git 分支：`rocm10`；唯一对应的 OBS 项目：`home:Sakura286:ROCm10`；API：`https://pickaxe.oerv.ac.cn`。
 - 操作前核对当前分支、remote 和 workflow 目标。`main` 对应 `home:Sakura286:ROCm`，在独立主线副本中工作。跨分支引入提交时保留本分支的 workflow 及项目映射。

@@ -1,0 +1,86 @@
+From 2bc76dfeecf71b94d0f83487dadc42e75a2d1362 Mon Sep 17 00:00:00 2001
+From: Jacob Lambert <jacob.lambert@amd.com>
+Date: Thu, 10 Sep 2026 03:30:34 -0700
+Subject: [PATCH] [Comgr] Accept subarch triple in place of target-cpu in
+ unbundle lit tests (#4355)
+
+Upstream [#206483](https://github.com/llvm/llvm-project/pull/206483)
+stops the driver passing a redundant `-target-cpu` to cc1 once the
+target triple encodes the subarch, so unbundled modules no longer carry
+a `"target-cpu"` attribute.
+
+`unbundle.hip`, `unpackage-test.hip` and
+`cache-tests/unbundle-cached.hip` assert it literally. They only still
+pass because that upstream change is currently neutralized by a
+downstream revert, and they break as soon as the revert is dropped to
+follow upstream.
+
+This folds the arch discriminator into the per-arch checks so either
+spelling satisfies them:
+
+```
+// BOTH: target datalayout =
+// GFX9: {{target triple = "amdgpu9\.00-amd-amdhsa"|"target-cpu"="gfx900"}}
+// GFX10: {{target triple = "amdgpu10\.30-amd-amdhsa"|"target-cpu"="gfx1030"}}
+```
+
+The `BOTH` check moves to the `datalayout` line, which precedes the
+triple, so it no longer consumes the match the `GFX9`/`GFX10` checks
+need.
+---
+ amd/comgr/test-lit/cache-tests/unbundle-cached.hip | 6 +++---
+ amd/comgr/test-lit/unbundle.hip                    | 6 +++---
+ amd/comgr/test-lit/unpackage-test.hip              | 6 +++---
+ 3 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/amd/comgr/test-lit/cache-tests/unbundle-cached.hip b/amd/comgr/test-lit/cache-tests/unbundle-cached.hip
+index 3337831f2fdbe..7a6741d139c05 100644
+--- a/amd/comgr/test-lit/cache-tests/unbundle-cached.hip
++++ b/amd/comgr/test-lit/cache-tests/unbundle-cached.hip
+@@ -32,9 +32,9 @@
+ // RUN: COUNT=$(ls "%t.cache" | wc -l)
+ // RUN: [ 3 -eq $COUNT ]
+ 
+-// BOTH: target triple = "amd{{gcn|gpu[0-9.]+}}-amd-amdhsa"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target datalayout =
++// GFX9: {{target triple = "amdgpu9\.00-amd-amdhsa"|"target-cpu"="gfx900"}}
++// GFX10: {{target triple = "amdgpu10\.30-amd-amdhsa"|"target-cpu"="gfx1030"}}
+ 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {
+diff --git a/amd/comgr/test-lit/unbundle.hip b/amd/comgr/test-lit/unbundle.hip
+index 860548ab8f3e2..1862d174479a9 100644
+--- a/amd/comgr/test-lit/unbundle.hip
++++ b/amd/comgr/test-lit/unbundle.hip
+@@ -18,9 +18,9 @@
+ // RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx1030 %t.compressed.gfx1030.bc
+ // RUN: %llvm-dis %t.compressed.gfx1030.bc -o - | %FileCheck --check-prefixes=BOTH,GFX10 %s
+ //
+-// BOTH: target triple = "amd{{gcn|gpu[0-9.]+}}-amd-amdhsa"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target datalayout =
++// GFX9: {{target triple = "amdgpu9\.00-amd-amdhsa"|"target-cpu"="gfx900"}}
++// GFX10: {{target triple = "amdgpu10\.30-amd-amdhsa"|"target-cpu"="gfx1030"}}
+ 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {
+diff --git a/amd/comgr/test-lit/unpackage-test.hip b/amd/comgr/test-lit/unpackage-test.hip
+index 062503ded9c1e..265c5aaaf1b6e 100644
+--- a/amd/comgr/test-lit/unpackage-test.hip
++++ b/amd/comgr/test-lit/unpackage-test.hip
+@@ -42,9 +42,9 @@
+ // RUN: unpackage --expect-fail \
+ // RUN: %t.corrupt.bc amdgcn-amd-amdhsa gfx900 %t.corrupt.output.bc
+ //
+-// BOTH: target triple = "amd{{gcn|gpu[0-9.]+}}-amd-amdhsa"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target datalayout =
++// GFX9: {{target triple = "amdgpu9\.00-amd-amdhsa"|"target-cpu"="gfx900"}}
++// GFX10: {{target triple = "amdgpu10\.30-amd-amdhsa"|"target-cpu"="gfx1030"}}
+ 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {

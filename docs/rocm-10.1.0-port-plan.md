@@ -2,16 +2,22 @@
 
 本任务在 openRuyi 上使用系统 `llvm-snapshot`（LLVM 24）移植 ROCm 10.1.0。按用户于 2026-11-13 确认的顺序，以 `rocm-cmake` → `rocm-llvm` 推进。x86_64 用于快速验证和推进依赖链；最终验收以 riscv64 为准。两项基础包均通过 riscv64 最终验收后，才开始其余组件。本文件是本任务的持续计划与上下文恢复入口，适用范围仅为 `rocm10` 实验分支。
 
+## 用户最新方向（2026-11-13）
+
+优先使用可追溯的 LLVM／ROCm 上游原始提交及必要前置提交进行 backport，弥补 ROCm 所用 LLVM 24 与 openRuyi snapshot 的接口差异；不要优先自造兼容补丁。当前本地 API 适配、postopt 双阶段实现及测试变更均转为待审查的实验对照，不能仅因测试通过就作为最终交付。下一步先比较两端 LLVM 基线、定位上游提交，区分 C++ API／ABI 变化和 AMD 专有功能；能回移原始提交的应替换为带来源的 backport。无法找到上游方案的项应明确记录证据和剩余差异。
+
+审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。八项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 尚待重验。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
+
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm x86_64 实际 RPM 功能验证通过；riscv64 已修复调度约束，等待匹配 worker，尚未最终验收，尚未验收。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 正按上游提交替换本地兼容补丁，旧 revision 11 的构建只保留作实验对照。当前 LLVM 24 已原生支持 postopt，已删除不必要的双阶段替代实现；八项上游回移及其前置关系见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方尚待双架构构建和实际产物验证。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 构建／测试适配中 | 当前包提交 `2fe0c57`，推送 HEAD `cfb4212`；OBS revision `11` / srcmd5 `2c4acc1c617ce69d8a6b9a3ea1c6c72f`，riscv64 等待 6 个匹配 worker |
+| rocm-llvm | 上游回移与重验中 | 旧包提交 `2fe0c57` / OBS revision `11` 为实验对照；新配方恢复原生 postopt，并使用有来源的上游修复 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -21,7 +27,7 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
 | rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | `11.1.nor` 构建／发布及实际 RPM 验证通过 | 等待 6 个匹配 worker | 未开始 | 未通过 |
+| rocm-llvm | 旧 `11.1.nor` 通过；新上游回移配方待重验 | 旧 revision 11 在 sg2044-0317:9 构建，新配方待构建 | 新配方待验证 | 未通过 |
 
 ## 固定边界和目标环境
 
@@ -214,3 +220,5 @@ riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失�
 第十轮 OBS revision `11` 已确认生效：调度状态为 `scheduled` / `waiting for 6 compliant workers`，不再进入 pico 小型 worker。`osc checkconstraints` 不带 XML 的远端查询在本实例仍列出未合并 recipe directive 的名单，因此以调度器的匹配数、实际 worker 及源码修订联合验证，不能只依赖该命令输出。源码证明及 buildinfo 保存为 `logs/source-final.obsinfo`、`logs/buildinfo-final-<arch>.xml`。
 
 x86_64 最新实际产物 `10.1.0-11.1.nor` 已全部复验通过，`_statistics` 的 srcmd5 与 revision 11 一致。证据：`logs/artifacts-x86_64.json`、`logs/artifact-validation-final-x86_64.log`、`logs/cmake-validation-final-x86_64.log`；宏展开指向 LLVM 24。当前 riscv64 排队监视脚本 `tests/wait-riscv-build.py`，进度保存在 `logs/result-monitor.jsonl`，进入构建后脚本退出，届时跟踪新日志和实际 worker。
+
+2026-11-13 12:19 UTC 监视到 riscv64 调度到 sg2044-0317:9；worker 日志实际开始时间 12:21:40 UTC，srcmd5 正确，内存上限约 84 GiB，已越过此前故障 worker 的初始化步骤并安装 LLVM 24 静态依赖。日志 `logs/build-riscv64-final-start.log`。排队期间还在目标机准备了备用原生诊断构建，源码及脚本在 `native-sources/`、`native-recipe/`、`tests/*native*`；大型静态包下载中，尚未编译，不计作任何验收。

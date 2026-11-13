@@ -1,0 +1,33 @@
+From feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0 Mon Sep 17 00:00:00 2001
+From: Jacob Lambert <jacob.lambert@amd.com>
+Date: Tue, 29 Sep 2026 16:56:55 -0700
+Subject: [PATCH] [Comgr] Isolate static LLVM linkage in standalone and
+ superproject builds (#2389)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Upstream: https://github.com/ROCm/llvm-project/commit/feb6bdbb08b2c55077377cd3e0a36bbcd04e49a0
+Backport: Select only the independent DemangleSymbolNameTest LLVM Support fix, including its explanatory comment. The static-link isolation framework and transpiler changes are outside this dynamic-link build.
+
+---
+diff --git a/amd/comgr/test-unit/CMakeLists.txt b/amd/comgr/test-unit/CMakeLists.txt
+index 41027710cf04b..e4ed8dacedced 100644
+--- a/amd/comgr/test-unit/CMakeLists.txt
++++ b/amd/comgr/test-unit/CMakeLists.txt
+@@ -77,12 +77,11 @@ add_executable(DemangleSymbolNameTest
+ target_link_libraries(DemangleSymbolNameTest PRIVATE
+   ${COMGR_GTEST_LIBS}
+   amd_comgr
++  LLVMSupport
+   ${LLVM_PTHREAD_LIB})
+ 
+-# Gtest's LLVM support brings in some printers for LLVM types (StringRef, etc.).
+-# When building in-tree, the included headers bring in some code that depend on LLVM's abi-breaking checks.
+-# This adds a dependency with LLVM's Support library.
+-# We could link against Support, but since we're not using these printers we can just disable them.
++# Disable LLVM printers in this test. LLVM's prebuilt GTest main still needs
++# LLVMSupport for its ABI-check reference when assertions are enabled.
+ target_compile_definitions(DemangleSymbolNameTest PRIVATE GTEST_NO_LLVM_SUPPORT=true)
+ 
+ target_include_directories(DemangleSymbolNameTest PRIVATE

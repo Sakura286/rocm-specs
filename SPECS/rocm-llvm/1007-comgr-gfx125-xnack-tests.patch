@@ -1,0 +1,54 @@
+From fad9cb3d631c287314e2de2f190274fb8c866a01 Mon Sep 17 00:00:00 2001
+From: Jacob Lambert <jacob.lambert@amd.com>
+Date: Fri, 16 Oct 2026 11:48:55 -0700
+Subject: [PATCH] [Comgr] Update gfx12.5 XNACK ISA parsing expectations (#4992)
+
+Upstream llvm/llvm-project#232080 restored XNACK on/off support for
+gfx12.5, so `amdgpu12.50-amd-amdhsa--gfx1250:xnack+` now succeeds. The
+stale `INVALID_ARGUMENT` expectation caused `parse-isa-name.c` to fail
+on Linux and Windows.
+
+Remove `REQUIRES: FixFromJacob` and check successful parsing and
+ISA-name round trips for both XNACK signs on `gfx1250`,
+`gfx1250-strict`, `gfx1251`, and `gfx12-5-generic`.
+
+Validation: `parse-isa-name.c` and `isa-enumeration.c` both pass under
+LIT with the current AMDGPU parser and regenerated target tables,
+reusing existing LLVM/Comgr build objects. The original expectation
+reproduces `FAILED: INVALID: SUCCESS`. No full LLVM rebuild was run.
+
+LCOMPILER-2999
+
+Upstream: https://github.com/ROCm/llvm-project/commit/fad9cb3d631c287314e2de2f190274fb8c866a01
+Backport: Omit removal of the temporary FixFromJacob test requirement, which is absent in therock-10.1. All XNACK checks are retained.
+
+---
+diff --git a/amd/comgr/test-lit/parse-isa-name.c b/amd/comgr/test-lit/parse-isa-name.c
+index 589af4ea89ea4..8a06f1e65bca3 100644
+--- a/amd/comgr/test-lit/parse-isa-name.c
++++ b/amd/comgr/test-lit/parse-isa-name.c
+@@ -68,6 +67,16 @@
+ // RUN: parse-isa-name "amdgpu9-amd-amdhsa--gfx900:xnack+" SUCCESS
+ // RUN: parse-isa-name "amdgpu9.4-amd-amdhsa--gfx9-4-generic:xnack+:sramecc+" SUCCESS
+ 
++// COM: Gfx12.5 targets support explicit xnack on/off settings.
++// RUN: parse-isa-name "amdgpu12.50-amd-amdhsa--gfx1250:xnack+" SUCCESS
++// RUN: parse-isa-name "amdgpu12.50-amd-amdhsa--gfx1250:xnack-" SUCCESS
++// RUN: parse-isa-name "amdgpu12.50s-amd-amdhsa--gfx1250-strict:xnack+" SUCCESS
++// RUN: parse-isa-name "amdgpu12.50s-amd-amdhsa--gfx1250-strict:xnack-" SUCCESS
++// RUN: parse-isa-name "amdgpu12.51-amd-amdhsa--gfx1251:xnack+" SUCCESS
++// RUN: parse-isa-name "amdgpu12.51-amd-amdhsa--gfx1251:xnack-" SUCCESS
++// RUN: parse-isa-name "amdgpu12.5-amd-amdhsa--gfx12-5-generic:xnack+" SUCCESS
++// RUN: parse-isa-name "amdgpu12.5-amd-amdhsa--gfx12-5-generic:xnack-" SUCCESS
++
+ // COM: gfx900 supports xnack but not sramecc, so a sramecc feature is rejected
+ // COM: regardless of the arch spelling; gfx801 supports neither sramecc nor a
+ // COM: xnack+sramecc combo.
+@@ -85,7 +94,6 @@
+ // RUN: parse-isa-name "amdgpu10.30-amd-amdhsa--gfx1030:xnack+" INVALID_ARGUMENT
+ // RUN: parse-isa-name "amdgpu11.00-amd-amdhsa--gfx1100:xnack+" INVALID_ARGUMENT
+ // RUN: parse-isa-name "amdgpu12.00-amd-amdhsa--gfx1200:xnack-" INVALID_ARGUMENT
+-// RUN: parse-isa-name "amdgpu12.50-amd-amdhsa--gfx1250:xnack+" INVALID_ARGUMENT
+ 
+ // COM: The processor may be omitted; it is derived from the subarch.
+ // RUN: parse-isa-name "amdgpu9.00-amd-amdhsa--" SUCCESS

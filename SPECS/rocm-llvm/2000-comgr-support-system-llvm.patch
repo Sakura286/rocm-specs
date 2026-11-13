@@ -2,17 +2,8 @@ From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Subject: [PATCH] comgr: use distribution LLVM and libc++ headers
 
 Allow standalone builds to embed the installed libc++ headers rather than
-requiring a complete LLVM source tree. Include unordered_set directly.
-
---- a/amd/comgr/src/comgr-compiler.cpp
-+++ b/amd/comgr/src/comgr-compiler.cpp
-@@ -87,6 +87,7 @@
-
- #include <csignal>
- #include <sstream>
-+#include <unordered_set>
-
- LLD_HAS_DRIVER(elf)
+requiring a complete LLVM source tree. This is a distribution path hook,
+not an LLVM API or ABI compatibility workaround.
 
 --- a/amd/comgr/cmake/LibcxxHeaders.cmake
 +++ b/amd/comgr/cmake/LibcxxHeaders.cmake
