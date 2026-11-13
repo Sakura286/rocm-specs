@@ -52,7 +52,7 @@ BuildOption(conf):  -DHIPSPARSELT_ENABLE_CLIENT=OFF
 BuildOption(conf):  -DBUILD_VERBOSE=ON
 BuildOption(conf):  -DCMAKE_Fortran_COMPILER=gfortran
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
-BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=ON
+BuildOption(conf):  -DCMAKE_INSTALL_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}
 BuildOption(conf):  -DGPU_TARGETS="gfx942;gfx950"
 BuildOption(conf):  -DTensile_COMPILER=clang++
 BuildOption(conf):  -DTensile_LIBRARY_FORMAT=msgpack
@@ -149,9 +149,14 @@ find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/am
 cd ..
 
 %conf -p
+# The GNU host target differs from the distribution LLVM runtime directory.
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 export PATH=%{rocmllvm_bindir}:$PATH
 export TENSILE_ROCM_ASSEMBLER_PATH=%{rocmllvm_bindir}/clang++
 export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=%{rocmllvm_bindir}/clang-offload-bundler
+
+%build -p
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparselt/LICENSE.md
