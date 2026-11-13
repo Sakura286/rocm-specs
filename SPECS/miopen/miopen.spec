@@ -32,6 +32,10 @@ BuildSystem:    cmake
 BuildOption(prep):  -n miopen
 
 BuildOption(conf):  -G Ninja
+# The distribution supplies the toolchain and dependencies. Avoid the upstream
+# standalone fallback, which fetches even disabled AI/test dependencies.
+BuildOption(conf):  -DCMAKE_TOOLCHAIN_FILE=/dev/null
+BuildOption(conf):  -DMIOPEN_STANDALONE_BUILD=OFF
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 %ifarch riscv64
