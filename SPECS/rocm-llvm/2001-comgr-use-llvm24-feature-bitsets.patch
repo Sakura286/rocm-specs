@@ -1,0 +1,43 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: use LLVM 24 AMDGPU feature bitsets
+
+The current LLVM snapshot replaced integer architecture attributes with a
+feature bitset. Query configurable on/off modes for both target-ID features;
+hardware support alone does not imply that a feature can be toggled.
+
+--- a/amd/comgr/src/comgr-metadata.cpp
++++ b/amd/comgr/src/comgr-metadata.cpp
+@@ -473,13 +473,13 @@
+     return false;
+   }
+
+-  unsigned ArchAttr = AMDGPU::getArchAttrAMDGCN(
++  const auto &ArchFeatures = AMDGPU::getFeatureBitset(
+       AMDGPU::parseArchAMDGCN(IsaInfos[IsaIndex].Processor));
+
+   return (Feature.drop_back() == "xnack" &&
+-          (ArchAttr & AMDGPU::FEATURE_XNACK_ON_OFF_MODES)) ||
++          (ArchFeatures.test(AMDGPU::FEAT_XNACK_ON_OFF_MODES))) ||
+          (Feature.drop_back() == "sramecc" &&
+-          (ArchAttr & AMDGPU::FEATURE_SRAMECC));
++          (ArchFeatures.test(AMDGPU::FEAT_SRAMECC_ON_OFF_MODES)));
+ }
+
+ const char *getIsaName(size_t Index) { return IsaInfos[Index].IsaName; }
+@@ -511,13 +511,13 @@
+   Root["Version"] = Doc.getNode("1.0.0", /*Copy=*/true);
+
+   AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(IsaInfos[IsaIndex].Processor);
+-  unsigned ArchAttr = AMDGPU::getArchAttrAMDGCN(Kind);
++  const auto &ArchFeatures = AMDGPU::getFeatureBitset(Kind);
+
+   auto FeaturesNode = Doc.getMapNode();
+-  if (ArchAttr & AMDGPU::FEATURE_XNACK_ON_OFF_MODES) {
++  if (ArchFeatures.test(AMDGPU::FEAT_XNACK_ON_OFF_MODES)) {
+     FeaturesNode["xnack"] = Doc.getNode("any", /*Copy=*/true);
+   }
+-  if (ArchAttr & AMDGPU::FEATURE_SRAMECC) {
++  if (ArchFeatures.test(AMDGPU::FEAT_SRAMECC_ON_OFF_MODES)) {
+     FeaturesNode["sramecc"] = Doc.getNode("any", /*Copy=*/true);
+   }
+

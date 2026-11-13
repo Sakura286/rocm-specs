@@ -72,6 +72,7 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 0001-Use-signed-char-in-comgr-building.patch
 # Use system libc++ headers and omit an AMD-only Clang option.
 2000-comgr-support-system-llvm.patch
+2001-comgr-use-llvm24-feature-bitsets.patch
 
 %description
 %{summary}
