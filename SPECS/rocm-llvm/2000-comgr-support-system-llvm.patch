@@ -4,6 +4,7 @@ Subject: [PATCH] comgr: support distribution LLVM and libc++ headers
 The system Clang does not implement AMD's postopt bitcode option. Remove
 both the option and its -Xclang introducer. Allow standalone builds to
 embed the installed libc++ headers instead of requiring an LLVM source tree.
+Include headers directly instead of relying on transitive LLVM includes.
 
 --- a/amd/comgr/src/comgr-compiler.cpp
 +++ b/amd/comgr/src/comgr-compiler.cpp
@@ -14,15 +15,34 @@ embed the installed libc++ headers instead of requiring an LLVM source tree.
 -    Args.push_back("-Xclang");
 -    Args.push_back("-mlink-builtin-bitcode-postopt");
    }
- 
+
    return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
 --- a/amd/comgr/cmake/LibcxxHeaders.cmake
 +++ b/amd/comgr/cmake/LibcxxHeaders.cmake
 @@ -22,6 +22,7 @@
- 
+
  # Find libc++ headers from the LLVM source tree
  set(LIBCXX_SEARCH_PATHS
 +  "${COMGR_LIBCXX_INCLUDE_DIR}"
    "${CMAKE_SOURCE_DIR}/libcxx/include"
    "${CMAKE_SOURCE_DIR}/../libcxx/include"
    "${CMAKE_SOURCE_DIR}/../../libcxx/include"  # amd/comgr -> libcxx
+--- a/amd/comgr/src/comgr-compiler.cpp
++++ b/amd/comgr/src/comgr-compiler.cpp
+@@ -78,6 +78,7 @@
+
+ #include <csignal>
+ #include <sstream>
++#include <unordered_set>
+
+ LLD_HAS_DRIVER(elf)
+
+--- a/amd/comgr/src/hotswap/raiser.cpp
++++ b/amd/comgr/src/hotswap/raiser.cpp
+@@ -15,6 +15,7 @@
+ #include "llvm/IR/IRBuilder.h"
+ #include "llvm/IR/LLVMContext.h"
+ #include "llvm/IR/Module.h"
++#include "llvm/TargetParser/AMDGPUTargetParser.h"
+ #include "llvm/TargetParser/TargetParser.h"
+ #include "llvm/TargetParser/Triple.h"
