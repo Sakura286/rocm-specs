@@ -121,6 +121,9 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 
 %prep -a
+# Keep ROCM_PATH as a CMake layout hint: exporting /usr makes Clang skip
+# the versioned device-libs directory and invalidates HIP feature probes.
+sed -i '/^set(ENV{ROCM_PATH} ${ROCM_PATH})$/d' CMakeLists.txt
 # The standalone device-linker commands bypass CMAKE_CXX_COMPILER_TARGET.
 # Keep their host bundle triple consistent with CMake's normal HIP commands.
 sed -i 's@set(DL_HIP_COMPILER_FLAGS "")@set(DL_HIP_COMPILER_FLAGS "--target=%{_target_cpu}-openruyi-linux-gnu")@' cmake/DeviceLinker.cmake
