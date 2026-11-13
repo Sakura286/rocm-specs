@@ -11,6 +11,11 @@
 
 %global llvm_maj_ver 23
 
+# Keep the large GPU template build on sufficiently parallel native workers.
+%ifarch riscv64
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           rocsparse
 Version:        %{rocm_version}
 Release:        %autorelease
