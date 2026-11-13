@@ -1,0 +1,20 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: give unbundling a distinct cache action ID
+
+LLVM 24 no longer exposes OffloadUnbundlingJobClass. This value is only
+used to distinguish cache keys, so allocate a COMGR-specific class after
+the driver actions and the existing SPIR-V class.
+
+--- a/amd/comgr/src/comgr-unbundle-command.cpp
++++ b/amd/comgr/src/comgr-unbundle-command.cpp
+@@ -121,7 +121,9 @@
+ }
+
+ CachedCommandAdaptor::ActionClass UnbundleCommand::getClass() const {
+-  return clang::driver::Action::OffloadUnbundlingJobClass;
++  // LLVM removed the driver unbundling action. Reserve a COMGR cache class
++  // after the driver actions and the SPIR-V class (JobClassLast + 1).
++  return clang::driver::Action::JobClassLast + 2;
+ }
+
+ void UnbundleCommand::addOptionsIdentifier(HashAlgorithm &H) const {

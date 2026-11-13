@@ -73,6 +73,7 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 # Use system libc++ headers and omit an AMD-only Clang option.
 2000-comgr-support-system-llvm.patch
 2001-comgr-use-llvm24-feature-bitsets.patch
+2002-comgr-use-independent-unbundle-cache-class.patch
 
 %description
 %{summary}
@@ -141,8 +142,9 @@ if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion
     exit 1
 fi
 
-# Make sure we only build the AMD bits by discarding the bundled llvm code:
-ls | grep -xv "amd" | xargs rm -r
+# Keep the matching Python test runner; all compiled LLVM code is discarded.
+mv llvm/utils/lit llvm-lit
+ls | grep -xvE 'amd|llvm-lit' | xargs rm -r
 
 install -pm 755 %{SOURCE1} prep.sh
 sed -i -e 's@%%{_prefix}@%{_prefix}@' prep.sh
@@ -188,6 +190,7 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %cmake -DCMAKE_PREFIX_PATH="$ROCM_PATH;%{bundle_prefix}" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
     -DCOMGR_LIBCXX_INCLUDE_DIR=%{bundle_prefix}/include/c++/v1 \
+    -DLLVM_LIT_PATH="$PWD/llvm-lit/lit.py" \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
 %cmake_build -- %{?_smp_mflags}
 
@@ -199,18 +202,21 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %cmake_build -- %{?_smp_mflags}
 
 %check
+check_status=0
 # Test device-libs
 %define _vpath_srcdir amd/device-libs
 %define _vpath_builddir build-devicelibs
 # OCL.cmake mirrors the absolute install path below the build directory.
 # Point Clang's --rocm-path at those freshly built libraries, not the host.
 ln -s .%{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
-%{?with_device_libs_test:%ctest}
+%{?with_device_libs_test:%ctest || check_status=1}
 
 # Test comgr
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
-%{?with_comgr_test:%ctest}
+%{?with_comgr_test:%ctest || check_status=1}
+%{?with_comgr_test:%cmake_build --target test-unit test-lit -- %{?_smp_mflags} || check_status=1}
+exit "$check_status"
 
 %install
 # Install macros
