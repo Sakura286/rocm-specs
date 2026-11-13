@@ -7,7 +7,7 @@
 
 %global srcname tensile
 %global upstreamname Tensile
-%global rocm_version 7.14.1
+%global rocm_version 10.1.0
 
 Name:           python-%{srcname}
 Version:        %{rocm_version}
@@ -15,8 +15,9 @@ Release:        %autorelease
 Summary:        Tool for creating benchmark-driven backend libraries for GEMMs
 License:        MIT
 URL:            https://github.com/ROCm/Tensile
-#!RemoteAsset:  sha256:ab722d21fbc2d36c36999cb86a50956afb3a45d0e85e4073ddf9687d4f7cfac7
-Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/tensile.tar.gz
+# ROCm 10.1.0 source release uses the therock-10.1 tag.
+#!RemoteAsset:  sha256:336bd361e2e3a058553cdc48b13bde1eab61ea724360a87fa6cb323800496610
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/tensile.tar.gz
 BuildArch:      noarch
 BuildSystem:    pyproject
 

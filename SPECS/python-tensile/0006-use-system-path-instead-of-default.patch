@@ -3,6 +3,8 @@ From: Sakura286 <chenxuan@iscas.ac.cn>
 Date: Fri, 6 Mar 2026 16:49:43 +0800
 Subject: [PATCH 6/6] use system path instead of default
 
+ROCm 10.1 adaptation: omit FindROCmSMI.cmake removed upstream.
+
 ---
  Tensile/Common.py                           | 2 +-
  Tensile/Source/CMakeLists.txt               | 4 ++--
@@ -69,19 +71,6 @@ index d299357..ba8597f 100644
      PATH_SUFFIXES
            /bin
        )
-diff --git a/Tensile/Source/cmake/FindROCmSMI.cmake b/Tensile/Source/cmake/FindROCmSMI.cmake
-index 0498766..071232a 100644
---- a/Tensile/Source/cmake/FindROCmSMI.cmake
-+++ b/Tensile/Source/cmake/FindROCmSMI.cmake
-@@ -24,7 +24,7 @@
- 
- if(NOT ROCM_ROOT)
-     if(NOT ROCM_DIR)
--        set(ROCM_ROOT "/opt/rocm")
-+        set(ROCM_ROOT "/usr")
-     else()
-         set(ROCM_DIR "${ROCM_DIR}/../../..")
-     endif()
 diff --git a/Tensile/Tests/hipModuleLoad_timing/Makefile b/Tensile/Tests/hipModuleLoad_timing/Makefile
 index 671167d..2177143 100644
 --- a/Tensile/Tests/hipModuleLoad_timing/Makefile
