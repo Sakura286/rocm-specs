@@ -189,9 +189,11 @@ export INCLUDE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/include
 %define _vpath_builddir build-devicelibs
 # Workaround for bug in cmake tests not finding amdgcn:
 ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
-#TODO ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_* should be removed in ROCm 7.0:
+# Keep the export location relative to the installation prefix.
+DEVICE_LIBS_INSTALL_DIR=%{amd_device_libs_prefix}/amdgcn
+DEVICE_LIBS_INSTALL_DIR=${DEVICE_LIBS_INSTALL_DIR#%{_prefix}/}
 %cmake -DCMAKE_PREFIX_PATH=%{bundle_prefix} \
-    -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
+    -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="$DEVICE_LIBS_INSTALL_DIR" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld"
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
