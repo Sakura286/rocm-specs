@@ -61,6 +61,7 @@ BuildOption(conf):  -DROCM_PATH=%{_prefix}
 BuildOption(conf):  -DCMAKE_TRY_COMPILE_PLATFORM_VARIABLES=ROCM_PATH
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DBUILD_TESTS=ON
+BuildOption(conf):  -DROCTX=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
@@ -84,6 +85,9 @@ BuildRequires:  ninja
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
+# RCCL uses the ROCTX header path for its NVTX compatibility layer. Without
+# the development package CMake silently selects conflicting NVTX stubs.
+BuildRequires:  roctracer-devel >= %{rocm_version}
 
 Requires:       %{name}-data = %{version}-%{release}
 
