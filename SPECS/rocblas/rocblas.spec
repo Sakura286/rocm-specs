@@ -8,9 +8,9 @@
 # Tests consumes too much time and space
 %bcond test 0
 
-%global rocm_version 7.2.4
+%global rocm_version 7.14.1
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocblas
 Summary:        BLAS implementation for ROCm
@@ -18,9 +18,11 @@ Version:        %{rocm_version}
 Release:        %autorelease
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocBLAS
-#!RemoteAsset:  sha256:39ccaf6a0009a131b7daf3b21e14517f864f7642f109fa2da6dec1127b4a85e0
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:e3407919fd358424b4298224bb160370f08fa2423ffa6c19cdaec02a69e667ba
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocblas.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocblas
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/cblas
@@ -58,15 +60,15 @@ BuildOption(conf):  -DTensile_ASSEMBLER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
-# https://github.com/ROCm/rocm-libraries/commit/6221075881f3ea8e9dfa0d985f22005c74ae1f52
-Patch1:         0002-fix-nodiscard-return-value-ignored.patch
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(msgpack)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
@@ -76,6 +78,7 @@ BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  python3dist(tensile)
+BuildRequires:  python-tensile >= 7.14.1
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-device-libs
 BuildRequires:  rocm-llvm-macros
