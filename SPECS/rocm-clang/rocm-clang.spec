@@ -56,6 +56,10 @@ BuildRequires:  lld(major) = %{llvm_major}
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(zlib)
+# LLVMConfig imports these targets even when only Clang is rebuilt.
+BuildRequires:  pkgconfig(libffi)
+BuildRequires:  pkgconfig(liblzma)
+BuildRequires:  pkgconfig(libxml-2.0)
 Requires:       llvm24-libs = %{snapshot_version}
 Requires:       clang24-libs = %{snapshot_version}
 
