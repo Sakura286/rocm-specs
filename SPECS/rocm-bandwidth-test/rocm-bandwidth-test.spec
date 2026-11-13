@@ -50,7 +50,7 @@ BuildRequires:  rocm-llvm-macros
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  git
 BuildRequires:  cmake(fmt)
-BuildRequires:  cmake(Boost)
+BuildRequires:  boost-devel
 BuildRequires:  cmake(CLI11)
 BuildRequires:  cmake(nlohmann_json)
 BuildRequires:  cmake(spdlog)
