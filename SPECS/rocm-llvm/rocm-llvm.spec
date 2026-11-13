@@ -8,13 +8,13 @@
 
 # The package follows LLVM's major version, but API version is still important:
 %global comgr_maj_api_ver 3
-%global comgr_full_api_ver %{comgr_maj_api_ver}.0
+%global comgr_full_api_ver %{comgr_maj_api_ver}.3
 
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.14
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
@@ -42,11 +42,11 @@ Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        Various AMD ROCm LLVM related services
 # llvm is Apache-2.0 WITH LLVM-exception OR NCSA
-# hipcc is MIT, comgr and device-libs are NCSA:
-License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND NCSA AND MIT
+# hipcc is MIT, device-libs are NCSA, comgr is Apache-2.0 WITH LLVM-exception:
+License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND Apache-2.0 WITH LLVM-exception AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
-#!RemoteAsset:  sha256:526b5fe23417c41acbeb2273e470887b4593f48a297a8d9c1a1aa730d556f9fb
-Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:7e496ab1280599c9e52e477ec29988a5d86a634d0cfe0f8f57b7ad1882644372
+Source0:        %{url}/archive/refs/tags/therock-%{version}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
@@ -54,6 +54,7 @@ BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
 BuildRequires:  clang-static(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  fdupes
+BuildRequires:  libcxx%{llvm_maj_ver}-devel
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  lld-devel(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
@@ -69,13 +70,8 @@ BuildRequires:  rocm-cmake >= %{rocm_release}
 %patchlist
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 0001-Use-signed-char-in-comgr-building.patch
-# Clang version of rocm-llvm is bebind llvm22 on openRuyi
-# https://github.com/ROCm/llvm-project/commit/ebcaa3d9
-1000-comgr-Options-changes-for-comgr.patch
-# https://github.com/ROCm/llvm-project/commit/ccb14ba83
-1001-comgr-remove-Driver-from-GetResourcesPath.patch
-# https://github.com/ROCm/llvm-project/commit/bc157825
-1002-device-libs-add-cube-lerp-qsad-sad-target-features.patch
+# Use system libc++ headers and omit an AMD-only Clang option.
+2000-comgr-support-system-llvm.patch
 
 %description
 %{summary}
@@ -136,7 +132,7 @@ hipcc will pass-through options to the target compiler. The tools calling hipcc
 must ensure the compiler options are appropriate for the target compiler.
 
 %prep
-%autosetup -p1 -n llvm-project-rocm-%{version}
+%autosetup -p1 -n llvm-project-therock-%{version}
 
 # llvm_maj_ver sanity check (we should be matching the bundled llvm major ver):
 if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion.cmake; then
@@ -180,7 +176,8 @@ export INCLUDE_PATH=%{_libdir}/llvm%{llvm_maj_ver}/include
 # Workaround for bug in cmake tests not finding amdgcn:
 ln -s %{amd_device_libs_prefix}/amdgcn amdgcn
 #TODO ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_* should be removed in ROCm 7.0:
-%cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
+%cmake -DCMAKE_PREFIX_PATH=%{bundle_prefix} \
+    -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW="%{amd_device_libs_prefix}/amdgcn" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld"
 %cmake_build -- %{?_smp_mflags}
 # Used by comgr to find device libs when building:
@@ -189,8 +186,9 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 # Build comgr
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
-%cmake -DCMAKE_PREFIX_PATH=$ROCM_PATH \
+%cmake -DCMAKE_PREFIX_PATH="$ROCM_PATH;%{bundle_prefix}" \
     -DCMAKE_EXE_LINKER_FLAGS:STRING="-fuse-ld=lld" \
+    -DCOMGR_LIBCXX_INCLUDE_DIR=%{bundle_prefix}/include/c++/v1 \
     -DBUILD_TESTING=%{?with_comgr_test:ON}%{!?with_comgr_test:OFF}
 %cmake_build -- %{?_smp_mflags}
 
@@ -289,10 +287,8 @@ rm -f %{buildroot}%{_datadir}/doc/hipcc/README.md
 %files -n hipcc
 %doc        amd/hipcc/README.md
 %license    amd/hipcc/LICENSE.txt
-%license    amd/hipcc/README.md
 %{_bindir}/hipcc
 %{_bindir}/hipconfig
-%{_bindir}/hipvars.pm
 
 %changelog
 %autochangelog

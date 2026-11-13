@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: support distribution LLVM and libc++ headers
+
+The system Clang does not implement AMD's postopt bitcode option. Remove
+both the option and its -Xclang introducer. Allow standalone builds to
+embed the installed libc++ headers instead of requiring an LLVM source tree.
+
+--- a/amd/comgr/src/comgr-compiler.cpp
++++ b/amd/comgr/src/comgr-compiler.cpp
+@@ -1580,8 +1580,6 @@
+     // necessary for HIP (for example if HIP adopts the same AMDGPUSimplifyLibs
+     // strategy that potentially introduces undefined device-library symbols),
+     // we will need also apply this option in compileToRelocatable().
+-    Args.push_back("-Xclang");
+-    Args.push_back("-mlink-builtin-bitcode-postopt");
+   }
+ 
+   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
+--- a/amd/comgr/cmake/LibcxxHeaders.cmake
++++ b/amd/comgr/cmake/LibcxxHeaders.cmake
+@@ -22,6 +22,7 @@
+ 
+ # Find libc++ headers from the LLVM source tree
+ set(LIBCXX_SEARCH_PATHS
++  "${COMGR_LIBCXX_INCLUDE_DIR}"
+   "${CMAKE_SOURCE_DIR}/libcxx/include"
+   "${CMAKE_SOURCE_DIR}/../libcxx/include"
+   "${CMAKE_SOURCE_DIR}/../../libcxx/include"  # amd/comgr -> libcxx
