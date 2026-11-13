@@ -70,6 +70,10 @@ BuildRequires:  rocm-cmake >= %{rocm_release}
 %patchlist
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 0001-Use-signed-char-in-comgr-building.patch
+# https://github.com/ROCm/llvm-project/commit/a6fd4570d3a813edbdf9bae1e9e042e384e78dd0
+1000-device-libs-add-msad-target-features.patch
+# https://github.com/ROCm/llvm-project/commit/24eca41ad5e52a7ee6ca272f04b181507b7c0adb
+1001-device-libs-handle-alias-type-diagnostics.patch
 # Use system libc++ headers and omit an AMD-only Clang option.
 2000-comgr-support-system-llvm.patch
 

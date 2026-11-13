@@ -1,0 +1,73 @@
+From 24eca41ad5e52a7ee6ca272f04b181507b7c0adb Mon Sep 17 00:00:00 2001
+From: Jacob Lambert <jacob.lambert@amd.com>
+Date: Wed, 13 May 2026 23:57:45 -0700
+Subject: [PATCH] Reland #195550 (alias type check) and silence
+ -Wattribute-alias in device-libs (#2523)
+
+Reland upstream PR llvm/llvm-project#195550 (\"[Clang][CodeGen] Report
+when an alias points to an incompatible target\") on amd-staging, and
+fix the device-libs build break that caused it to be reverted.
+
+The reland was reverted on amd-staging in 80d9f4d07a7b because the new
+`-Wattribute-alias` warning fires on intentional sign-pun aliases in
+`amd/device-libs` (which builds with `-Werror`).
+
+Backport only the device-libs changes; the system Clang already implements
+the alias type diagnostic.
+
+diff --git a/amd/device-libs/opencl/src/async/awgcpy.cl b/amd/device-libs/opencl/src/async/awgcpy.cl
+index bc12c51e3f277..8218543d548f4 100644
+--- a/amd/device-libs/opencl/src/async/awgcpy.cl
++++ b/amd/device-libs/opencl/src/async/awgcpy.cl
+@@ -14,6 +14,9 @@
+ #define IATTR
+ #define AATTR(A) __attribute__((overloadable, alias(A)))
+ 
++// Aliases below intentionally sign-pun unsigned OpenCL overloads.
++#pragma clang diagnostic ignored "-Wattribute-alias"
++
+ #define BODY(D,S) \
+     size_t i; \
+     size_t d = mul24(mul24((int)get_local_size(0), (int)get_local_size(1)), (int)get_local_size(2)); \
+diff --git a/amd/device-libs/opencl/src/misc/shuffle.cl b/amd/device-libs/opencl/src/misc/shuffle.cl
+index 1735b14a255ee..07b111fb7cf95 100644
+--- a/amd/device-libs/opencl/src/misc/shuffle.cl
++++ b/amd/device-libs/opencl/src/misc/shuffle.cl
+@@ -25,6 +25,9 @@
+ #define IATTR __attribute__((const))
+ #define AATTR(A) __attribute__((overloadable, const, alias(A)))
+ 
++// Aliases below intentionally sign-pun unsigned OpenCL overloads.
++#pragma clang diagnostic ignored "-Wattribute-alias"
++
+ #define LIST2 t[m.s0], t[m.s1]
+ #define LIST4 LIST2, t[m.s2], t[m.s3]
+ #define LIST8 LIST4, t[m.s4], t[m.s5], t[m.s6], t[m.s7]
+diff --git a/amd/device-libs/opencl/src/relational/bselect.cl b/amd/device-libs/opencl/src/relational/bselect.cl
+index 34e20ded8df52..3e359fc2f1bb5 100644
+--- a/amd/device-libs/opencl/src/relational/bselect.cl
++++ b/amd/device-libs/opencl/src/relational/bselect.cl
+@@ -15,6 +15,9 @@
+ #define IATTR __attribute__((const))
+ #define AATTR(S) __attribute__((overloadable, const, alias(S)))
+ 
++// Aliases below intentionally sign-pun unsigned OpenCL overloads.
++#pragma clang diagnostic ignored "-Wattribute-alias"
++
+ #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+ 
+ #define char_utype uchar
+diff --git a/amd/device-libs/opencl/src/relational/select.cl b/amd/device-libs/opencl/src/relational/select.cl
+index 62b528a77066f..b81acbec0d12c 100644
+--- a/amd/device-libs/opencl/src/relational/select.cl
++++ b/amd/device-libs/opencl/src/relational/select.cl
+@@ -15,6 +15,9 @@
+ #define IATTR __attribute__((const))
+ #define AATTR(S) __attribute__((overloadable, const, alias(S)))
+ 
++// Aliases below intentionally sign-pun unsigned/signed OpenCL overloads.
++#pragma clang diagnostic ignored "-Wattribute-alias"
++
+ #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+ 
+ #define char_mask ((char)1 << 7)
