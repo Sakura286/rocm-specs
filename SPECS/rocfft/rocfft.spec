@@ -15,8 +15,6 @@
 
 %global llvm_maj_ver 24
 
-# The upstream clients also embed SPIR-V, which cannot use fat LTO objects.
-%global _lto_cflags %{nil}
 
 %ifarch riscv64
 # Generated GPU kernels require native workers with larger job slots.
