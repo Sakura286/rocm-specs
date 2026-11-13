@@ -22,6 +22,7 @@ URL:            https://github.com/ROCm/rocm_bandwidth_test
 #!RemoteAsset:  sha256:abba532eeb43f0740ed9bbacc39ff738a55acae0f01ba5d75a899e313ddc35ea
 Source0:        %{url}/archive/06dd9df114855ed2dc38cd731ad214066a62d6da/rocm_bandwidth_test-06dd9df114855ed2dc38cd731ad214066a62d6da.tar.gz
 Source1:        distro-install.cmake
+Patch0:         0001-fix-library-unload-loop.patch
 BuildSystem:    cmake
 
 # No therock-10.1 release exists for this standalone tool; use latest tagged source.
@@ -74,6 +75,9 @@ addition to this, you can also query the system topology in
 terms of memory pools and their agents.
 
 %prep -a
+# Upstream's default omits /plugins and its fallback list hardcodes lib.
+# Match the actual GNUInstallDirs path used by the RPM install rules.
+sed -i 's@SYSTEM_DEFAULT_PLUGIN_INSTALL_PATH="${CMAKE_INSTALL_FULL_LIBDIR}/${AMD_TARGET_NAME}"@SYSTEM_DEFAULT_PLUGIN_INSTALL_PATH="${CMAKE_INSTALL_FULL_LIBDIR}/${AMD_TARGET_NAME}/plugins"@' cmake/build_utils.cmake
 # Select the distribution CMake package names and exported CLI11 target.
 sed -i -e 's/set(BOOST_PACKAGE_NAME "boost")/set(BOOST_PACKAGE_NAME "Boost")/' \
     -e 's/set(CATCH2_PACKAGE_NAME "catch2")/set(CATCH2_PACKAGE_NAME "Catch2")/' \

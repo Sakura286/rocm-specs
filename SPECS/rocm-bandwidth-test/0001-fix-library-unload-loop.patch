@@ -1,0 +1,25 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Iterate loaded library handles when unloading libraries
+
+Distribution fix, not an LLVM API/ABI adaptation. Upstream develop and
+its three plugin_mgmt.cpp history commits were checked on 2026-11-14;
+the same bug remains and no corresponding upstream fix was found.
+Reference: https://github.com/ROCm/rocm_bandwidth_test/blob/06dd9df114855ed2dc38cd731ad214066a62d6da/deps/work_bench/src/plugin_mgmt.cpp#L536
+
+plugin_load_path_add populates a separate search-path list. Testing that
+list while popping m_library_loaded never terminates when paths exist,
+and dereferences back() on an empty handle list. Actual RPM --help and
+--version abort in PluginManagement_t::plugin_unload with libstdc++
+assertions enabled. Iterate the handle list being consumed instead.
+
+--- a/deps/work_bench/src/plugin_mgmt.cpp
++++ b/deps/work_bench/src/plugin_mgmt.cpp
+@@ -533,7 +533,7 @@
+         all_plugins_list.pop_back();
+     }
+ 
+-    while (!m_plugin_loaded_paths->empty()) {
++    while (!m_library_loaded->empty()) {
+         unload_library(m_library_loaded->back(), "");
+         m_library_loaded->pop_back();
+     }
