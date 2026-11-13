@@ -10,13 +10,13 @@
 
 ## 当前检查点
 
-基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为 33 个源码包，持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
+基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为原有 33 个源码包，加上新依赖 rocm-stinkytofu 与 LLVM 24 支持包 rocm-clang，共 35 个；持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
 
 `rocm-llvm` 配方 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，实际 RPM `10.1.0-13.1.nor`。两个架构均通过 device-libs CTest 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail。实际 RPM 的 21 项检查（含 COMGR、嵌入 libc++、缓存、hipcc gfx1100 编译和无未定义符号检查）与 CMake 下游导入／运行、LLVM 24 宏检查均通过。riscv64 在 `sh-plct-sg2044` 原生执行，RPM 校验值与下载产物一致。
 
 证据：工作区 `tmp/rocm10-rocm-llvm/upstream-review/build-final-{x86_64,riscv64}.log`、`artifact-final-x86_64.log`、`cmake-final-x86_64.log`、`riscv64-validation/`；总审计 `tmp/rocm10-rocm-llvm/audit.json`。旧 revision 11 和 custom-patch native-build 均为历史实验，不要恢复其下载／构建流程。
 
-下一步按依赖关系推进全部 31 个剩余包。先处理 rocm-core、rocprofiler-register、hipblas-common、half、Tensile、管理工具等；随后 HSA/HIP 运行时和数学库。x86_64 结果用于解除开发等待，同时跟进 riscv64。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
+当前全栈检查点（2026-11-13 23:25 UTC）：35/35 已完成 x86_64 构建和对应快速功能验证，25/35 已完成 riscv64 构建与实际 RPM 无 GPU 验收。正式 rocm-clang 13.1 的原生 HIP/RDC/LTO、默认 triple 及离线 codegen 已通过；MIOpen 9.1 x86_64 的 CMake/tensor 描述符 API 也通过。剩余原生包为 rocSPARSE、rocFFT、rocSOLVER、hipBLAS、hipFFT、hipSPARSE、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen。rocSPARSE/rocFFT 正等待大 worker，后续按依赖关系继续；实际产物验证脚本持续运行。完整状态、证据及恢复命令见全栈进度的最新检查点，不在全 x86_64 完成时结束任务。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
 
 ## 固定边界和目标环境
 
@@ -222,4 +222,4 @@ x86_64 最新实际产物 `10.1.0-11.1.nor` 已全部复验通过，`_statistics
 
 ### 2026-11-14 验收范围与新增编译器支持包
 
-用户已确认目前无带 AMD GPU 的 riscv64 机器，先完成全部包的无 GPU 验证：riscv64 构建、实际 RPM 的 CPU/API 与离线编译。GPU 数值运算保留为未验证项，不再等待硬件答复。全栈状态及 LLVM PR 216938/233925、独立 rocm-clang 支持包的准备进展见全栈进度文档最新检查点。两项 PR 均未合并，必须保留来源、完整提交及实验性状态；使用系统 LLVM 24 相同源码基线，不扩展到主线工程。
+用户已确认目前无带 AMD GPU 的 riscv64 机器，先完成全部包的无 GPU 验证：riscv64 构建、实际 RPM 的 CPU/API 与离线编译。GPU 数值运算保留为未验证项，不再等待硬件答复。全栈状态及 LLVM PR 216938/233925/168164、独立 rocm-clang 支持包的最终产物验证见全栈进度文档最新检查点。三项 PR 均未合并，必须保留来源、完整提交及实验性状态；使用系统 LLVM 24 相同源码基线，不扩展到主线工程。当前两项基础包与支持包的双架构验收已经完成，继续其余全部组件。
