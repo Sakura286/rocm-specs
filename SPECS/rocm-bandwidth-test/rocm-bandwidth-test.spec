@@ -5,9 +5,10 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
+# This legacy tool has no therock-7.14.1 release; use its latest ROCm tag.
 %global upstreamname rocm_bandwidth_test
-%global rocm_release 6.4
-%global rocm_patch 2
+%global rocm_release 7.2
+%global rocm_patch 4
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 # GPU HW is required to run %check, and needs to run locally
@@ -21,7 +22,7 @@ Summary:        Bandwidth test for ROCm
 # https://github.com/ROCm/rocm_bandwidth_test/issues/127
 License:        NCSA AND MIT
 URL:            https://github.com/ROCm/rocm_bandwidth_test
-#!RemoteAsset:  sha256:70cd7918dd07564241576e4ae8a4c5d007f87aa3d93589baded49022dc2cf27b
+#!RemoteAsset:  sha256:eb3256351c00123d4536e93dd1500f5edd6fa46e5acd777c6cce8f9db894ccc0
 Source0:        %{url}/archive/rocm-%{version}.tar.gz
 # From base_test.cpp
 Source1:        LICENSE.NCSA.txt
