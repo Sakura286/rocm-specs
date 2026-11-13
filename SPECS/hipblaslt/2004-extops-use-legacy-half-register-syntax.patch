@@ -14,7 +14,7 @@ Tensile GEMM assembler explicitly uses real-true16 and is unchanged.
 +    # LLVM 23 defaults to real-true16 syntax on RDNA3/4, requiring .l/.h.
 +    if(arch MATCHES "^gfx(11[0-9][0-9]|120[01])$")
 +        target_compile_options(extop-obj-${arch} PRIVATE
-+            -Xclangas -target-feature -Xclangas -real-true16)
++            "SHELL:-Xclangas -target-feature -Xclangas -real-true16")
 +    endif()
      target_sources(extop-obj-${arch}
          PRIVATE
