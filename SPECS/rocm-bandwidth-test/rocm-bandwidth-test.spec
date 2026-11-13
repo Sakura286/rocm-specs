@@ -23,6 +23,9 @@ Source0:        %{url}/archive/rocm-%{version}.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rocm_bandwidth_test-rocm-%{version}
+# LLVM 23's HIP bundler requires the host triple's environment field.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
@@ -60,6 +63,8 @@ BuildRequires:  pkgconfig(numa)
 %patchlist
 # Use distribution dependencies and standard library/plugin installation.
 2000-system-build-and-install.patch
+# Avoid interpreting version numbers as required components.
+2001-fix-system-package-version-arguments.patch
 
 %description
 ROCm Bandwidth Test is designed to capture the performance
@@ -70,10 +75,16 @@ addition to this, you can also query the system topology in
 terms of memory pools and their agents.
 
 %conf -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export ROCM_PATH=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %build -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export ROCM_PATH=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 
