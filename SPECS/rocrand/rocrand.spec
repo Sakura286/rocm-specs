@@ -9,11 +9,11 @@
 # which needs GPU to run
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocrand
 Version:        %{rocm_version}
@@ -21,9 +21,11 @@ Release:        %autorelease
 Summary:        ROCm random number generator
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocRAND
-#!RemoteAsset:  sha256:1e0295d1cf798480fe87147fc5b7d649f869a9afedd0409a4bc6548f2f097dfb
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:21465c535ac5a05dcb3d4adf4f505962b436a748a61218bdcba9bcfc1ce7b4e5
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocrand.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocrand
 
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
