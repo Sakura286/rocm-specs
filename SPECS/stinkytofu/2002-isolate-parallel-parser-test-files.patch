@@ -1,0 +1,28 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Give each discovered parser test its own temporary file
+
+CTest runs discovered GTest cases in separate concurrent processes. Fixed
+filenames let those processes overwrite or remove one another's input.
+
+--- a/tests/unit/asm/PatternParserTest.cpp
++++ b/tests/unit/asm/PatternParserTest.cpp
+@@ -52,7 +52,8 @@
+      */
+     std::vector<Pattern> parsePatternString(const std::string& input) {
+         // Create temporary file in platform temp directory
+-        auto tmpPath = std::filesystem::temp_directory_path() / "test_pattern.pattern";
++        auto tmpPath = std::filesystem::temp_directory_path() / (std::string("test_pattern_")
++            + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".pattern");
+         std::ofstream out(tmpPath);
+         out << input;
+         out.close();
+@@ -71,7 +72,8 @@
+      */
+     PatternParseResult parsePatternStringWithDiagnostics(const std::string& input) {
+         // Create temporary file in platform temp directory
+-        auto tmpPath = std::filesystem::temp_directory_path() / "test_pattern_diag.pattern";
++        auto tmpPath = std::filesystem::temp_directory_path() / (std::string("test_pattern_diag_")
++            + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".pattern");
+         std::ofstream out(tmpPath);
+         out << input;
+         out.close();

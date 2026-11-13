@@ -16,6 +16,7 @@ URL:            https://github.com/ROCm/rocm-libraries
 Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/stinkytofu.tar.gz
 Patch2000:      2000-standalone-install-layout.patch
 Patch2001:      2001-include-climits.patch
+Patch2002:      2002-isolate-parallel-parser-test-files.patch
 BuildSystem:    cmake
 
 BuildOption(prep):  -n stinkytofu
