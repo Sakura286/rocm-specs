@@ -64,7 +64,6 @@ BuildOption(conf):  -DTensile_LOGIC=asm_full
 BuildOption(conf):  -DTensile_CODE_OBJECT_VERSION=default
 BuildOption(conf):  -DTensile_SEPARATE_ARCHITECTURES=ON
 BuildOption(conf):  -DTensile_LAZY_LIBRARY_LOADING=ON
-BuildOption(conf):  -DTensile_ASSEMBLER=%{_builddir}/%{buildsubdir}/tensile-assembler/clang++
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
@@ -124,7 +123,9 @@ Requires:       diffutils
 %endif
 
 %conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
+# TensileConfig captures PATH for its build command; this version does not
+# forward a Tensile_ASSEMBLER CMake variable to --assembler.
+export PATH=%{_builddir}/%{buildsubdir}/tensile-assembler:%{rocmllvm_bindir}:$PATH
 
 %prep -a
 # Legacy Tensile emits Fake16 operands; LLVM upstream forbids those in Real16
