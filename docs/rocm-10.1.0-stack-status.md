@@ -9,9 +9,9 @@
 | 源码包 | 当前步骤 | x86_64 | riscv64 |
 | --- | --- | --- | --- |
 | amdsmi | 已提交，构建／验证中 | succeeded；实际 RPM Python 版本 API 通过 | succeeded；产物验证待完成 |
-| half | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
+| half | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | hipblas | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipblas-common | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
+| hipblas-common | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | hipblaslt | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | hipcub | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | hipfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
@@ -28,14 +28,14 @@
 | rocfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocm-bandwidth-test | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocm-cmake | 双架构实际 RPM 验收通过 | 通过 | 通过 |
-| rocm-core | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
+| rocm-core | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | rocm-llvm | 双架构实际 RPM 验收通过 | 通过 | 通过 |
 | rocm-origami | 已提交，构建／验证中 | succeeded；实际 RPM CMake/gfx1100 硬件模型 API 通过 | unresolvable；产物验证待完成 |
 | rocm-smi | 已提交，构建／验证中 | succeeded；CLI 通过（无 GPU） | succeeded；CLI/API 通过（无 GPU） |
 | rocm-stinkytofu | 双架构实际 RPM 验收通过 | 1500 CTest；CMake/API/解析/优化通过 | 1500 CTest；SG2044 原生 CMake/API/解析/优化通过 |
 | rocminfo | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocprim | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
-| rocprofiler-register | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
+| rocprofiler-register | 双架构实际 RPM 验收通过 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | rocr-runtime | 已提交，构建／验证中 | succeeded；产物验证待完成 | building；产物验证待完成 |
 | rocrand | 已提交，构建／验证中 | succeeded；实际 RPM CMake/版本 API/Philox CPU 算法通过 | unresolvable；产物验证待完成 |
 | rocsolver | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
@@ -99,3 +99,11 @@
 - rocFFT、hipFFT、hipCUB x86_64 实际 RPM 联合 CMake 消费者通过，导入各自 target；rocFFT/hipFFT 组件版本一致为 1.0.40，hipCUB block reduction 编译为 gfx1100/gfx1200。见 `validation/fft-cub-*x86_64.log`。rocFFT 独立 RTC helper 离线编译两个目标均生成 4544 字节 ELF（`fft-api-rtc-x86_64.json`）。`execution_info_create` 会枚举 HIP 设备，无 GPU 时失败；保留原失败日志，不声称该 API 或 FFT 运算通过。
 - RCCL 在 5100 多个编译任务后，CE-reduce 自定义命令仍使用不完整 host triple。`87bc074` 为独立 DeviceLinker 命令补上同一 GNU target；四目标直接 Clang 编译复现通过，完整重建待结果。常规 CMake compiler target 不会自动传播到这些自定义命令。
 - bandwidth-test 实际 RPM 退出时在 `PluginManagement_t::plugin_unload()` 空 vector::back 上触发断言，GDB 已定位。上游 develop 及文件的三项历史提交均仍有错误，未找到可回移提交；`e436b15` 增加有调查记录的一行发行版补丁：以实际被 pop 的库 handle 容器作为循环条件。另将默认插件搜索路径补全至 GNUInstallDirs 的 lib64/rocm_bandwidth_test/plugins。此为普通 C++ 运行时错误及安装路径修复，不是 LLVM API/ABI 补丁。重建后须重跑 CLI 与插件发现，旧 RPM 出包不能标记验收完成。
+
+
+## 构建吞吐与恢复提示
+
+- rocBLAS 旧 x86 worker 实际只给 `-j4`；`osc checkconstraints` 确认有 20 个 jobs>=32 的 x86 worker。rocBLAS、RCCL、rocSPARSE、rocSOLVER、hipBLASLt、hipSPARSELt、MIOpen 分别独立提交，将已有大 worker 约束扩展到两个架构；未重建已完成的 FFT/CUB 包。最新提交范围 `324843a` 至 `f335602`。
+- 已通过 `_buildinfo` 核实 rocBLAS/RCCL 的 `hardware:jobs 32`，实际调度分别为 `epyc-massive-02-n0h:8` / `epyc-massive-03:9`，日志均为 `-j32`。RCCL 104 秒到 1186/6013，继续跟踪后段 CE-reduce 与链接。HSA riscv64 当前 worker `sg2044-0317:8` 仍在安装最后的 clang24-static；旧 `_mm_pause` 错误日志不是新修订的结果。
+- 本机剩余磁盘有限，大产物归档优先存放 SG2044 的任务目录（约 450 GiB 可用）。实际 RPM 解包脚本更新为在同一文件系统中用 hardlink 连接 staging 与只读验证 root，避免重复的大库副本；保留所有 RPM/日志/实验产物。覆盖借用的 Python stdlib 目录时保留缺失宿主条目，防止新包的 site-packages 覆盖导致隔离环境缺少 encodings。
+- 恢复任务时继续查询全部 34 包的最新 OBS 状态、失败日志和 source revision，再推进实际 RPM 的 x86_64 与 SG2044 验证；不要把本检查点或所有 SPEC 已升级视为工作完成。
