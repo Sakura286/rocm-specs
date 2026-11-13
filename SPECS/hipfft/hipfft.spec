@@ -84,6 +84,11 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{_description}
 
+%prep -a
+# Match rocFFT: system LLVM 24 lacks the SPIR-V backend; keep native GPU targets.
+sed -i '/target_.*_options(.*--offload-arch=amdgcnspirv/d' \
+    clients/bench/CMakeLists.txt clients/tests/CMakeLists.txt
+
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
 
