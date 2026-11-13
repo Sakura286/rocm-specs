@@ -5,9 +5,9 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.14.1
+%global rocm_version 10.1.0
 
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
 Name:           rocprim
 Version:        %{rocm_version}
@@ -15,8 +15,8 @@ Release:        %autorelease
 Summary:        ROCm parallel primatives
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocPRIM
-#!RemoteAsset:  sha256:16b4ca78e826860807cc4d41c00fd60dded305f110d6b705f32f210d7fccb1d4
-Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocprim.tar.gz
+#!RemoteAsset:  sha256:feea175561e6c251837e506af93d4567f4793dd2b083ab302bf8edfb295e41bf
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocprim.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rocprim
@@ -36,6 +36,7 @@ BuildRequires:  clang%{llvm_maj_ver}-tools-extra-devel
 BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  gcc-c++
