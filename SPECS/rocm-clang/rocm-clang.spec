@@ -37,7 +37,7 @@ BuildOption(conf):  -DCMAKE_INSTALL_PREFIX=%{compiler_prefix}
 BuildOption(conf):  -DCMAKE_INSTALL_LIBDIR=lib
 BuildOption(conf):  -DCMAKE_C_COMPILER=gcc
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=g++
-BuildOption(conf):  -DLLVM_USE_LINKER=%{_libdir}/llvm%{llvm_major}/bin/ld.lld
+BuildOption(conf):  -DLLVM_USE_LINKER=lld
 BuildOption(conf):  -DLLVM_LINK_LLVM_DYLIB=ON
 BuildOption(conf):  -DCLANG_LINK_CLANG_DYLIB=ON
 BuildOption(conf):  -DCLANG_BUILD_TOOLS=ON
@@ -66,7 +66,12 @@ are experimental and were not merged when backported. LLVM libraries,
 compiler runtime, resource headers and device libraries come from the
 matching distribution snapshot. Tools install under %{compiler_prefix}.
 
+%conf -p
+# GCC accepts the linker name rather than an absolute -fuse-ld path.
+export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
+
 %build
+export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
 %cmake_build --target clang clang-linker-wrapper
 
 %install
