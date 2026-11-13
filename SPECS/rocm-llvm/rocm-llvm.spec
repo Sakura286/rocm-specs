@@ -76,6 +76,8 @@ BuildRequires:  rocm-cmake >= %{rocm_release}
 1001-device-libs-handle-alias-type-diagnostics.patch
 # Use system libc++ headers and omit an AMD-only Clang option.
 2000-comgr-support-system-llvm.patch
+# Link the multilib HIP runtime instead of assuming prefix/lib.
+2001-hipcc-use-distribution-runtime-directory.patch
 
 %description
 %{summary}

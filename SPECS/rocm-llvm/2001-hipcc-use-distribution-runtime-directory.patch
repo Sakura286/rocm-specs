@@ -1,0 +1,42 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Resolve the HIP runtime in the distribution library directory
+
+Preserve HIP_LIB_PATH and HIP_PATH overrides; append the runtime after user
+objects and disable the driver's hardcoded prefix/lib lookup.
+
+--- a/amd/hipcc/src/hipBin_amd.h
++++ b/amd/hipcc/src/hipBin_amd.h
+@@ -372,10 +372,11 @@
+     hipLibPath = env.hipLibPathEnv_;
+   }
+   else if (!env.hipPathEnv_.empty()) {
+-    fs::path p = env.hipLibPathEnv_;
++    fs::path p = env.hipPathEnv_;
+     p /= "lib";
+     hipLibPath = p.string();
+   }
++  if (hipLibPath.empty()) hipLibPath = "@HIP_LIBDIR@";
+   return hipLibPath;
+ }
+ 
+@@ -872,7 +873,7 @@
+     if (!hip_path.empty()) {
+       HIPLDFLAGS += " -L" + hip_path;
+     }
+-    HIPLDFLAGS += " --hip-link";
++    HIPLDFLAGS += " --hip-link -no-hip-rt";
+     if (rdc) {
+       HIPLDFLAGS += HIPLDARCHFLAGS;
+     }
+@@ -903,6 +904,11 @@
+   }
+ 
+   CMD += " " + toolArgs;
++  // Clang assumes $HIP_PATH/lib, but the distribution uses a multilib directory.
++  // Keep the runtime after user objects so --as-needed does not discard it.
++  if (needLDFLAGS && !compileOnly) {
++    CMD += " \"" + getHipLibPath() + "/libamdhip64.so\"";
++  }
+   if ((needCFLAGS || needCXXFLAGS) &&
+       !var.hipccCompileFlagsAppendEnv_.empty()) {
+     CMD.append(" ");

@@ -12,3 +12,6 @@ sed -i 's|@AMD_DEVICE_LIBS_PREFIX_CODE@|set(AMD_DEVICE_LIBS_PREFIX "%{amd_device
 
 # CMP0053 OLD is only needed on Windows and was removed in CMake 4.
 sed -i 's/cmake_policy(SET CMP0053 OLD)/cmake_policy(SET CMP0053 NEW)/' amd/device-libs/cmake/OCL.cmake
+
+# Set the default runtime directory for hipcc; environment overrides still work.
+sed -i 's|@HIP_LIBDIR@|%{_libdir}|g' amd/hipcc/src/hipBin_amd.h
