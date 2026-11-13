@@ -126,6 +126,7 @@ BuildRequires:  cmake(GTest)
 2003-use-installed-stinkytofu-conversion-sources.patch
 2004-extops-use-legacy-half-register-syntax.patch
 2005-rocisa-default-half-conversions-to-low-half.patch
+2006-amax-keep-legacy-half-conversion-operands.patch
 
 %global _description %{expand:
 hipBLASLt is a library that provides general matrix-matrix

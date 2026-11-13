@@ -1,0 +1,16 @@
+Explicitly omit half selectors in the legacy-mode AMax assembly generator.
+
+--- a/tensilelite/AMaxGenerator.py
++++ b/tensilelite/AMaxGenerator.py
+@@ -763,9 +763,9 @@
+ 
+         mod.add(ri.VMovB32(vgpr("Offset"), 0))
+         if self.i_type.toChar() == 'H' and self.o_type.toChar() == "S":
+-            mod.add(ri.VCvtF16toF32(vgpr("Output"), vgpr("Output")))
++            mod.add(ri.VCvtF16toF32(vgpr("Output"), vgpr("Output"), true16=[-1, -1, -1]))
+         elif self.i_type.toChar() == 'S' and self.o_type.toChar() == "H":
+-            mod.add(ri.VCvtF32toF16(vgpr("Output"), vgpr("Output")))
++            mod.add(ri.VCvtF32toF16(vgpr("Output"), vgpr("Output"), true16=[-1, -1, -1]))
+         mod.add(BufferStorex1(vgpr("Output"), vgpr("Offset"), sgpr("Dst",4), 0, MUBUFModifiers(offen=True)))
+         mod.addSpaceLine()
+ 
