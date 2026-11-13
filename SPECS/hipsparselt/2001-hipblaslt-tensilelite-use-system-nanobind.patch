@@ -1,0 +1,20 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use distribution build dependencies
+
+--- a/tensilelite/rocisa/CMakeLists.txt
++++ b/tensilelite/rocisa/CMakeLists.txt
+@@ -49,13 +49,7 @@
+         endif()
+         find_package(nanobind REQUIRED CONFIG)
+     else()
+-        include(FetchContent)
+-        FetchContent_Declare(
+-          nanobind
+-          GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+-          GIT_TAG        9b3afa9dbdc23641daf26fadef7743e7127ff92f # v2.6.1
+-        )
+-        FetchContent_MakeAvailable(nanobind)
++        find_package(nanobind CONFIG REQUIRED)
+         if(ROCISA_USE_STABLE_ABI)
+             find_package(Python 3.12 COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
+         endif()

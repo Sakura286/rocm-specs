@@ -1,21 +1,26 @@
-From 43c4a61c5d8836a16feb8e53c72f255790523ff3 Mon Sep 17 00:00:00 2001
-From: Tom Rix <Tom.Rix@amd.com>
-Date: Mon, 3 Nov 2025 06:11:40 -0800
-Subject: [PATCH] hipblaslt find origami package
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use distribution build dependencies
 
----
- CMakeLists.txt | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-@@ -217,7 +217,7 @@
-     # TODO: This is a temporary solution to prevent the installation of the origami license files.
-     block(SCOPE_FOR VARIABLES)
-         set(ORIGAMI_ENABLE_INSTALL OFF)
--        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../shared/origami" origami)
-+        find_package(origami CONFIG REQUIRED)
-     endblock()
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -256,19 +256,7 @@
  endif()
- 
--- 
-2.52.0
+
+ if(NOT ROCM_LIBS_SUPERBUILD)
+-    if(HIPBLASLT_ENABLE_THEROCK)
+-        find_package(origami CONFIG QUIET)
+-    endif()
+-    if(NOT TARGET roc::origami)
+-        block(SCOPE_FOR VARIABLES)
+-            set(ORIGAMI_ENABLE_FETCH ON)
+-            set(ORIGAMI_BUILD_TESTING OFF)
+-            set(ORIGAMI_ENABLE_PYTHON OFF)
+-            set(BUILD_TESTING OFF)
+-            set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+-            add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../shared/origami" "${CMAKE_CURRENT_BINARY_DIR}/origami" EXCLUDE_FROM_ALL)
+-        endblock()
+-    endif()
++    find_package(origami CONFIG REQUIRED)
+ endif()
+
+ # INTERFACE library that owns the public hipblaslt API headers (the in-tree
