@@ -8,11 +8,11 @@
 # roctracer needs a GPU to run tests
 %bcond test 0
 
-%global rocm_release 7.14
-%global rocm_patch   1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
 Name:           roctracer
 Version:        %{rocm_version}
@@ -20,8 +20,8 @@ Release:        %autorelease
 Summary:        ROCm Tracer Callback/Activity Library
 License:        MIT
 URL:            https://github.com/ROCm/roctracer
-#!RemoteAsset:  sha256:cd24d915f05424cb2d6204b0afd66aa4e94cb24eaa2364e6df742bcb9096de40
-Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/roctracer.tar.gz
+#!RemoteAsset:  sha256:f545ca32582b90d911988b50860b80983e40d6758def8852f30ef983774213b2
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/roctracer.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n roctracer
@@ -35,6 +35,7 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
