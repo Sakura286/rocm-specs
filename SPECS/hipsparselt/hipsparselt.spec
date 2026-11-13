@@ -35,6 +35,9 @@ Source5:        2000-tensilelite-add-heartbeat-during-parallel-map.patch
 Patch2000:      2000-hipsparselt-guard-mf16c-to-x86.patch
 BuildSystem:    cmake
 
+# LLVM 23's HIP bundler requires the host triple's environment field.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 %if %{with test}
@@ -147,9 +150,15 @@ find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/am
 cd ..
 
 %conf -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %build -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export PATH=%{rocmllvm_bindir}:$PATH
 export TENSILE_ROCM_ASSEMBLER_PATH=%{rocmllvm_bindir}/clang++
 export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=%{rocmllvm_bindir}/clang-offload-bundler
