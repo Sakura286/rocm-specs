@@ -8,14 +8,15 @@
 
 # The package follows LLVM's major version, but API version is still important:
 %global comgr_maj_api_ver 3
-%global comgr_full_api_ver %{comgr_maj_api_ver}.3
+%global comgr_full_api_ver %{comgr_maj_api_ver}.5
 
 # What LLVM is upstream using (use LLVM_VERSION_MAJOR from cmake/Modules/LLVMVersion.cmake):
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
-%global rocm_release 7.14
-%global rocm_patch 1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
+%global source_tag therock-%{rocm_release}
 
 %global bundle_prefix %{_libdir}/llvm%{llvm_maj_ver}
 %global llvm_triple %{_target_platform}
@@ -30,12 +31,8 @@
 %global targets_to_build "RISCV;AMDGPU"
 %endif
 
-# All the tests are not enabled both on fedora and debian
-# https://salsa.debian.org/rocm-team/rocm-llvm/-/blob/debian/unstable/debian/rules
-# https://src.fedoraproject.org/rpms/rocm-compilersupport/blob/rawhide/f/rocm-compilersupport.spec
-# Disabled by default.
-%bcond device_libs_test 0
-%bcond comgr_test 0
+%bcond device_libs_test 1
+%bcond comgr_test 1
 
 Name:           rocm-llvm
 Version:        %{rocm_version}
@@ -45,13 +42,14 @@ Summary:        Various AMD ROCm LLVM related services
 # hipcc is MIT, device-libs are NCSA, comgr is Apache-2.0 WITH LLVM-exception:
 License:        (Apache-2.0 WITH LLVM-exception OR NCSA) AND Apache-2.0 WITH LLVM-exception AND NCSA AND MIT
 URL:            https://github.com/ROCm/llvm-project
-#!RemoteAsset:  sha256:7e496ab1280599c9e52e477ec29988a5d86a634d0cfe0f8f57b7ad1882644372
-Source0:        %{url}/archive/refs/tags/therock-%{version}.tar.gz
+#!RemoteAsset:  sha256:db317aadb90366b61af0fd93b0ccf3cefe70a18e4e37c23744d968ea6f900654
+Source0:        %{url}/archive/refs/tags/%{source_tag}.tar.gz
 Source1:        rocm-llvm.prep.in
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang-devel(major) = %{llvm_maj_ver}
 BuildRequires:  clang-static(major) = %{llvm_maj_ver}
+BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  fdupes
 BuildRequires:  libcxx%{llvm_maj_ver}-devel
@@ -65,15 +63,11 @@ BuildRequires:  pkgconfig(libzstd)
 # comgr requires python
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
-BuildRequires:  rocm-cmake >= %{rocm_release}
+BuildRequires:  rocm-cmake >= %{rocm_version}
 
 %patchlist
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 0001-Use-signed-char-in-comgr-building.patch
-# https://github.com/ROCm/llvm-project/commit/a6fd4570d3a813edbdf9bae1e9e042e384e78dd0
-1000-device-libs-add-msad-target-features.patch
-# https://github.com/ROCm/llvm-project/commit/24eca41ad5e52a7ee6ca272f04b181507b7c0adb
-1001-device-libs-handle-alias-type-diagnostics.patch
 # Use system libc++ headers and omit an AMD-only Clang option.
 2000-comgr-support-system-llvm.patch
 
@@ -136,7 +130,7 @@ hipcc will pass-through options to the target compiler. The tools calling hipcc
 must ensure the compiler options are appropriate for the target compiler.
 
 %prep
-%autosetup -p1 -n llvm-project-therock-%{version}
+%autosetup -p1 -n llvm-project-%{source_tag}
 
 # llvm_maj_ver sanity check (we should be matching the bundled llvm major ver):
 if ! grep -q "set(LLVM_VERSION_MAJOR %{llvm_maj_ver})" cmake/Modules/LLVMVersion.cmake; then
@@ -209,39 +203,11 @@ export ROCM_PATH=$(realpath %__cmake_builddir)
 %define _vpath_builddir build-devicelibs
 # Workaround for bug in cmake tests not finding amdgcn:
 ln -s %{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
-# Below tests are failed:
-#    6 - compile_native_rcp__gfx600 (Failed)
-#    7 - compile_native_rsqrt__gfx600 (Failed)
-#   10 - compile_native_rcp__gfx700 (Failed)
-#   11 - compile_native_rsqrt__gfx700 (Failed)
-#   14 - compile_native_rcp__gfx803 (Failed)
-#   15 - compile_native_rsqrt__gfx803 (Failed)
-#   18 - compile_atomic_work_item_fence__gfx803 (Failed)
-#   19 - compile_atomic_work_item_fence__gfx900 (Failed)
-#   20 - compile_atomic_work_item_fence__gfx90a (Failed)
-#   21 - compile_atomic_work_item_fence__gfx1030 (Failed)
-#   22 - compile_atomic_work_item_fence__gfx1100 (Failed)
-#   23 - compile_atomic_work_item_fence__gfx1200 (Failed)
 %{?with_device_libs_test:%ctest}
 
 # Test comgr
 %define _vpath_srcdir amd/comgr
 %define _vpath_builddir build-comgr
-# Below tests are failed:
-#    2 - comgr_disasm_llvm_reloc_test (SEGFAULT)
-#    3 - comgr_disasm_llvm_so_test (SEGFAULT)
-#    5 - comgr_disasm_options_test (SEGFAULT)
-#   13 - comgr_compile_test (Failed)
-#   14 - comgr_compile_minimal_test (Failed)
-#   16 - comgr_compile_log_remarks_test (Failed)
-#   17 - comgr_compile_source_with_device_libs_to_bc_with_vfs_test (Failed)
-#   21 - comgr_get_data_isa_name_test (Failed)
-#   29 - comgr_mangled_names_test (Failed)
-#   30 - comgr_multithread_test (SEGFAULT)
-#   32 - comgr_compile_hip_test (Failed)
-#   33 - comgr_compile_hip_to_relocatable (Failed)
-#   34 - comgr_mangled_names_hip_test (Failed)
-#   35 - comgr_unbundle_hip_test (Failed)
 %{?with_comgr_test:%ctest}
 
 %install

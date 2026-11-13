@@ -1,14 +1,23 @@
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
-Subject: [PATCH] comgr: support distribution LLVM and libc++ headers
+Subject: [PATCH] comgr: use distribution LLVM and libc++ headers
 
-The system Clang does not implement AMD's postopt bitcode option. Remove
-both the option and its -Xclang introducer. Allow standalone builds to
-embed the installed libc++ headers instead of requiring an LLVM source tree.
-Include headers directly instead of relying on transitive LLVM includes.
+Allow standalone builds to embed the installed libc++ headers rather than
+requiring a complete LLVM source tree. Include unordered_set directly.
+The distribution Clang does not implement AMD's postopt bitcode option;
+omit the option and its introducer. Device-library linking behavior is
+covered by the COMGR tests and requires validation with the system LLVM.
 
 --- a/amd/comgr/src/comgr-compiler.cpp
 +++ b/amd/comgr/src/comgr-compiler.cpp
-@@ -1580,8 +1580,6 @@
+@@ -87,6 +87,7 @@
+
+ #include <csignal>
+ #include <sstream>
++#include <unordered_set>
+
+ LLD_HAS_DRIVER(elf)
+
+@@ -1712,8 +1713,6 @@
      // necessary for HIP (for example if HIP adopts the same AMDGPUSimplifyLibs
      // strategy that potentially introduces undefined device-library symbols),
      // we will need also apply this option in compileToRelocatable().
@@ -27,42 +36,3 @@ Include headers directly instead of relying on transitive LLVM includes.
    "${CMAKE_SOURCE_DIR}/libcxx/include"
    "${CMAKE_SOURCE_DIR}/../libcxx/include"
    "${CMAKE_SOURCE_DIR}/../../libcxx/include"  # amd/comgr -> libcxx
---- a/amd/comgr/src/comgr-compiler.cpp
-+++ b/amd/comgr/src/comgr-compiler.cpp
-@@ -78,6 +78,7 @@
-
- #include <csignal>
- #include <sstream>
-+#include <unordered_set>
-
- LLD_HAS_DRIVER(elf)
-
---- a/amd/comgr/src/hotswap/raiser.cpp
-+++ b/amd/comgr/src/hotswap/raiser.cpp
-@@ -15,6 +15,7 @@
- #include "llvm/IR/IRBuilder.h"
- #include "llvm/IR/LLVMContext.h"
- #include "llvm/IR/Module.h"
-+#include "llvm/TargetParser/AMDGPUTargetParser.h"
- #include "llvm/TargetParser/TargetParser.h"
- #include "llvm/TargetParser/Triple.h"
-
---- a/amd/comgr/src/comgr-unbundle-command.cpp
-+++ b/amd/comgr/src/comgr-unbundle-command.cpp
-@@ -16,6 +16,7 @@
-
- #include <clang/Driver/OffloadBundler.h>
- #include <llvm/BinaryFormat/Magic.h>
-+#include <llvm/Object/OffloadBundle.h>
-
- namespace COMGR {
- using namespace llvm;
-@@ -143,7 +144,7 @@
-
-   MemoryBuffer &InputBuffer = **MaybeInputBuffer;
-
--  using Header = CompressedOffloadBundle::CompressedBundleHeader;
-+  using Header = llvm::object::CompressedOffloadBundle::CompressedBundleHeader;
-   Expected<Header> MaybeHeader = Header::tryParse(InputBuffer.getBuffer());
-   if (!MaybeHeader)
-     return MaybeHeader.takeError();

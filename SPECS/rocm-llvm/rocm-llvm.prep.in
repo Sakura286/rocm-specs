@@ -4,11 +4,31 @@ if [ ! -x "${LLVM_BINDIR}/clang++" ]; then
     echo "Something wrong with llvm-config"
     exit 1
 fi
-sed -i "s@hipClangPath /= \"lib/llvm/bin\"@hipClangPath = \"${LLVM_BINDIR}\"@" amd/hipcc/src/hipBin_amd.h
 
-# The packaged device libraries live in the system Clang resource directory.
-sed -i 's@amdgcnBitcode = roccmPath@amdgcnBitcode = "%{amd_device_libs_prefix}/"@' amd/hipcc/src/hipBin_amd.h
-sed -i 's|@AMD_DEVICE_LIBS_PREFIX_CODE@|set(AMD_DEVICE_LIBS_PREFIX "%{amd_device_libs_prefix}")|' amd/device-libs/AMDDeviceLibsConfig.cmake.in
+# Fail if upstream changes a path anchor instead of silently retaining a
+# bundled-toolchain path. Explicit HIP_CLANG_PATH overrides remain supported.
+python3 - "$LLVM_BINDIR" <<'PY'
+from pathlib import Path
+import sys
 
+def replace_once(name, old, new):
+    path = Path(name)
+    text = path.read_text()
+    if text.count(old) != 1:
+        raise SystemExit(f"Expected one path anchor in {name}: {old}")
+    path.write_text(text.replace(old, new))
+
+replace_once('amd/hipcc/src/hipBin_amd.h',
+             'hipClangPath /= "lib";\n    hipClangPath /= "llvm";\n    hipClangPath /= "bin";',
+             f'hipClangPath = "{sys.argv[1]}";')
+replace_once('amd/hipcc/src/hipBin_amd.h',
+             'amdgcnBitcode = roccmPath',
+             'amdgcnBitcode = "%{amd_device_libs_prefix}/"')
+replace_once('amd/device-libs/AMDDeviceLibsConfig.cmake.in',
+             '@AMD_DEVICE_LIBS_PREFIX_CODE@',
+             'set(AMD_DEVICE_LIBS_PREFIX "%{amd_device_libs_prefix}")')
 # CMP0053 OLD is only needed on Windows and was removed in CMake 4.
-sed -i 's/cmake_policy(SET CMP0053 OLD)/cmake_policy(SET CMP0053 NEW)/' amd/device-libs/cmake/OCL.cmake
+replace_once('amd/device-libs/cmake/OCL.cmake',
+             'cmake_policy(SET CMP0053 OLD)',
+             'cmake_policy(SET CMP0053 NEW)')
+PY
