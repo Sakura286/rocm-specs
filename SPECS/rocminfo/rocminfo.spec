@@ -34,6 +34,7 @@ BuildRequires:  clang
 BuildRequires:  cmake
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  cmake(hsa-runtime64) >= 1.0
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 
 %description
 %{pkg_desc}
