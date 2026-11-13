@@ -70,12 +70,15 @@ BuildRequires:  rocm-cmake >= %{rocm_version}
 %patchlist
 # https://salsa.debian.org/rocm-team/rocm-llvm/-/merge_requests/2
 0001-Use-signed-char-in-comgr-building.patch
-# Use system libc++ headers and omit an AMD-only Clang option.
+# Use system libc++ headers; implement postopt linking in COMGR below.
 2000-comgr-support-system-llvm.patch
 2001-comgr-use-llvm24-feature-bitsets.patch
 2002-comgr-use-independent-unbundle-cache-class.patch
 2003-comgr-separate-lit-and-tool-paths.patch
 2004-comgr-link-unit-test-llvm-dependencies.patch
+2005-comgr-preserve-postopt-device-linking.patch
+2006-device-libs-update-llvm24-checks.patch
+2007-comgr-update-llvm24-test-expectations.patch
 
 %description
 %{summary}
@@ -211,7 +214,9 @@ check_status=0
 # OCL.cmake mirrors the absolute install path below the build directory.
 # Point Clang's --rocm-path at those freshly built libraries, not the host.
 ln -s .%{amd_device_libs_prefix}/amdgcn build-devicelibs/amdgcn
-%{?with_device_libs_test:%ctest || check_status=1}
+# Full lgamma_r folding assumes AMD-specific folding of reciprocal intrinsics.
+# Keep those fixtures, but run the supported special-value checks instead.
+%{?with_device_libs_test:%ctest --exclude-regex '^constant_fold_lgamma_r__' || check_status=1}
 
 # Test comgr
 %define _vpath_srcdir amd/comgr

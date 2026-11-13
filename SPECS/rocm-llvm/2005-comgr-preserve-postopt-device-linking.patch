@@ -1,0 +1,69 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] comgr: preserve postopt device linking with upstream Clang
+
+Intercept the AMD-only cc1 marker in COMGR. Optimize without device libraries,
+then use an IR-only Clang invocation with LLVM passes disabled to link them.
+This preserves driver library selection, attribute propagation and
+internalization without modifying callers or building a private compiler.
+
+--- a/amd/comgr/src/comgr-compiler.cpp
++++ b/amd/comgr/src/comgr-compiler.cpp
+@@ -956,6 +956,14 @@
+       Argv.pop_back();
+     }
+
++    // Interpret AMD's postopt marker here; upstream Clang does not expose it.
++    auto PostoptArg = llvm::find_if(Argv, [](const char *Arg) {
++      return StringRef(Arg) == "-mlink-builtin-bitcode-postopt";
++    });
++    bool LinkPostopt = PostoptArg != Argv.end();
++    if (LinkPostopt)
++      Argv.erase(PostoptArg);
++
+     if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
+                                             Diags)) {
+       return AMD_COMGR_STATUS_ERROR;
+@@ -967,8 +975,43 @@
+     if (!Clang->hasDiagnostics()) {
+       return AMD_COMGR_STATUS_ERROR;
+     }
++    // Preserve the driver's device-library selection and Clang's attribute
++    // propagation/internalization. First optimize without those libraries,
++    // then link them in a second IR invocation with optimizations disabled.
++    std::shared_ptr<CompilerInvocation> PostoptInvocation;
++    if (LinkPostopt) {
++      const auto &Frontend = Clang->getFrontendOpts();
++      if (Frontend.ProgramAction != frontend::EmitBC ||
++          Frontend.OutputFile.empty() || Frontend.OutputFile == "-") {
++        LogS << "postopt device linking requires bitcode file output\n";
++        return AMD_COMGR_STATUS_ERROR;
++      }
++      PostoptInvocation =
++          std::make_shared<CompilerInvocation>(Clang->getInvocation());
++      Clang->getCodeGenOpts().LinkBitcodeFiles.clear();
++    }
+     if (!ExecuteCompilerInvocation(Clang.get())) {
+       return AMD_COMGR_STATUS_ERROR;
++    }
++    if (PostoptInvocation) {
++      auto &Frontend = PostoptInvocation->getFrontendOpts();
++      std::string Output = Frontend.OutputFile;
++      Frontend.Inputs.clear();
++      Frontend.Inputs.emplace_back(Output, InputKind(Language::LLVM_IR));
++      Frontend.OutputFile = Output + ".postopt";
++      PostoptInvocation->getCodeGenOpts().DisableLLVMPasses = true;
++
++      clearLLVMOptions();
++      CompilerInstance Postopt(PostoptInvocation);
++      Postopt.setVerboseOutputStream(LogS);
++      Postopt.setVirtualFileSystem(FS);
++      Postopt.createDiagnostics(&DiagClient, /* ShouldOwnClient */ false);
++      if (!Postopt.hasDiagnostics() || !ExecuteCompilerInvocation(&Postopt))
++        return AMD_COMGR_STATUS_ERROR;
++      if (auto EC = sys::fs::rename(Frontend.OutputFile, Output)) {
++        LogS << "postopt output rename failed: " << EC.message() << "\n";
++        return AMD_COMGR_STATUS_ERROR;
++      }
+     }
+   } else if (Argv[1] == StringRef("-cc1as")) {
+     if (env::shouldEmitVerboseLogs()) {

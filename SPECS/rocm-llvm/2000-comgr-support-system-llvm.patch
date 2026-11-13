@@ -3,9 +3,6 @@ Subject: [PATCH] comgr: use distribution LLVM and libc++ headers
 
 Allow standalone builds to embed the installed libc++ headers rather than
 requiring a complete LLVM source tree. Include unordered_set directly.
-The distribution Clang does not implement AMD's postopt bitcode option;
-omit the option and its introducer. Device-library linking behavior is
-covered by the COMGR tests and requires validation with the system LLVM.
 
 --- a/amd/comgr/src/comgr-compiler.cpp
 +++ b/amd/comgr/src/comgr-compiler.cpp
@@ -17,15 +14,6 @@ covered by the COMGR tests and requires validation with the system LLVM.
 
  LLD_HAS_DRIVER(elf)
 
-@@ -1712,8 +1713,6 @@
-     // necessary for HIP (for example if HIP adopts the same AMDGPUSimplifyLibs
-     // strategy that potentially introduces undefined device-library symbols),
-     // we will need also apply this option in compileToRelocatable().
--    Args.push_back("-Xclang");
--    Args.push_back("-mlink-builtin-bitcode-postopt");
-   }
-
-   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
 --- a/amd/comgr/cmake/LibcxxHeaders.cmake
 +++ b/amd/comgr/cmake/LibcxxHeaders.cmake
 @@ -22,6 +22,7 @@
