@@ -1,0 +1,3550 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Backport upstream true16 operand half selection
+
+Upstream: https://github.com/ROCm/rocm-libraries/commit/bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2
+Upstream-PR: https://github.com/ROCm/rocm-libraries/pull/10052 (merged)
+Upstream-Commit: bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2
+
+Carry the complete projects/hipblaslt subtree change; the companion subtree is carried
+by the matching StinkyTofu/hipBLASLt packages. Only strip the monorepo path
+prefix. No prerequisite source changes were needed on therock-10.1.
+
+diff --git a/device-library/extops/CMakeLists.txt b/device-library/extops/CMakeLists.txt
+index 27cba450c363..ec5b59ac684f 100644
+--- a/device-library/extops/CMakeLists.txt
++++ b/device-library/extops/CMakeLists.txt
+@@ -20,10 +20,16 @@ foreach(arch IN LISTS archs)
+     if(arch MATCHES "^gfx1[12][0-9][0-9]$")
+         set(WAVEFRONT "-mno-wavefrontsize64")
+     endif()
++    # Enable true16 on all gfx11*/gfx12* (NoSDWA). "SHELL:" keeps the flag group
++    # intact so CMake de-duplication does not drop the paired +real-true16.
++    set(TRUE16_FEATURE "")
++    if(arch MATCHES "^gfx1[12][0-9][0-9]$")
++        set(TRUE16_FEATURE "SHELL:-Xclangas -target-feature -Xclangas +real-true16")
++    endif()
+     add_library(extop-obj-${arch} OBJECT)
+     target_compile_options(extop-obj-${arch}
+         PRIVATE
+-            -Wno-unused-command-line-argument -x assembler -target amdgcn-amd-amdhsa -mcode-object-version=4 -mcpu=${offload_arch} ${WAVEFRONT} -c
++            -Wno-unused-command-line-argument -x assembler -target amdgcn-amd-amdhsa -mcode-object-version=4 -mcpu=${offload_arch} ${WAVEFRONT} -c ${TRUE16_FEATURE}
+     )
+     target_sources(extop-obj-${arch}
+         PRIVATE
+diff --git a/tensilelite/AMaxGenerator.py b/tensilelite/AMaxGenerator.py
+index 9d6c88550834..9f6ff394b693 100644
+--- a/tensilelite/AMaxGenerator.py
++++ b/tensilelite/AMaxGenerator.py
+@@ -22,7 +22,7 @@
+ 
+ from rocisa.code import Label, Module, RegSet, TextBlock, ValueSet, SrdUpperValue
+ from rocisa.container import EXEC, VCC, DSModifiers, MUBUFModifiers, vgpr, sgpr
+-from rocisa.enum import RegisterType
++from rocisa.enum import RegisterType, HighBitSel
+ from rocisa.register import RegisterPool
+ import rocisa.instruction as ri
+ 
+@@ -450,12 +450,16 @@ def calculate_global_address(self) -> Module:
+ 
+     def max_per_data(self, i, onlyOneElement = False) -> Module:
+         mod = Module("max_per_data")
++        low = HighBitSel.LOW
+         if (self.i_type.isHalf()):
+-            mod.add(ri.VMaxF16(vgpr("Output"), vgpr("Output"), vgpr(f"Value+{i}", isAbs=True)))
++            # f16 in the low half; t16(LOW) tags .l on true16 (no-op on legacy).
++            mod.add(ri.VMaxF16(ri.t16(vgpr("Output"), low), ri.t16(vgpr("Output"), low),
++                               ri.t16(vgpr(f"Value+{i}", isAbs=True), low)))
+             # On non-Ecc hardware, the top 16 bits are dirty
+             if not onlyOneElement:
+                 mod.add(ri.VLShiftRightB32(vgpr(f"Value+{i}"), 16, vgpr(f"Value+{i}")))
+-                mod.add(ri.VMaxF16(vgpr("Output"), vgpr("Output"), vgpr(f"Value+{i}", isAbs=True)))
++                mod.add(ri.VMaxF16(ri.t16(vgpr("Output"), low), ri.t16(vgpr("Output"), low),
++                                   ri.t16(vgpr(f"Value+{i}", isAbs=True), low)))
+         elif (self.i_type.isSingle()):
+             mod.add(ri.VMaxF32(vgpr("Output"), vgpr("Output"), vgpr(f"Value+{i}", isAbs=True)))
+         return mod
+@@ -652,7 +656,9 @@ def sum_in_some_thread(self)  -> Module:
+     def merge_sum(self) -> Module:
+         mod = Module("merge_sum")
+         if (self.i_type.isHalf()):
+-            mod.add(ri.VMaxF16(vgpr("Output"), vgpr("Output"), vgpr("OutputB")))
++            low = HighBitSel.LOW
++            mod.add(ri.VMaxF16(ri.t16(vgpr("Output"), low), ri.t16(vgpr("Output"), low),
++                               ri.t16(vgpr("OutputB"), low)))
+         elif (self.i_type.isSingle()):
+             mod.add(ri.VMaxF32(vgpr("Output"), vgpr("Output"), vgpr("OutputB")))
+ 
+@@ -768,10 +774,11 @@ def output_result(self) -> Module:
+         BufferStorex1 = self.global_write_inst_type(1)
+ 
+         mod.add(ri.VMovB32(vgpr("Offset"), 0))
++        # f16 in the low half; ECvt* selects .l on true16, SDWA WORD_0 on legacy.
+         if self.i_type.toChar() == 'H' and self.o_type.toChar() == "S":
+-            mod.add(ri.VCvtF16toF32(vgpr("Output"), vgpr("Output")))
++            mod.add(ri.ECvtF16toF32(vgpr("Output"), vgpr("Output"), HighBitSel.LOW))
+         elif self.i_type.toChar() == 'S' and self.o_type.toChar() == "H":
+-            mod.add(ri.VCvtF32toF16(vgpr("Output"), vgpr("Output")))
++            mod.add(ri.ECvtF32toF16(vgpr("Output"), vgpr("Output"), HighBitSel.LOW))
+         mod.add(BufferStorex1(vgpr("Output"), vgpr("Offset"), sgpr("Dst",4), 0, MUBUFModifiers(offen=True)))
+         mod.addSpaceLine()
+ 
+diff --git a/tensilelite/Makefile b/tensilelite/Makefile
+index 4462cc1630b6..3169b55ecbb2 100644
+--- a/tensilelite/Makefile
++++ b/tensilelite/Makefile
+@@ -51,8 +51,9 @@ LDD := $(ROCM_PATH)/bin/amdclang++
+ WAVE ?= 64
+ WAVEFRONTSIZE ?= $(if $(WAVE:32=),-mwavefrontsize64, -mno-wavefrontsize64)
+ 
++# Enable true16 on all gfx11*/gfx12* (NoSDWA); gfx10* stays fake16.
+ TRUE16_FEATURE :=
+-ifneq ($(filter gfx1250,$(TARGET_ARCH)),)
++ifneq ($(filter gfx11% gfx12%,$(TARGET_ARCH)),)
+ 	TRUE16_FEATURE += -Xclangas -target-feature -Xclangas +real-true16
+ endif
+ 
+diff --git a/tensilelite/Tensile/Activation.py b/tensilelite/Tensile/Activation.py
+index 77bd44740075..4cc41be8fd82 100644
+--- a/tensilelite/Tensile/Activation.py
++++ b/tensilelite/Tensile/Activation.py
+@@ -30,14 +30,15 @@
+ 
+ from rocisa import rocIsa
+ from rocisa.code import Module, TextBlock
+-from rocisa.container import VCC, EXEC, vgpr, sgpr, HolderContainer, RegisterContainer, Holder
+-from rocisa.enum import InstType
++from rocisa.container import VCC, EXEC, vgpr, sgpr, HolderContainer, RegisterContainer, Holder, \
++    SDWAModifiers, VOP3PModifiers
++from rocisa.enum import InstType, HighBitSel, SelectBit, UnusedBit
+ from rocisa.instruction import Instruction, SMovB32, SNop, SSetMask, VAddF16, VAddF32, \
+     VAddPKF16, VAndB32, VCmpGEF16, VCmpGEF32, VCmpGEF64, VCmpGEI32, VCmpGTF16, VCmpGTF32, \
+-    VCmpGTF64, VCmpGTI32, VCmpXClassF32, VCmpXLtF32, VCndMaskB32, VExpF16, VExpF32, VFmaF16, \
+-    VFmaF32, VFmaPKF16, VMaxF32, VMaxF64, VMaxI32, VMaxPKF16, VMed3I32, VMinF16, VMinF32, \
++    VCmpGTF64, VCmpGTI32, VCmpXClassF32, VCmpXLtF32, VCndMaskB16, VCndMaskB32, VExpF16, VExpF32, VFmaF16, \
++    VFmaF32, VFmaPKF16, VMaxF16, VMaxF32, VMaxF64, VMaxI32, VMaxPKF16, VMed3I32, VMinF16, VMinF32, \
+     VMinF64, VMinI32, VMovB32, VMulF16, VMulF32, VMulF64, VMulLOU32, VMulPKF16, VRcpF16, \
+-    VRcpF32, VSubF32, VSubI32
++    VRcpF32, VSubF32, VSubI32, t16
+ 
+ from Tensile.Common.DataType import DataType
+ from Tensile.Common.Utilities import printExit, printWarning
+@@ -471,6 +472,71 @@ def vgprPrefix(self, *args):
+             args = args[1]
+             return vgpr(vgprStr, args)
+ 
++    # ---- f16 half-wise emit helpers -------------------------------------------
++    # Each emits one f16 op for half `i`, hiding the true16-vs-SDWA arch branch:
++    #   true16 (NoSDWA): tag each VGPR operand with .l/.h (scalars pass through),
++    #                    v_cndmask_b16 replaces v_cndmask_b32.
++    #   legacy  (SDWA):  select the half via WORD_0/WORD_1 on the operands.
++    # Callers keep their own `for i in range(0, 2)` loop, so a compare and the
++    # cndmask that consumes its VCC stay in the same iteration.
++    @staticmethod
++    def _t16v(op, half):
++        # Tag .l/.h on a VGPR operand only; sgpr/immediate operands pass through.
++        return t16(op, half) if getattr(op, "regType", None) == "v" else op
++
++    def addTransF16Half(self, module, InstCls, vgprIdx, i, comment):
++        # One half of a unary f16 transcendental (dst == src); caller owns the SNop.
++        if rocIsa.getInstance().getArchCaps()["NoSDWA"]:
++            half = HighBitSel.LOW if i == 0 else HighBitSel.HIGH
++            module.add(InstCls(dst=t16(self.vgprPrefix(vgprIdx), half), \
++                               src=t16(self.vgprPrefix(vgprIdx), half), comment=comment))
++        else:
++            sb = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
++            module.add(InstCls(dst=self.vgprPrefix(vgprIdx), src=self.vgprPrefix(vgprIdx), \
++                               sdwa=SDWAModifiers(dst_sel=sb, dst_unused=UnusedBit.UNUSED_PRESERVE, \
++                                                  src0_sel=sb), comment=comment))
++
++    def addTransF16Halfwise(self, module, InstCls, vgprIdx, comment):
++        ti = rocIsa.getInstance()
++        for i in range(0, 2):
++            self.addTransF16Half(module, InstCls, vgprIdx, i, comment)
++            if ti.getArchCaps()["TransOpWait"]:
++                module.add(SNop(waitState=0, comment="1 wait states"))
++
++    def addCmpF16Half(self, module, CmpCls, src0, src1, i, comment):
++        # f16 compare into VCC over half `i`; src0 is the VGPR, src1 a scalar/immediate.
++        if rocIsa.getInstance().getArchCaps()["NoSDWA"]:
++            half = HighBitSel.LOW if i == 0 else HighBitSel.HIGH
++            module.add(CmpCls(dst=VCC(), src0=t16(src0, half), src1=src1, comment=comment))
++        else:
++            sb = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
++            module.add(CmpCls(dst=VCC(), src0=src0, src1=src1, \
++                              sdwa=SDWAModifiers(src0_sel=sb, src1_sel=SelectBit.WORD_0), comment=comment))
++
++    def addValuF16Half(self, module, InstCls, dst, src0, src1, i, comment):
++        # f16 min/max-style op over half `i` (all operands share the WORD_i select on legacy).
++        if rocIsa.getInstance().getArchCaps()["NoSDWA"]:
++            half = HighBitSel.LOW if i == 0 else HighBitSel.HIGH
++            module.add(InstCls(dst=self._t16v(dst, half), src0=self._t16v(src0, half), \
++                               src1=self._t16v(src1, half), comment=comment))
++        else:
++            sb = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
++            module.add(InstCls(dst=dst, src0=src0, src1=src1, \
++                               sdwa=SDWAModifiers(dst_sel=sb, dst_unused=UnusedBit.UNUSED_PRESERVE, \
++                                                  src0_sel=sb, src1_sel=sb), comment=comment))
++
++    def addCndMaskF16Half(self, module, dst, src0, src1, i, comment):
++        # Half-`i` conditional select from VCC: v_cndmask_b16 (true16) / v_cndmask_b32 + SDWA (legacy).
++        if rocIsa.getInstance().getArchCaps()["NoSDWA"]:
++            half = HighBitSel.LOW if i == 0 else HighBitSel.HIGH
++            module.add(VCndMaskB16(dst=self._t16v(dst, half), src0=self._t16v(src0, half), \
++                                   src1=self._t16v(src1, half), src2=VCC(), comment=comment))
++        else:
++            sb = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
++            module.add(VCndMaskB32(dst=dst, src0=src0, src1=src1, \
++                                   sdwa=SDWAModifiers(dst_sel=sb, dst_unused=UnusedBit.UNUSED_PRESERVE, \
++                                                      src0_sel=sb, src1_sel=sb), comment=comment))
++
+     ################################################################################
+     ################################################################################
+     ###
+@@ -506,21 +572,10 @@ def getClippedReluModule(self, cDataType, vgprIn, vgprOut, activationAlpha, acti
+         if cDataType.isHalf():
+             vgprTemp = self.getVgpr(1)
+             for i in range(0, 2):
+-                select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                module.add(VCmpGTF16(dst=VCC(), src0=self.vgprPrefix(vgprIn), src1=sgpr(activationAlpha), \
+-                           sdwa=SDWAModifiers(src0_sel=select_bit, src1_sel=SelectBit.WORD_0), comment="x > alpha?"))
+-                module.add(VMinF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationBeta), src1=self.vgprPrefix(vgprIn), \
+-                           sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                              src0_sel=select_bit, src1_sel=select_bit), \
+-                           comment="min(x, beta)"))
+-                module.add(VMinF16(dst=vgpr(Holder(idx=vgprTemp)), src0=sgpr(activationBeta), src1=0.0, \
+-                           sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                              src0_sel=select_bit, src1_sel=select_bit), \
+-                           comment="min(0, beta)"))
+-                module.add(VCndMaskB32(dst=self.vgprPrefix(vgprOut), src0=vgpr(Holder(idx=vgprTemp)), src1=self.vgprPrefix(vgprOut), \
+-                           sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                              src0_sel=select_bit, src1_sel=select_bit), \
+-                           comment="set x to min(0, beta) if <= alpha"))
++                self.addCmpF16Half(module, VCmpGTF16, self.vgprPrefix(vgprIn), sgpr(activationAlpha), i, "x > alpha?")
++                self.addValuF16Half(module, VMinF16, self.vgprPrefix(vgprOut), sgpr(activationBeta), self.vgprPrefix(vgprIn), i, "min(x, beta)")
++                self.addValuF16Half(module, VMinF16, vgpr(Holder(idx=vgprTemp)), sgpr(activationBeta), 0.0, i, "min(0, beta)")
++                self.addCndMaskF16Half(module, self.vgprPrefix(vgprOut), vgpr(Holder(idx=vgprTemp)), self.vgprPrefix(vgprOut), i, "set x to min(0, beta) if <= alpha")
+             module.add(SNop(waitState=0, comment="1 wait states")) # workaround for emulator
+         elif cDataType.isSingle():
+             module.add(VCmpGTF32(dst=VCC(), src0=self.vgprPrefix(vgprIn), src1=sgpr(activationAlpha), comment="x > alpha ?"))
+@@ -551,17 +606,11 @@ def getExpModule(self, cDataType, vgprIn, vgprOut):
+             module.add(SMovB32(dst=sgpr(Holder(idx=sgprMagic)), src=math.log(math.e,2), comment="exp magic"))
+             if self.usePK:
+                 module.add(VMulPKF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(Holder(idx=sgprMagic)), src1=self.vgprPrefix(vgprIn), comment="exp step 1"))
+-                for i in range(0, 2):
+-                    select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                    module.add(VExpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), \
+-                                       sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                                          src0_sel=select_bit), \
+-                                       comment="exp step 2"))
+-                    if ti.getArchCaps()["TransOpWait"]:
+-                        module.add(SNop(waitState=0, comment="1 wait states"))
++                self.addTransF16Halfwise(module, VExpF16, vgprOut, "exp step 2")
+             else:
+-                module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(Holder(idx=sgprMagic)), src1=self.vgprPrefix(vgprIn), comment="exp step 1"))
+-                module.add(VExpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), comment="exp step 2"))
++                # Scalar path: f16 in the low half, tag .l on true16 (no-op on legacy).
++                module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), HighBitSel.LOW), src0=sgpr(Holder(idx=sgprMagic)), src1=t16(self.vgprPrefix(vgprIn), HighBitSel.LOW), comment="exp step 1"))
++                module.add(VExpF16(dst=t16(self.vgprPrefix(vgprOut), HighBitSel.LOW), src=t16(self.vgprPrefix(vgprOut), HighBitSel.LOW), comment="exp step 2"))
+                 if ti.getArchCaps()["TransOpWait"]:
+                     module.add(SNop(waitState=0, comment="1 wait states"))
+         elif cDataType.isSingle():
+@@ -581,6 +630,7 @@ def getGeluModule(self, cDataType, vgprIn, vgprOut, activationAlpha=None):
+             flt16GeluK1Str = HexToStr(cDataType, self.usePK, ActivationMagicNumbers["Float16GeluK1"])
+             sgprMagicK1 = self.getSgpr(1)
+             sgprPKLiteral = self.getSgpr(1)
++            coef = floatUnion(u=ActivationMagicNumbers["FloatGeluK0"])
+             module.add(SMovB32(dst=sgpr(Holder(idx=sgprMagicK1)), src=flt16GeluK1Str, comment="Float16GeluK1" ))
+             module.add(SMovB32(dst=sgpr(Holder(idx=sgprPKLiteral)), src=coef.f))
+             vgprTemp = self.getVgpr(1)
+@@ -606,19 +656,22 @@ def getGeluModule(self, cDataType, vgprIn, vgprOut, activationAlpha=None):
+                                         vop3=VOP3PModifiers(op_sel_hi=[0,1,1]), comment="0.5 * x * (1 + tanh(...)) * scale"))
+ 
+             else:
+-                module.add(VMulF16(dst=vgpr(Holder(idx=vgprTemp)), src0=self.vgprPrefix(vgprIn), src1=self.vgprPrefix(vgprIn), comment="x * x" ))
+-                module.add(VFmaF16(dst=vgpr(Holder(idx=vgprTemp)), src0=vgpr(Holder(idx=vgprTemp)), src1=sgpr(Holder(idx=sgprMagicK1)), src2=1.0, comment="x^2 * k1 + 1"))
+-                module.add(VMulF16(dst=vgpr(Holder(idx=vgprTemp)), src0=self.vgprPrefix(vgprIn), src1=vgpr(Holder(idx=vgprTemp)), comment="x * (x^2 * k1 + 1)"))
++                # Scalar path: f16 values in the low half. t16(LOW) tags .l on true16,
++                # no-op on non-true16 (legacy output unchanged).
++                low = HighBitSel.LOW
++                module.add(VMulF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=t16(self.vgprPrefix(vgprIn), low), src1=t16(self.vgprPrefix(vgprIn), low), comment="x * x" ))
++                module.add(VFmaF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=t16(vgpr(Holder(idx=vgprTemp)), low), src1=sgpr(Holder(idx=sgprMagicK1)), src2=1.0, comment="x^2 * k1 + 1"))
++                module.add(VMulF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=t16(self.vgprPrefix(vgprIn), low), src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="x * (x^2 * k1 + 1)"))
+                 coef = floatUnion(u=ActivationMagicNumbers["FloatGeluK0"])
+-                module.add(VMulF16(dst=vgpr(Holder(idx=vgprTemp)), src0=sgpr(Holder(idx=sgprPKLiteral)), src1=vgpr(Holder(idx=vgprTemp)), comment="k0 * x * (x^2 * k1 + 1)"))
++                module.add(VMulF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=sgpr(Holder(idx=sgprPKLiteral)), src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="k0 * x * (x^2 * k1 + 1)"))
+                 module.add(self.getTanhModule(cDataType, Holder(idx=vgprTemp), Holder(idx=vgprTemp), "", ""))
+-                module.add(VAddF16(dst=vgpr(Holder(idx=vgprTemp)), src0=1.0, src1=vgpr(Holder(idx=vgprTemp)), comment="1 + tanh(...)" ))
+-                module.add(VMulF16(dst=vgpr(Holder(idx=vgprTemp)), src0=self.vgprPrefix(vgprIn), src1=vgpr(Holder(idx=vgprTemp)), comment="x * (1 + tanh(...))"))
++                module.add(VAddF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=1.0, src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="1 + tanh(...)" ))
++                module.add(VMulF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=t16(self.vgprPrefix(vgprIn), low), src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="x * (1 + tanh(...))"))
+                 if activationAlpha == None:
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=0.5, src1=vgpr(Holder(idx=vgprTemp)), comment="0.5 * x * (1 + tanh(...))"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=0.5, src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="0.5 * x * (1 + tanh(...))"))
+                 else:
+-                    module.add(VMulF16(dst=vgpr(Holder(idx=vgprTemp)), src0=0.5, src1=vgpr(Holder(idx=vgprTemp)), comment="0.5 * x * (1 + tanh(...))"))
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationAlpha), src1=vgpr(Holder(idx=vgprTemp)), comment="0.5 * x * (1 + tanh(...)) * scale"))
++                    module.add(VMulF16(dst=t16(vgpr(Holder(idx=vgprTemp)), low), src0=0.5, src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="0.5 * x * (1 + tanh(...))"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=sgpr(activationAlpha), src1=t16(vgpr(Holder(idx=vgprTemp)), low), comment="0.5 * x * (1 + tanh(...)) * scale"))
+         elif cDataType.isSingle():
+             vgprTemp = self.getVgpr(1)
+             flt16GeluK1Str = HexToStr(cDataType, self.usePK, ActivationMagicNumbers["FloatGeluK1"])
+@@ -645,14 +698,8 @@ def getLeakyReluModule(self, cDataType, vgprIn, vgprOut, activationAlpha):
+             vgprTemp = self.getVgpr(1)
+             module.add(VMulPKF16(dst=vgpr(Holder(idx=vgprTemp)), src0=sgpr(activationAlpha), src1=self.vgprPrefix(vgprIn), comment="tmp = x * alpha"))
+             for i in range(0, 2):
+-                select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                module.add(VCmpGEF16(dst=VCC(), src0=self.vgprPrefix(vgprIn), src1=0.0, \
+-                                     sdwa=SDWAModifiers(src0_sel=select_bit, src1_sel=SelectBit.WORD_0), \
+-                                     comment="x > 0 ?"))
+-                module.add(VCndMaskB32(dst=self.vgprPrefix(vgprOut), src0=vgpr(Holder(idx=vgprTemp)), src1=self.vgprPrefix(vgprIn), \
+-                                       sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                                          src0_sel=select_bit, src1_sel=select_bit), \
+-                                       comment="set x to tmp if < 0"))
++                self.addCmpF16Half(module, VCmpGEF16, self.vgprPrefix(vgprIn), 0.0, i, "x > 0 ?")
++                self.addCndMaskF16Half(module, self.vgprPrefix(vgprOut), vgpr(Holder(idx=vgprTemp)), self.vgprPrefix(vgprIn), i, "set x to tmp if < 0")
+         elif cDataType.isSingle():
+             vgprTemp = self.getVgpr(1)
+             module.add(VMulF32(dst=vgpr(Holder(idx=vgprTemp)), src0=sgpr(activationAlpha), src1=self.vgprPrefix(vgprIn), comment="tmp = x * alpha"))
+@@ -703,17 +750,18 @@ def getSigmoidModule(self, cDataType, vgprIn, vgprOut):
+                 module.add(VAddPKF16(dst=self.vgprPrefix(vgprOut), src0=1.0, src1=self.vgprPrefix(vgprOut), \
+                                      vop3=VOP3PModifiers(op_sel_hi=[0,1,1]), comment="1 + exp(-x)"))
+                 for i in range(0, 2):
+-                    select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                    module.add(VRcpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), \
+-                                       sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, src0_sel=select_bit), \
+-                                       comment="1 / (1 + exp(-x))"))
++                    self.addTransF16Half(module, VRcpF16, vgprOut, i, "1 / (1 + exp(-x))")
+                 if ti.getArchCaps()["TransOpWait"]:
+                     module.add(SNop(waitState=0, comment="1 wait states"))
+             else:
+-                module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=-1.0, src1=self.vgprPrefix(vgprIn), comment=" x = -x"))
++                # Scalar path: f16 value lives in the low half. t16(LOW) tags .l on
++                # true16 targets and is a no-op on non-true16 targets (legacy output
++                # is byte-for-byte unchanged).
++                low = HighBitSel.LOW
++                module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=-1.0, src1=t16(self.vgprPrefix(vgprIn), low), comment=" x = -x"))
+                 module.add(self.getExpModule(cDataType, vgprOut, vgprOut))
+-                module.add(VAddF16(dst=self.vgprPrefix(vgprOut), src0=1.0, src1=self.vgprPrefix(vgprOut), comment="1 + exp(-x)"))
+-                module.add(VRcpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), comment="1 / (1 + exp(-x))"))
++                module.add(VAddF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=1.0, src1=t16(self.vgprPrefix(vgprOut), low), comment="1 + exp(-x)"))
++                module.add(VRcpF16(dst=t16(self.vgprPrefix(vgprOut), low), src=t16(self.vgprPrefix(vgprOut), low), comment="1 / (1 + exp(-x))"))
+                 if ti.getArchCaps()["TransOpWait"]:
+                     module.add(SNop(waitState=0, comment="1 wait states"))
+         elif cDataType.isSingle():
+@@ -742,33 +790,27 @@ def getTanhModule(self, cDataType, vgprIn, vgprOut, activationAlpha, activationB
+                 module.add(self.getExpModule(cDataType, vgprOut, vgprOut))
+                 module.add(VAddPKF16(dst=self.vgprPrefix(vgprOut), src0=1.0, src1=self.vgprPrefix(vgprOut), \
+                                      vop3=VOP3PModifiers(op_sel_hi=[0,1,1]), comment="e^2x + 1"))
+-                for i in range(0, 2):
+-                    select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                    vgprCtrl = "dst_sel:WORD_%d dst_unused:UNUSED_PRESERVE src0_sel:WORD_%d"%(i, i)
+-                    module.add(VRcpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), \
+-                                       sdwa=SDWAModifiers(dst_sel=select_bit, dst_unused=UnusedBit.UNUSED_PRESERVE, \
+-                                                          src0_sel=select_bit), \
+-                                       comment="1 / (1 + exp(-x))"))
+-                    if ti.getArchCaps()["TransOpWait"]:
+-                        module.add(SNop(waitState=0, comment="1 wait states")) #workaround for emulator
++                self.addTransF16Halfwise(module, VRcpF16, vgprOut, "1 / (1 + exp(-x))")
+                 module.add(VFmaPKF16(dst=self.vgprPrefix(vgprOut), src0=-2.0, src1=self.vgprPrefix(vgprOut), src2=1.0, \
+                                      vop3=VOP3PModifiers(op_sel_hi=[0,1,0,1]), comment="tanh(x) = (1 / (e^2x + 1)) * (-2) + 1"))
+                 if activationBeta:
+                     module.add(VMulPKF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationBeta), src1=self.vgprPrefix(vgprOut), comment="beta * tanh(x)"))
+             else:
++                # Scalar path: f16 in the low half, tag .l on true16 (no-op on legacy).
++                low = HighBitSel.LOW
+                 if activationAlpha:
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationAlpha), src1=self.vgprPrefix(vgprIn), comment="x * alpha"))
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=2, src1=self.vgprPrefix(vgprOut), comment=" x = 2 * x"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=sgpr(activationAlpha), src1=t16(self.vgprPrefix(vgprIn), low), comment="x * alpha"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=2, src1=t16(self.vgprPrefix(vgprOut), low), comment=" x = 2 * x"))
+                 else:
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=2, src1=self.vgprPrefix(vgprIn), comment=" x = 2 * x"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=2, src1=t16(self.vgprPrefix(vgprIn), low), comment=" x = 2 * x"))
+                 module.add(self.getExpModule(cDataType, vgprOut, vgprOut))
+-                module.add(VAddF16(dst=self.vgprPrefix(vgprOut), src0=1.0, src1=self.vgprPrefix(vgprOut), comment="e^2x + 1"))
+-                module.add(VRcpF16(dst=self.vgprPrefix(vgprOut), src=self.vgprPrefix(vgprOut), comment="1 / (1 + exp(-x))"))
++                module.add(VAddF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=1.0, src1=t16(self.vgprPrefix(vgprOut), low), comment="e^2x + 1"))
++                module.add(VRcpF16(dst=t16(self.vgprPrefix(vgprOut), low), src=t16(self.vgprPrefix(vgprOut), low), comment="1 / (1 + exp(-x))"))
+                 if ti.getArchCaps()["TransOpWait"]:
+                     module.add(SNop(waitState=0, comment="1 wait states")) #workaround for emulator
+-                module.add(VFmaF16(dst=self.vgprPrefix(vgprOut), src0=-2.0, src1=self.vgprPrefix(vgprOut), src2=1.0, comment="tanh(x) = (1 / (e^2x + 1)) * (-2) + 1"))
++                module.add(VFmaF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=-2.0, src1=t16(self.vgprPrefix(vgprOut), low), src2=1.0, comment="tanh(x) = (1 / (e^2x + 1)) * (-2) + 1"))
+                 if activationBeta:
+-                    module.add(VMulF16(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationBeta), src1=self.vgprPrefix(vgprOut), comment="beta * tanh(x)"))
++                    module.add(VMulF16(dst=t16(self.vgprPrefix(vgprOut), low), src0=sgpr(activationBeta), src1=t16(self.vgprPrefix(vgprOut), low), comment="beta * tanh(x)"))
+         elif cDataType.isSingle():
+             if activationAlpha:
+                 module.add(VMulF32(dst=self.vgprPrefix(vgprOut), src0=sgpr(activationAlpha), src1=self.vgprPrefix(vgprIn), comment="x * alpha"))
+@@ -877,7 +919,9 @@ def getSiluModule(self, cDataType, vgprIn, vgprOut):
+             mulFunction = VMulF32
+         else:
+             raise RuntimeError("Unsupported data type %s."%cDataType.toDevice("HIP"))
+-        module.add(mulFunction(dst=self.vgprPrefix(vgprOut), src0=self.vgprPrefix(vgprIn), src1=self.vgprPrefix(Holder(idx=vgprTemp)), comment="x / (1 + exp(-x))"))
++        # Scalar VMulF16 gets .l on true16; packed VMulPKF16 must NOT be tagged.
++        w = (lambda r: t16(r, HighBitSel.LOW)) if (cDataType.isHalf() and not self.usePK) else (lambda r: r)
++        module.add(mulFunction(dst=w(self.vgprPrefix(vgprOut)), src0=w(self.vgprPrefix(vgprIn)), src1=w(self.vgprPrefix(Holder(idx=vgprTemp))), comment="x / (1 + exp(-x))"))
+         return module
+ 
+     def getSwishModule(self, cDataType, vgprIn, vgprOut, activationAlpha):
+@@ -894,9 +938,11 @@ def getSwishModule(self, cDataType, vgprIn, vgprOut, activationAlpha):
+             raise RuntimeError("Unsupported data type %s."%cDataType.toDevice("HIP"))
+         vgprTempIn = self.getVgpr(1)
+         vgprTempOut = self.getVgpr(1)
+-        module.add(mulFunction(dst=self.vgprPrefix(Holder(idx=vgprTempIn)), src0=self.vgprPrefix(vgprIn), src1=sgpr(activationAlpha), comment="x * beta"))
++        # Scalar VMulF16 gets .l on true16; packed VMulPKF16 must NOT be tagged.
++        w = (lambda r: t16(r, HighBitSel.LOW)) if (cDataType.isHalf() and not self.usePK) else (lambda r: r)
++        module.add(mulFunction(dst=w(self.vgprPrefix(Holder(idx=vgprTempIn))), src0=w(self.vgprPrefix(vgprIn)), src1=sgpr(activationAlpha), comment="x * beta"))
+         module.addModuleAsFlatItems(self.getSigmoidModule(cDataType, Holder(idx=vgprTempIn), Holder(idx=vgprTempOut)))
+-        module.add(mulFunction(dst=self.vgprPrefix(vgprOut), src0=self.vgprPrefix(vgprIn), src1=self.vgprPrefix(Holder(idx=vgprTempOut)), comment="x / (1 + exp(-x * beta))"))
++        module.add(mulFunction(dst=w(self.vgprPrefix(vgprOut)), src0=w(self.vgprPrefix(vgprIn)), src1=w(self.vgprPrefix(Holder(idx=vgprTempOut))), comment="x / (1 + exp(-x * beta))"))
+         return module
+ 
+     def getClampModule(self, cDataType, vgprIn, vgprOut, activationAlpha, activationBeta):
+@@ -918,11 +964,8 @@ def getClampModule(self, cDataType, vgprIn, vgprOut, activationAlpha, activation
+ 
+         if cDataType.isHalf():
+             for i in range(0, 2):
+-                select_bit = SelectBit.WORD_0 if i == 0 else SelectBit.WORD_1
+-                sdwa = SDWAModifiers(dst_sel = select_bit, dst_unused = UnusedBit.UNUSED_PRESERVE,
+-                                     src0_sel = select_bit, src1_sel = select_bit)
+-                module.add(MIN(dst = Vout, src0 = beta, src1 = Vin, sdwa = sdwa, comment = "min(x, beta)"))
+-                module.add(MAX(dst = Vout, src0 = alpha, src1 = Vout, sdwa = sdwa, comment = "max(alpha, min(x, beta))"))
++                self.addValuF16Half(module, MIN, Vout, beta, Vin, i, "min(x, beta)")
++                self.addValuF16Half(module, MAX, Vout, alpha, Vout, i, "max(alpha, min(x, beta))")
+         else:
+             module.add(MIN(dst = Vout, src0 = beta, src1 = Vin, comment = "min(x, beta)"))
+             module.add(MAX(dst = Vout, src0 = alpha, src1 = Vout, comment = "max(alpha, min(x, beta))"))
+@@ -1338,6 +1381,10 @@ def generateInlineAssemblyBody(self, spaces, activationType):
+     kStr = ""
+     padSpacesStr = ' ' * spaces
+     asm = padSpacesStr + self.asmStr
++    # true16: bind f16 alpha/beta as "v" (not "s") so they stay in a VGPR and get
++    # a ".l" select; an f16 sgpr forced into a VGPR has no half-word and is rejected.
++    isTrue16 = bool(rocIsa.getInstance().getArchCaps()["NoSDWA"]) and self.dataType.isHalf()
++    scalarCons = "v" if isTrue16 else "s"
+     if (activationType == 'abs'):
+       if self.dataType.isHalf() or self.dataType.isBFloat16():
+         unionDataTypeStr = "_Float16" if self.dataType.isHalf() else "BFloat16"
+@@ -1374,7 +1421,7 @@ def generateInlineAssemblyBody(self, spaces, activationType):
+       kStr += (asm + " // geluscaling\n")
+       module = activation.getGeluModule(self.dataType, 0, 0, 1)
+       kStr += self.getActivationAsmStr(activation, module, (len(asm) * " "))
+-      kStr += addSpace(asm, ": \"+v\"(value) : \"s\"(alpha)\n")
++      kStr += addSpace(asm, ": \"+v\"(value) : \"%s\"(alpha)\n" % scalarCons)
+       kStr += self.getRequiredRegStr(asm, activation.vgprCounter, activation.sgprCounter)
+     elif (activationType == 'leakyrelu'):
+       if (self.dataType.isSingle() or self.dataType.isHalf() or self.dataType.isDouble()):
+@@ -1400,7 +1447,7 @@ def generateInlineAssemblyBody(self, spaces, activationType):
+       kStr += (asm + " // tanh\n")
+       module = activation.getTanhModule(self.dataType, 0, 0, 1, 2)
+       kStr += self.getActivationAsmStr(activation, module, (len(asm) * " "))
+-      kStr += addSpace(asm, ": \"+v\"(value) : \"s\"(alpha), \"s\"(beta)\n")
++      kStr += addSpace(asm, ": \"+v\"(value) : \"%s\"(alpha), \"%s\"(beta)\n" % (scalarCons, scalarCons))
+       kStr += self.getRequiredRegStr(asm, activation.vgprCounter, activation.sgprCounter)
+     elif (activationType == 'dgelu'):
+       kStr += (asm + " // dgelu\n")
+@@ -1424,7 +1471,7 @@ def generateInlineAssemblyBody(self, spaces, activationType):
+       kStr += (asm + " // Swish\n")
+       module = activation.getSwishModule(self.dataType, 0, 0, 1)
+       kStr += self.getActivationAsmStr(activation, module, (len(asm) * " "))
+-      kStr += addSpace(asm, ": \"+v\"(value) : \"s\"(alpha)\n")
++      kStr += addSpace(asm, ": \"+v\"(value) : \"%s\"(alpha)\n" % scalarCons)
+       kStr += self.getRequiredRegStr(asm, activation.vgprCounter, activation.sgprCounter)
+     elif (activationType == 'clamp'):
+       kStr += (padSpacesStr + "value = std::max(alpha, std::min(value, beta));\n")  # clamp
+diff --git a/tensilelite/Tensile/Components/PackData.py b/tensilelite/Tensile/Components/PackData.py
+index aa97496b9a95..da247462c3d6 100644
+--- a/tensilelite/Tensile/Components/PackData.py
++++ b/tensilelite/Tensile/Components/PackData.py
+@@ -23,7 +23,7 @@
+ from rocisa import rocIsa
+ from rocisa.code import Module
+ from rocisa.container import vgpr, sgpr,SDWAModifiers, VOP3PModifiers
+-from rocisa.enum import DataTypeEnum, SelectBit, UnusedBit, SaturateCastType
++from rocisa.enum import DataTypeEnum, SelectBit, UnusedBit, SaturateCastType, HighBitSel
+ from rocisa.instruction import VAdd3U32, VCvtF32toF16, VLShiftRightB32, \
+                             VCmpUF32, VCndMaskB32, VCvtPkF32toFP8, VCvtPkF32toBF8, \
+                             VCmpClassF32, VOrB32, VPackF16toB32, \
+@@ -36,7 +36,7 @@
+ 
+ from ..Common.DataType import DataType
+ from ..Component import PackData
+-from rocisa.instruction import ECvtF32toF16
++from rocisa.instruction import ECvtF32toF16, t16
+ 
+ def formatting(idx, inputPrefix, prefixOffset):
+     if inputPrefix:
+@@ -51,7 +51,8 @@ def __call__(self, gwvw, destIdx, elementSumIdx, tmpVgpr=None, inputPrefix="", p
+         ti = rocIsa.getInstance()
+         if gwvw == 1:
+             formatVgpr = formatting(elementSumIdx, inputPrefix, prefixOffset)
+-            module.add(ECvtF32toF16(dst=vgpr(destIdx), src=vgpr(formatVgpr), comment="convert C to fp16"))
++            # sel=LOW writes vD.l (required on true16, SDWA WORD_0 on legacy).
++            module.add(ECvtF32toF16(dst=vgpr(destIdx), src=vgpr(formatVgpr), sel=HighBitSel.LOW, comment="convert C to fp16"))
+             return module
+ 
+         assert (gwvw % 2 == 0)
+@@ -72,7 +73,8 @@ def __call__(self, gwvw, destIdx, elementSumIdx, tmpVgpr=None, inputPrefix="", p
+                     d = destIdx + vi//2
+                     module.add(VCvtPkF32toF16(dst=vgpr(d), src0=vgpr(formatVgpr_1), src1=vgpr(formatVgpr), comment="convert C to fp16 and pack with neighbor"))
+             else:
+-                module.add(ECvtF32toF16(dst=vgpr(tmpDst), src=vgpr(formatVgpr), comment="convert C to fp16"))
++                # sel=LOW writes vD.l (VPackF16toB32 below reads the low 16 bits).
++                module.add(ECvtF32toF16(dst=vgpr(tmpDst), src=vgpr(formatVgpr), sel=HighBitSel.LOW, comment="convert C to fp16"))
+                 if vi%2 == 1:
+                     d = destIdx + vi//2
+                     module.add(VPackF16toB32(dst=vgpr(d), src0=vgpr(tmpDst_1), src1=vgpr(tmpDst), \
+@@ -320,8 +322,8 @@ def __call__(self, gwvw, destIdx, elementSumIdx, i8CVTVgprStruct, tmpS01, Satura
+                 d = destIdx + vi//4
+                 for i in reversed(range(0, 4)):
+                     module.add(VSaturateCastInt(vgpr(formatting(sumIdxV-i, inputPrefix, prefixOffset)), vgprI8Temp0, tmpS01, -128, 127, type=SaturateTypeInt8, initGpr=(i%4 == 3)))
+-                module.add(VLShiftLeftB16(dst=vgpr(formatting(sumIdxV-2, inputPrefix, prefixOffset)), shiftHex=8, src=vgpr(formatting(sumIdxV-2, inputPrefix, prefixOffset))))
+-                module.add(VLShiftLeftB16(dst=vgpr(formatting(sumIdxV-0, inputPrefix, prefixOffset)), shiftHex=8, src=vgpr(formatting(sumIdxV-0, inputPrefix, prefixOffset))))
++                module.add(VLShiftLeftB16(dst=t16(vgpr(formatting(sumIdxV-2, inputPrefix, prefixOffset)), HighBitSel.LOW), shiftHex=8, src=t16(vgpr(formatting(sumIdxV-2, inputPrefix, prefixOffset)), HighBitSel.LOW)))
++                module.add(VLShiftLeftB16(dst=t16(vgpr(formatting(sumIdxV-0, inputPrefix, prefixOffset)), HighBitSel.LOW), shiftHex=8, src=t16(vgpr(formatting(sumIdxV-0, inputPrefix, prefixOffset)), HighBitSel.LOW)))
+                 if ti.getArchCaps()["NoSDWA"]:
+                     module.add(VMovB32(vgpr(vgprI8Mask0), "0xFF", comment="bits 7:0")) # src0_sel=SelectBit.BYTE_0
+                     module.add(VAndB32(dst=vgpr(vgprI8Temp0), src0=vgpr(formatting(sumIdxV-3, inputPrefix, prefixOffset)), \
+@@ -371,7 +373,7 @@ def __call__(self, gwvw, destIdx, elementSumIdx, i8CVTVgprStruct, tmpS01, Satura
+             if vi%2 == 1:
+                 for i in reversed(range(0, 2)):
+                     module.add(VSaturateCastInt(vgpr(formatting(sumIdxV-i, inputPrefix, prefixOffset)), vgprI8Temp0, tmpS01, -128, 127, type=SaturateTypeInt8, initGpr=(i%2 == 1)))
+-                module.add(VLShiftLeftB16(dst=vgpr(formatVgpr), shiftHex=8, src=vgpr(formatVgpr)))
++                module.add(VLShiftLeftB16(dst=t16(vgpr(formatVgpr), HighBitSel.LOW), shiftHex=8, src=t16(vgpr(formatVgpr), HighBitSel.LOW)))
+                 if ti.getArchCaps()["NoSDWA"]:
+                     module.add(VMovB32(vgpr(vgprI8Mask0), "0xFF", comment="bits 7:0")) # src0_sel=SelectBit.BYTE_0
+                     module.add(VAndB32(dst=vgpr(vgprI8Temp0), src0=vgpr(formatting(sumIdxV-1, inputPrefix, prefixOffset)), \
+diff --git a/tensilelite/Tensile/KernelWriter.py b/tensilelite/Tensile/KernelWriter.py
+index 04ed6ed5162f..458767ae8ddf 100644
+--- a/tensilelite/Tensile/KernelWriter.py
++++ b/tensilelite/Tensile/KernelWriter.py
+@@ -39,9 +39,9 @@
+   GlobalStoreB128, GlobalStoreB32, GlobalStoreB64, Instruction, MacroInstruction, \
+   MFMAInstruction, MXMFMAInstruction, SAndB32, SBarrier, SBranch, SCBranchSCC0, SCBranchSCC1, SCBranchVCCNZ, SCmpEQU32, SCmpEQU64, SCmpGeU32, SCmpLeU32, \
+   SCSelectB32, SLShiftLeftB32, SLShiftRightB32, SMFMAInstruction, SMovB32, SMovB64, SNop, SEndpgm, SOrB32, SSetPrior, SSetRegIMM32B32, SSubU32, SWaitCnt, SWaitAlu, \
+-  SLongBranchPositive, VFmaMixF32, VMadMixF32, VMovB32, VAndB32, VCmpEQU32, VCndMaskB32, VMovB64, VNop, VReadfirstlaneB32, TensorLoadToLds, SCMovB32, SCMovB64
++  SLongBranchPositive, VFmaMixF32, VMadMixF32, VMovB32, VAndB32, VCmpEQU32, VCndMaskB32, VMovB64, VNop, VReadfirstlaneB32, TensorLoadToLds, SCMovB32, SCMovB64, t16
+ from rocisa.register import RegisterPool
+-from rocisa.enum import RegisterType, DataTypeEnum
++from rocisa.enum import RegisterType, DataTypeEnum, HighBitSel
+ 
+ from .KernelWriterModules import *
+ 
+@@ -11692,6 +11692,13 @@ def assertCmpCommon(self, inst, val0, val1, vtmp, cookie=-1):
+             SOrSaveExecBX = SOrSaveExecB64 if self.wavefrontSize == 64 else SOrSaveExecB32
+             module.add(SOrSaveExecBX(dst=sgpr("SaveExecMask",self.laneSGPRCount), src=0, \
+                 comment="assert: saved execmask"))
++            # true16: 16-bit compares need a .l/.h suffix on their vgpr operands.
++            # Tag .l on NoSDWA (no-op on legacy); only vgpr operands are tagged.
++            if inst.__name__.endswith(("I16", "U16", "F16")):
++                if getattr(val0, "regType", None) == "v":
++                    val0 = t16(val0, HighBitSel.LOW)
++                if getattr(val1, "regType", None) == "v":
++                    val1 = t16(val1, HighBitSel.LOW)
+             module.add(inst(dst=VCC(), src0=val0, src1=val1, comment="v_cmp")) # type: ignore
+             module.add(self.assertCommon(vtmp, cookie))
+             module.add(SOrSaveExecBX(dst=VCC(), src=sgpr("SaveExecMask",self.laneSGPRCount), \
+diff --git a/tensilelite/Tensile/KernelWriterAssembly.py b/tensilelite/Tensile/KernelWriterAssembly.py
+index fe9b487c5928..3ac030552c7a 100644
+--- a/tensilelite/Tensile/KernelWriterAssembly.py
++++ b/tensilelite/Tensile/KernelWriterAssembly.py
+@@ -27,7 +27,7 @@
+ from rocisa.asmpass import getActFuncModuleName, getActFuncBranchModuleName
+ from rocisa.code import KernelBody, Label, Macro, Module, RegSet, SrdUpperValue, \
+                         StructuredModule, TextBlock, ValueEndif, ValueIf, ValueSet, SignatureBase
+-from rocisa.container import DSModifiers, SDWAModifiers, VOP3PModifiers, True16Modifiers, \
++from rocisa.container import DSModifiers, SDWAModifiers, VOP3PModifiers, \
+                       MUBUFModifiers, SMEMModifiers, EXEC, VCC, RegisterContainer, \
+                       DPPModifiers, vgpr, sgpr, accvgpr, mgpr, ContinuousRegister, \
+                       HWRegContainer, GLOBALModifiers, MemTokenData
+@@ -12806,9 +12806,9 @@ def localWriteBody(tP):
+                       sel = [0,1,1,0] if isHigh16Bits else [0,0,0,0]
+                       localWriteCVTCode.add(VCvtScaleFP8toF16(dst=paramList[0], src=new_src, scale=0x3f800000, vop3=VOP3PModifiers(op_sel=sel), comment="A convert fp8 to f16"))
+                     else:
+-                      sel = 1 if isHigh16Bits else 0
++                      # byte_sel is a byte index 0..3, so use 2 (not 1) to match SDWA BYTE_2.
+                       if noSDWA:
+-                        localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, vop3=VOP3PModifiers(byte_sel=[sel]), comment="convert C to fp32"))
++                        localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, vop3=VOP3PModifiers(byte_sel=[2 if isHigh16Bits else 0]), comment="convert C to fp32"))
+                       else:
+                         src_sel = SelectBit.BYTE_2 if isHigh16Bits else SelectBit.BYTE_0
+                         localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, sdwa=SDWAModifiers(src0_sel=src_sel), comment="convert C to fp32"))
+@@ -12856,7 +12856,10 @@ def localWriteBody(tP):
+                         localWriteCVTCode.add(VCvtScaleFP8toF16(dst=paramList[0], src=new_src, scale=0x3f800000, vop3=VOP3PModifiers(op_sel=sel), comment="C convert fp8 to f16"))
+                       else:
+                         if noSDWA:
+-                          localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, vop3=VOP3PModifiers(op_sel=[1 if isHigh16Bits else 0]), comment="convert C to fp32"))
++                          # Map the chosen SDWA src_sel (BYTE_0/1/2/3) to the VOP3 byte index.
++                          byte_sel_int = {SelectBit.BYTE_0: 0, SelectBit.BYTE_1: 1,
++                                          SelectBit.BYTE_2: 2, SelectBit.BYTE_3: 3}[src_sel]
++                          localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, vop3=VOP3PModifiers(byte_sel=[byte_sel_int]), comment="convert C to fp32"))
+                         else:
+                           localWriteCVTCode.add(VCvtFP8toF32(dst=vgpr(vgprTmp), src=new_src, sdwa=SDWAModifiers(src0_sel=src_sel), comment="convert C to fp32"))
+                         localWriteCVTCode.add(ECvtF32toF16(dst=paramList[0], src=vgpr(vgprTmp), sel=HighBitSel.HIGH if isHigh16Bits else HighBitSel.LOW, comment="convert C to fp16"))
+@@ -17918,7 +17921,9 @@ def writeBiasToGlobal(self, biasDataType, kernel, tP, gwvw, offsetVgpr, tmpSgprR
+         # Does not support hi/lo yet
+         if kernel["ProblemType"]["ComputeDataType"].isSingle():
+           if biasDataType.isHalf():
+-            module.add(VCvtF32toF16(dst=vgpr(tmpVgprN), src=vgpr(tmpVgprN), comment="convert to FP16"))
++            # sel=LOW writes vN.l (VPackF16toB32 packs adjacent pairs); true16 on
++            # NoSDWA, SDWA WORD_0 on legacy.
++            module.add(ECvtF32toF16(dst=vgpr(tmpVgprN), src=vgpr(tmpVgprN), sel=HighBitSel.LOW, comment="convert to FP16"))
+             if vi % 2 == 1 and enablePack:
+               module.add(VPackF16toB32(dst=vgpr(tmpVgprN - 1), src0=vgpr(tmpVgprN - 1), src1=vgpr(tmpVgprN), \
+                          comment="Pack with neighbor"))
+diff --git a/tensilelite/Tensile/Tests/unit/characterization/Activation/test_true16_activation_char.py b/tensilelite/Tensile/Tests/unit/characterization/Activation/test_true16_activation_char.py
+new file mode 100644
+index 000000000000..216b669dca4c
+--- /dev/null
++++ b/tensilelite/Tensile/Tests/unit/characterization/Activation/test_true16_activation_char.py
+@@ -0,0 +1,259 @@
++# Copyright Advanced Micro Devices, Inc., or its affiliates.
++# SPDX-License-Identifier: MIT
++"""True16 half-select emit characterization for Tensile/Activation.py.
++
++The existing Activation characterization tests only initialize a gfx942 (legacy
++SDWA) ISA, so the new true16 code paths added on `users/ericwan/true16-half-sel`
++are never exercised. This test drives the same emit code under BOTH:
++
++  * a legacy SDWA arch (gfx942, ``NoSDWA == 0``)  -> WORD_x / v_cndmask_b32, and
++  * a true16 arch      (gfx1200, ``NoSDWA == 1``) -> .l/.h operand suffix,
++                                                     v_cndmask_b16.
++
++It covers the new per-half helpers (``addTransF16Half`` / ``addTransF16Halfwise``
++/ ``addCmpF16Half`` / ``addValuF16Half`` / ``addCndMaskF16Half`` / ``_t16v``) both
++directly and through the Half activation modules that call them
++(clippedrelu / leakyrelu / sigmoid / tanh / exp / clamp / silu / swish / gelu),
++plus the ActivationInline true16 constraint path.
++
++All calls are CPU-only string generation: rocIsa.init records the assembler path
++but never runs it, and the ``NoSDWA`` arch cap is derived from the ISA version, so
++no LLVM/GPU is required.
++"""
++
++import importlib
++import shutil
++
++import pytest
++
++pytestmark = pytest.mark.unit
++
++A = importlib.import_module("Tensile.Activation")
++DataType = importlib.import_module("Tensile.Common.DataType").DataType
++
++import rocisa
++from rocisa.code import Module
++from rocisa.container import sgpr, vgpr, VCC
++from rocisa.instruction import VCmpGTF16, VExpF16, VMinF16
++
++# NoSDWA (true16) archs are gfx11/gfx12; legacy SDWA archs are gfx9/gfx10.
++LEGACY_ISA = (9, 4, 2)
++TRUE16_ISA = (12, 0, 0)
++_WAVEFRONT = 64
++
++
++def _asm_path():
++    return shutil.which("amdclang++") or "/usr/bin/amdclang++"
++
++
++def _use_isa(isa):
++    """Register (idempotent) and select an ISA on the rocisa singleton."""
++    ri = rocisa.rocIsa.getInstance()
++    ri.init(isa, _asm_path())
++    ri.setKernel(isa, _WAVEFRONT)
++    return ri
++
++
++# Register both ISAs once at import time.
++_use_isa(LEGACY_ISA)
++_use_isa(TRUE16_ISA)
++
++
++@pytest.fixture(autouse=True)
++def _restore_legacy_isa():
++    # rocIsa is a process-global singleton; these tests switch the active arch.
++    # Restore the gfx942 default after each test so sibling Activation test
++    # modules (which assume gfx942 without re-selecting it) are unaffected.
++    yield
++    _use_isa(LEGACY_ISA)
++
++
++def _render(module):
++    return "\n".join(str(item) for item in module.items())
++
++
++def _no_true16_suffix(text):
++    # Legacy output must never tag an operand with a .l/.h half-select.
++    import re
++
++    return re.search(r"v\d+\.[lh]\b", text) is None
++
++
++# ---------------------------------------------------------------------------
++# Half activation modules that route through the true16 helpers.
++# ---------------------------------------------------------------------------
++_HALF_ACTS = [
++    "abs",
++    "relu",
++    "clippedrelu",
++    "leakyrelu",
++    "sigmoid",
++    "tanh",
++    "exp",
++    "clamp",
++    "silu",
++    "swish",
++    "gelu",
++    "geluscaling",
++]
++
++
++def _module_for(act, *, isa, usePK):
++    _use_isa(isa)
++    m = A.ActivationModule()
++    m.setUsePK(usePK)
++    return _render(m.getModule(DataType("H"), act, 0, 1))
++
++
++@pytest.mark.parametrize("usePK", [True, False], ids=["pk", "scalar"])
++@pytest.mark.parametrize("act", _HALF_ACTS)
++def test_half_activation_true16_renders(act, usePK):
++    # true16 arch: emit must succeed and never fall back to SDWA WORD selects.
++    text = _module_for(act, isa=TRUE16_ISA, usePK=usePK)
++    assert text
++    assert "src0_sel:WORD" not in text
++    assert "v_cndmask_b32" not in text
++
++
++@pytest.mark.parametrize("usePK", [True, False], ids=["pk", "scalar"])
++@pytest.mark.parametrize("act", _HALF_ACTS)
++def test_half_activation_legacy_renders(act, usePK):
++    # legacy arch: emit must succeed and never emit a true16 .l/.h suffix.
++    text = _module_for(act, isa=LEGACY_ISA, usePK=usePK)
++    assert text
++    assert _no_true16_suffix(text)
++    assert "v_cndmask_b16" not in text
++
++
++def test_cndmask_op_switches_by_arch():
++    # clippedrelu + leakyrelu are the activations that emit the conditional select.
++    for act in ("clippedrelu", "leakyrelu"):
++        assert "v_cndmask_b16" in _module_for(act, isa=TRUE16_ISA, usePK=True)
++        assert "v_cndmask_b32" in _module_for(act, isa=LEGACY_ISA, usePK=True)
++
++
++# ---------------------------------------------------------------------------
++# Direct per-half helper coverage (both arch branches, both halves).
++# ---------------------------------------------------------------------------
++def test_addCmpF16Half_branches():
++    am = A.ActivationModule()
++
++    _use_isa(TRUE16_ISA)
++    for i, suffix in ((0, "v0.l"), (1, "v0.h")):
++        mod = Module("cmp")
++        am.addCmpF16Half(mod, VCmpGTF16, vgpr(0), sgpr(1), i, "x > a")
++        text = _render(mod)
++        assert suffix in text
++        assert "s1" in text  # scalar src passes through untagged
++
++    _use_isa(LEGACY_ISA)
++    for i, sel in ((0, "src0_sel:WORD_0"), (1, "src0_sel:WORD_1")):
++        mod = Module("cmp")
++        am.addCmpF16Half(mod, VCmpGTF16, vgpr(0), sgpr(1), i, "x > a")
++        text = _render(mod)
++        assert sel in text
++        assert _no_true16_suffix(text)
++
++
++def test_addValuF16Half_branches():
++    am = A.ActivationModule()
++
++    _use_isa(TRUE16_ISA)
++    mod = Module("valu")
++    am.addValuF16Half(mod, VMinF16, vgpr(0), sgpr(1), vgpr(2), 1, "min")
++    text = _render(mod)
++    assert "v0.h" in text and "v2.h" in text
++    assert "s1" in text
++
++    _use_isa(LEGACY_ISA)
++    mod = Module("valu")
++    am.addValuF16Half(mod, VMinF16, vgpr(0), sgpr(1), vgpr(2), 0, "min")
++    text = _render(mod)
++    assert "src0_sel:WORD_0" in text
++    assert _no_true16_suffix(text)
++
++
++def test_addCndMaskF16Half_branches():
++    am = A.ActivationModule()
++
++    _use_isa(TRUE16_ISA)
++    mod = Module("cnd")
++    am.addCndMaskF16Half(mod, vgpr(0), vgpr(1), vgpr(2), 0, "select")
++    text = _render(mod)
++    assert "v_cndmask_b16" in text
++    assert "v0.l" in text
++
++    _use_isa(LEGACY_ISA)
++    mod = Module("cnd")
++    am.addCndMaskF16Half(mod, vgpr(0), vgpr(1), vgpr(2), 1, "select")
++    text = _render(mod)
++    assert "v_cndmask_b32" in text
++    assert "src0_sel:WORD_1" in text
++    assert _no_true16_suffix(text)
++
++
++def test_addTransF16Half_and_halfwise_branches():
++    am = A.ActivationModule()
++
++    _use_isa(TRUE16_ISA)
++    mod = Module("trans")
++    am.addTransF16Half(mod, VExpF16, 0, 1, "exp")
++    assert "v0.h" in _render(mod)
++
++    mod = Module("trans")
++    am.addTransF16Halfwise(mod, VExpF16, 0, "exp")
++    text = _render(mod)
++    assert "v0.l" in text and "v0.h" in text  # both halves emitted
++
++    _use_isa(LEGACY_ISA)
++    mod = Module("trans")
++    am.addTransF16Half(mod, VExpF16, 0, 1, "exp")
++    text = _render(mod)
++    assert "src0_sel:WORD_1" in text
++    assert _no_true16_suffix(text)
++
++
++def test_t16v_only_tags_vgpr():
++    _use_isa(TRUE16_ISA)
++    from rocisa.enum import HighBitSel
++
++    tagged = A.ActivationModule._t16v(vgpr(3), HighBitSel.HIGH)
++    assert str(tagged) == "v3.h"
++    # Scalar operands are returned unchanged (no half-select tagging).
++    passthrough = A.ActivationModule._t16v(sgpr(2), HighBitSel.HIGH)
++    assert str(passthrough) == "s2"
++
++
++# ---------------------------------------------------------------------------
++# ActivationInline true16 constraint path.
++# ---------------------------------------------------------------------------
++@pytest.mark.parametrize("isa", [LEGACY_ISA, TRUE16_ISA], ids=["legacy", "true16"])
++def test_activation_inline_body_renders(isa):
++    _use_isa(isa)
++    ai = A.ActivationInline(DataType("h"), False)
++    body = ai.generateInlineAssemblyBody(4, "geluscaling")
++    assert isinstance(body, str) and body
++
++
++# ---------------------------------------------------------------------------
++# PackData_F16: F32->F16 pack now goes through ECvtF32toF16(sel=LOW).
++# ---------------------------------------------------------------------------
++def test_packdata_f16_gwvw1_branches():
++    from Tensile.Components.PackData import PackData_F16
++
++    packer = PackData_F16()
++
++    _use_isa(TRUE16_ISA)
++    text = _render(packer(gwvw=1, destIdx=0, elementSumIdx=4))
++    assert "v_cvt_f16_f32" in text
++    assert "v0.l" in text  # true16 writes the low half explicitly
++
++    _use_isa(LEGACY_ISA)
++    text = _render(packer(gwvw=1, destIdx=0, elementSumIdx=4))
++    assert "v_cvt_f16_f32" in text
++    assert _no_true16_suffix(text)
++
++    # gwvw>=2 pack loop should also emit on both arches.
++    for isa in (TRUE16_ISA, LEGACY_ISA):
++        _use_isa(isa)
++        assert _render(packer(gwvw=2, destIdx=0, elementSumIdx=4))
+diff --git a/tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py b/tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py
+index 939c1901fab9..e74782bff87d 100644
+--- a/tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py
++++ b/tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py
+@@ -1,7 +1,7 @@
+ # Copyright Advanced Micro Devices, Inc., or its affiliates.
+ # SPDX-License-Identifier: MIT
+ 
+-"""Regression test for the true16 (real-true16) activation-clamp defect (ROCM-3994).
++"""Regression test for the true16 (real-true16) activation-clamp defect.
+ 
+ hipBLASLt / TensileLite's ``AMaxKernelGenerator`` emits the ``v_max_f16``
+ activation clamp for half inputs. Under a compiler that enforces real16 mode
+@@ -18,11 +18,6 @@
+ This is a pure host-side codegen assertion: it renders the generator's module to
+ a string and checks the emitted text. No GPU and no assembler are required. The
+ target arch is forced from a gfx string, so no real device has to be present.
+-
+-RED on ``origin/develop`` (emits fake16), GREEN on the true16 fix branch (emits
+-true16). The test is parametrized across the whole gfx11 family enabled by the
+-``NoSDWA`` arch cap (isaVersion 11/12), not a single arch, so it does not repeat
+-the original mistake of pinning one target.
+ """
+ 
+ import os
+@@ -44,8 +39,9 @@
+ 
+ import AMaxGenerator  # noqa: E402
+ 
+-# gfx11 family covered by the NoSDWA arch cap (checkInList(isaVersion[0], {11, 12})).
+-# All of these are wave32 and select the true16 activation path on the fix branch.
++
++# true16 family covered by the NoSDWA arch cap (checkInList(isaVersion[0], {11, 12})).
++# All of these select the true16 activation path on the fix branch.
+ GFX11_TARGETS = [
+     "gfx1100",
+     "gfx1101",
+@@ -57,23 +53,18 @@
+     "gfx1153",
+ ]
+ 
+-# ROCM-3994 known-bug quarantine (W-KNOWN-BUG two-PR flow).
+-#
+-# This reproducer lands ahead of the true16 fix (users/ericwan/true16-patch).
+-# On develop the AMax activation clamp is emitted in the fake16 form, so the
+-# assertions below fail -> reported as xfailed -> CI stays green. When the fix
+-# lands, the emitted text becomes true16, the test passes, and strict=True turns
+-# that XPASS into a hard failure -- forcing the fix PR to delete this marker.
+-# The test always executes (it is quarantined, not disabled).
+-#
+-# Time-box: tracked by ROCM-3994; re-evaluate by the next hipBLASLt release if
+-# still unfixed. REMOVE this marker in the fix PR.
+-_ROCM3994_XFAIL = pytest.mark.xfail(
+-    reason="ROCM-3994: fake16 v_max_f16 emitted for the AMax activation clamp; "
+-           "real-true16 assemblers reject it. Remove this marker in the true16 fix PR.",
+-    strict=True,
+-    raises=AssertionError,
+-)
++# gfx12 shares the NoSDWA true16 path (isaVersion[0] == 12). The PR targets gfx11
++# and gfx12, so exercise gfx12 too (this is where the downstream gfx125x build breaks).
++GFX12_TARGETS = [
++    "gfx1200",
++    "gfx1201",
++    "gfx1250",
++]
++
++# Carry the arch-family marker per target so gfx11/gfx12 selection still works.
++TRUE16_TARGETS = [pytest.param(t, marks=pytest.mark.gfx11) for t in GFX11_TARGETS] + [
++    pytest.param(t, marks=pytest.mark.gfx12) for t in GFX12_TARGETS
++]
+ 
+ # Matches a v_max_f16 whose destination and both sources carry a true16 half-word
+ # selector (.l/.h). Critically, the abs() source suffix is *inside* the paren.
+@@ -122,10 +113,8 @@ def _vmax_lines(text: str):
+     return [ln.strip() for ln in text.splitlines() if "v_max_f16" in ln]
+ 
+ 
+-@_ROCM3994_XFAIL
+ @pytest.mark.unit
+-@pytest.mark.gfx11
+-@pytest.mark.parametrize("target", GFX11_TARGETS)
++@pytest.mark.parametrize("target", TRUE16_TARGETS)
+ def test_amax_activation_clamp_is_true16(target):
+     """max_per_data must emit the true16 v_max_f16 (with abs source)."""
+     gen = _make_generator(target)
+@@ -143,7 +132,7 @@ def test_amax_activation_clamp_is_true16(target):
+         # Negative: reject the bare fake16 form outright.
+         assert not _FAKE16_RE.search(ln), (
+             f"[{target}] v_max_f16 emitted in fake16 form (no half-word "
+-            f"selector) — this is the ROCM-3994 defect: {ln!r}"
++            f"selector) — this is the true16 activation-clamp defect: {ln!r}"
+         )
+ 
+     # The abs() source suffix must bind *inside* the paren: abs(v[..].l), never abs(v[..]).l
+@@ -153,10 +142,8 @@ def test_amax_activation_clamp_is_true16(target):
+     )
+ 
+ 
+-@_ROCM3994_XFAIL
+ @pytest.mark.unit
+-@pytest.mark.gfx11
+-@pytest.mark.parametrize("target", GFX11_TARGETS)
++@pytest.mark.parametrize("target", TRUE16_TARGETS)
+ def test_amax_merge_sum_is_true16(target):
+     """merge_sum must emit the true16 v_max_f16 (plain register sources)."""
+     gen = _make_generator(target)
+@@ -171,5 +158,5 @@ def test_amax_merge_sum_is_true16(target):
+         )
+         assert not _FAKE16_RE.search(ln), (
+             f"[{target}] merge_sum v_max_f16 emitted in fake16 form "
+-            f"(ROCM-3994 defect): {ln!r}"
++            f"(true16 activation-clamp defect): {ln!r}"
+         )
+diff --git a/tensilelite/Tensile/Toolchain/Component.py b/tensilelite/Tensile/Toolchain/Component.py
+index fd5a986f444a..d316ce27c892 100644
+--- a/tensilelite/Tensile/Toolchain/Component.py
++++ b/tensilelite/Tensile/Toolchain/Component.py
+@@ -169,8 +169,8 @@ def __call__(self, targetGfx: str, wavefrontSize: int, srcPath: str, destPath: s
+             destPath: The destination path for the generated object file.
+         """
+         args = self._default_args
+-        # Enable true16 syntax on targets that support +real-true16.
+-        if targetGfx in ("gfx1250", "gfx1201", "gfx1200", "gfx1100"):
++        # Enable true16 on all gfx11*/gfx12* (NoSDWA); gfx10* stays fake16.
++        if targetGfx.startswith(("gfx11", "gfx12")):
+             args = args + ["-Xclangas", "-target-feature", "-Xclangas", "+real-true16"]
+         args = [
+             *args,
+diff --git a/tensilelite/rocisa/rocisa/include/container.hpp b/tensilelite/rocisa/rocisa/include/container.hpp
+index 8480cf85d253..77f634d39850 100644
+--- a/tensilelite/rocisa/rocisa/include/container.hpp
++++ b/tensilelite/rocisa/rocisa/include/container.hpp
+@@ -649,43 +649,6 @@ namespace rocisa
+         }
+     };
+ 
+-    struct True16Modifiers : public Container
+-    {
+-        True16Modifiers(HighBitSel high_bit = HighBitSel::NONE)
+-            : Container()
+-            , high_bit(high_bit)
+-        {
+-        }
+-
+-        True16Modifiers(const int high_bit = -1)
+-            : Container()
+-            , high_bit(static_cast<HighBitSel>(high_bit))
+-        {
+-        }
+-
+-        True16Modifiers(const True16Modifiers& other)
+-            : Container()
+-            , high_bit(other.high_bit)
+-        {
+-        }
+-
+-        std::shared_ptr<Container> clone() const override
+-        {
+-            return std::make_shared<True16Modifiers>(*this);
+-        }
+-
+-        std::string toString() const override
+-        {
+-            if(high_bit == HighBitSel::NONE)
+-            {
+-                return "";
+-            }
+-            return high_bit == HighBitSel::HIGH ? ".h" : ".l";
+-        }
+-
+-        const HighBitSel high_bit;
+-    };
+-
+     struct EXEC : public Container
+     {
+         EXEC(bool setHi = false)
+@@ -936,6 +899,8 @@ namespace rocisa
+         bool                   isAbs;
+         bool                   isMacro;
+         bool                   isOff;
++        // true16 half-word select (".l"/".h") for 16-bit VGPR operands.
++        std::optional<HighBitSel> halfSelect;
+ 
+         RegisterContainer(const std::string&            regType,
+                           const std::optional<RegName>& regName,
+@@ -952,6 +917,7 @@ namespace rocisa
+             , isAbs(false)
+             , isMacro(false)
+             , isOff(false)
++            , halfSelect(std::nullopt)
+         {
+         }
+ 
+@@ -973,6 +939,7 @@ namespace rocisa
+             , isAbs(isAbs)
+             , isMacro(isMacro)
+             , isOff(isOff)
++            , halfSelect(std::nullopt)
+         {
+         }
+ 
+@@ -988,6 +955,7 @@ namespace rocisa
+             , isAbs(other.isAbs)
+             , isMacro(other.isMacro)
+             , isOff(other.isOff)
++            , halfSelect(other.halfSelect)
+         {
+         }
+ 
+@@ -1013,6 +981,7 @@ namespace rocisa
+             , isAbs(other.isAbs)
+             , isMacro(other.isMacro)
+             , isOff(other.isOff)
++            , halfSelect(other.halfSelect)
+         {
+         }
+ 
+@@ -1030,6 +999,7 @@ namespace rocisa
+                 isAbs       = other.isAbs;
+                 isMacro     = other.isMacro;
+                 isOff       = other.isOff;
++                halfSelect  = other.halfSelect;
+             }
+             return *this;
+         }
+@@ -1048,6 +1018,7 @@ namespace rocisa
+                 isAbs       = other.isAbs;
+                 isMacro     = other.isMacro;
+                 isOff       = other.isOff;
++                halfSelect  = other.halfSelect;
+             }
+             return *this;
+         }
+@@ -1074,6 +1045,25 @@ namespace rocisa
+             return c;
+         }
+ 
++        void setHalfSelect(HighBitSel sel)
++        {
++            this->halfSelect = sel;
++        }
++
++        RegisterContainer lo() const
++        {
++            RegisterContainer c = *this;
++            c.halfSelect        = HighBitSel::LOW;
++            return c;
++        }
++
++        RegisterContainer hi() const
++        {
++            RegisterContainer c = *this;
++            c.halfSelect        = HighBitSel::HIGH;
++            return c;
++        }
++
+         void replaceRegName(const std::string& srcName, int dst)
+         {
+             if(regName)
+@@ -1184,6 +1174,11 @@ namespace rocisa
+             std::string minusStr = isMinus ? "-" : "";
+             minusStr             = isAbs ? "abs(" + minusStr : minusStr;
+             auto absStr          = isAbs ? ")" : "";
++            std::string halfStr = "";
++            if(halfSelect.has_value() && *halfSelect != HighBitSel::NONE)
++            {
++                halfStr = (*halfSelect == HighBitSel::HIGH) ? ".h" : ".l";
++            }
+             std::string msbStr = "";
+             if(capOrDefault(rocIsa::getInstance().getAsmCaps(), "HasVgprMSB") && regType == "v")
+             {
+@@ -1201,7 +1196,7 @@ namespace rocisa
+                 if(regNum == 1)
+                 {
+                     return minusStr + regType + "[" + macroSlash + regType + "gpr"
+-                           + regName->toString() + msbStr + "]" + absStr;
++                           + regName->toString() + msbStr + "]" + halfStr + absStr;
+                 }
+                 else
+                 {
+@@ -1215,8 +1210,8 @@ namespace rocisa
+                 if(regNum == 1)
+                 {
+                     if(msb > 0)
+-                        return minusStr + regType + "["  + std::to_string(regIdx) + msbStr + "]" + absStr;
+-                    return minusStr + regType + std::to_string(regIdx) + absStr;
++                        return minusStr + regType + "["  + std::to_string(regIdx) + msbStr + "]" + halfStr + absStr;
++                    return minusStr + regType + std::to_string(regIdx) + halfStr + absStr;
+                 }
+                 else
+                 {
+@@ -1365,11 +1360,13 @@ namespace rocisa
+ 
+         RegisterContainer getCopiedRC() const
+         {
+-            if(holderType == 0)
+-            {
+-                return RegisterContainer{regType, std::nullopt, regIdx, (float)regNum};
+-            }
+-            return RegisterContainer{regType, regName, regIdx, (float)regNum};
++            RegisterContainer rc = (holderType == 0)
++                                       ? RegisterContainer{regType, std::nullopt, regIdx, (float)regNum}
++                                       : RegisterContainer{regType, regName, regIdx, (float)regNum};
++            // Preserve the true16 half-select when a Holder lowers to its register,
++            // else the .l/.h suffix is lost and the operand is invalid on NoSDWA.
++            rc.halfSelect = halfSelect;
++            return rc;
+         }
+ 
+         std::pair<std::shared_ptr<HolderContainer>, std::shared_ptr<HolderContainer>>
+diff --git a/tensilelite/rocisa/rocisa/include/instruction/common.hpp b/tensilelite/rocisa/rocisa/include/instruction/common.hpp
+index e0c0fdd78e5c..e5dfbbd44f7e 100644
+--- a/tensilelite/rocisa/rocisa/include/instruction/common.hpp
++++ b/tensilelite/rocisa/rocisa/include/instruction/common.hpp
+@@ -5519,6 +5519,36 @@ namespace rocisa
+         }
+     };
+ 
++    // true16 16-bit conditional select (half-word via operand .l/.h suffix).
++    struct VCndMaskB16 : public CommonInstruction
++    {
++        VCndMaskB16(const std::shared_ptr<Container>& dst,
++                    const InstructionInput&           src0,
++                    const InstructionInput&           src1,
++                    const std::shared_ptr<Container>& src2    = std::make_shared<VCC>(),
++                    const std::string&                comment = "")
++            : CommonInstruction(InstType::INST_B16,
++                                dst,
++                                {src0, src1, src2},
++                                std::nullopt,
++                                std::nullopt,
++                                std::nullopt,
++                                comment)
++        {
++            setInst("v_cndmask_b16");
++        }
++
++        VCndMaskB16(const VCndMaskB16& other)
++            : CommonInstruction(other)
++        {
++        }
++
++        std::shared_ptr<Item> clone() const override
++        {
++            return std::make_shared<VCndMaskB16>(*this);
++        }
++    };
++
+     struct VLShiftLeftB16 : public CommonInstruction
+     {
+         VLShiftLeftB16(const std::shared_ptr<Container>& dst,
+diff --git a/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp b/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp
+index ac5bd36a10b6..472c7a3b94da 100644
+--- a/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp
++++ b/tensilelite/rocisa/rocisa/include/instruction/cvt.hpp
+@@ -28,53 +28,31 @@ namespace rocisa
+     struct VCvtInstruction : public CommonInstruction
+     {
+         CvtType cvtType;
+-        std::vector<True16Modifiers> true16;
+ 
+         VCvtInstruction(CvtType                                   cvtType,
+                         const std::shared_ptr<RegisterContainer>& dst,
+                         const std::vector<InstructionInput>&      srcs,
+                         const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                         const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+-                        const std::vector<True16Modifiers>&       true16  = {},
+                         const std::string&                        comment = "")
+             : CommonInstruction(InstType::INST_CVT, dst, srcs, std::nullopt, sdwa, vop3, comment)
+             , cvtType(cvtType)
+-            , true16(true16)
+         {
+         }
+ 
+-        VCvtInstruction(CvtType                                   cvtType,
+-                        const std::shared_ptr<RegisterContainer>& dst,
+-                        const std::vector<InstructionInput>&      srcs,
+-                        const std::optional<SDWAModifiers>&       sdwa      = std::nullopt,
+-                        const std::optional<VOP3PModifiers>&      vop3      = std::nullopt,
+-                        const std::vector<int>&                   true16Arg = {},
+-                        const std::string&                        comment   = "")
+-            : CommonInstruction(InstType::INST_CVT, dst, srcs, std::nullopt, sdwa, vop3, comment)
+-            , cvtType(cvtType)
+-        {
+-            std::transform(true16Arg.begin(), true16Arg.end(), std::back_inserter(true16),
+-                           [](int arg) { return arg; });
+-        }
+-
+         VCvtInstruction(const VCvtInstruction& other)
+             : CommonInstruction(other)
+             , cvtType(other.cvtType)
+-            , true16(other.true16)
+         {
+         }
+ 
+         std::string getArgStr() const override
+         {
+-            const bool isTrue16 = !true16.empty();
++            // true16 half-selects (".l"/".h") are carried on the operands themselves.
+             std::string kStr;
+             if(dst && !dst->toString().empty())
+             {
+                 kStr += dst->toString();
+-                if (isTrue16 && true16.size() > static_cast<size_t>(ArgType::DST))
+-                {
+-                    kStr += true16[static_cast<size_t>(ArgType::DST)].toString();
+-                }
+             }
+             if(dst1 && !dst1->toString().empty())
+             {
+@@ -83,10 +61,6 @@ namespace rocisa
+                     kStr += ", ";
+                 }
+                 kStr += dst1->toString();
+-                if (isTrue16 && true16.size() > static_cast<size_t>(ArgType::DST1))
+-                {
+-                    kStr += true16[static_cast<size_t>(ArgType::DST1)].toString();
+-                }
+             }
+             if(!srcs.empty())
+             {
+@@ -95,18 +69,10 @@ namespace rocisa
+                     kStr += ", ";
+                 }
+                 kStr += InstructionInputToString(srcs[0]);
+-                if (isTrue16 && true16.size() > static_cast<size_t>(ArgType::SRC0))
+-                {
+-                    kStr += true16[static_cast<size_t>(ArgType::SRC0)].toString();
+-                }
+             }
+             for(size_t i = 1; i < srcs.size(); ++i)
+             {
+                 kStr += ", " + InstructionInputToString(srcs[i]);
+-                if (isTrue16 && true16.size() > static_cast<size_t>(ArgType::SRC0) + i)
+-                {
+-                    kStr += true16[static_cast<size_t>(ArgType::SRC0) + i].toString();
+-                }
+             }
+             return kStr;
+         }
+@@ -117,9 +83,8 @@ namespace rocisa
+         VCvtF16toF32(const std::shared_ptr<RegisterContainer>& dst,
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+-                     const std::vector<int>&                   true16  = {},
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_F16_to_F32, dst, {src}, sdwa, std::nullopt, true16, comment)
++            : VCvtInstruction(CvtType::CVT_F16_to_F32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_f32_f16");
+         }
+@@ -140,9 +105,8 @@ namespace rocisa
+         VCvtF32toF16(const std::shared_ptr<RegisterContainer>& dst,
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+-                     const std::vector<int>&                   true16  = {},
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_F32_to_F16, dst, {src}, sdwa, std::nullopt, true16, comment)
++            : VCvtInstruction(CvtType::CVT_F32_to_F16, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_f16_f32");
+         }
+@@ -164,7 +128,7 @@ namespace rocisa
+                        const InstructionInput&                   src0,
+                        const InstructionInput&                   src1,
+                        const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_F32_to_F16, dst, {src0, src1}, std::nullopt, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_PK_F32_to_F16, dst, {src0, src1}, std::nullopt, std::nullopt, comment)
+         {
+             setInst("v_cvt_pk_f16_f32");
+         }
+@@ -186,7 +150,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_F32_to_U32, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_F32_to_U32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_u32_f32");
+         }
+@@ -208,7 +172,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_U32_to_F32, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_U32_to_F32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_f32_u32");
+         }
+@@ -230,7 +194,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_F64_to_U32, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_F64_to_U32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_u32_f64");
+         }
+@@ -252,7 +216,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_U32_to_F64, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_U32_to_F64, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_f64_u32");
+         }
+@@ -274,7 +238,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_I32_to_F32, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_I32_to_F32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_f32_i32");
+         }
+@@ -296,7 +260,7 @@ namespace rocisa
+                      const InstructionInput&                   src,
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_F32_to_I32, dst, {src}, sdwa, std::nullopt, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_F32_to_I32, dst, {src}, sdwa, std::nullopt, comment)
+         {
+             setInst("v_cvt_i32_f32");
+         }
+@@ -319,7 +283,7 @@ namespace rocisa
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_FP8_to_F32, dst, {src}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_FP8_to_F32, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_f32_fp8");
+         }
+@@ -342,7 +306,7 @@ namespace rocisa
+                      const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                      const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_BF8_to_F32, dst, {src}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_BF8_to_F32, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_f32_bf8");
+         }
+@@ -364,9 +328,8 @@ namespace rocisa
+                        const InstructionInput&                   src,
+                        const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                        const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+-                       const std::vector<int>&                   true16  = {},
+                        const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_FP8_to_F32, dst, {src}, sdwa, vop3, true16, comment)
++            : VCvtInstruction(CvtType::CVT_PK_FP8_to_F32, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_pk_f32_fp8");
+         }
+@@ -388,9 +351,8 @@ namespace rocisa
+                        const InstructionInput&                   src,
+                        const std::optional<SDWAModifiers>&       sdwa    = std::nullopt,
+                        const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+-                       const std::vector<int>&                   true16  = {},
+                        const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_BF8_to_F32, dst, {src}, sdwa, vop3, true16, comment)
++            : VCvtInstruction(CvtType::CVT_PK_BF8_to_F32, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_pk_f32_bf8");
+         }
+@@ -414,7 +376,7 @@ namespace rocisa
+                        const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+                        const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_PK_F32_to_FP8, dst, {src0, src1}, std::nullopt, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_PK_F32_to_FP8, dst, {src0, src1}, std::nullopt, vop3, comment)
+         {
+             setInst("v_cvt_pk_fp8_f32");
+         }
+@@ -438,7 +400,7 @@ namespace rocisa
+                        const std::optional<VOP3PModifiers>&      vop3    = std::nullopt,
+                        const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_PK_F32_to_BF8, dst, {src0, src1}, std::nullopt, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_PK_F32_to_BF8, dst, {src0, src1}, std::nullopt, vop3, comment)
+         {
+             setInst("v_cvt_pk_bf8_f32");
+         }
+@@ -462,7 +424,7 @@ namespace rocisa
+                        const std::vector<int>&                   sels,
+                        const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SR_F32_to_FP8, dst, {src0, src1}, std::nullopt, VOP3PModifiers(), std::vector<int>({}), comment)
++                CvtType::CVT_SR_F32_to_FP8, dst, {src0, src1}, std::nullopt, VOP3PModifiers(), comment)
+         {
+             setInst("v_cvt_sr_fp8_f32");
+             if(sels.empty()) return;
+@@ -513,7 +475,7 @@ namespace rocisa
+                        const std::vector<int>&                   sels,
+                        const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SR_F32_to_BF8, dst, {src0, src1}, std::nullopt, VOP3PModifiers(), std::vector<int>({}), comment)
++                CvtType::CVT_SR_F32_to_BF8, dst, {src0, src1}, std::nullopt, VOP3PModifiers(), comment)
+         {
+             setInst("v_cvt_sr_bf8_f32");
+             if(sels.empty()) return;
+@@ -564,7 +526,7 @@ namespace rocisa
+                               const InstructionInput&                   scale,
+                               const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_SR_PK8_FP8_F32, dst, {src0, src1, scale}, std::nullopt, std::nullopt, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_SR_PK8_FP8_F32, dst, {src0, src1, scale}, std::nullopt, std::nullopt, comment)
+         {
+             setInst("v_cvt_scalef32_sr_pk8_fp8_f32");
+         }
+@@ -589,7 +551,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK_F16_FP8, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK_F16_FP8, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk_f16_fp8");
+         }
+@@ -614,7 +576,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK_F16_BF8, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK_F16_BF8, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk_f16_bf8");
+         }
+@@ -638,7 +600,7 @@ namespace rocisa
+                           std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                           std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                           const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_SCALEF32_F16_FP8, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_SCALEF32_F16_FP8, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_f16_fp8");
+         }
+@@ -661,7 +623,7 @@ namespace rocisa
+                        std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                        std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                        const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_FP8_to_F16, dst, {src}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_PK_FP8_to_F16, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_pk_f16_fp8");
+         }
+@@ -684,7 +646,7 @@ namespace rocisa
+                      std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                      std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                      const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_FP8_to_F16, dst, {src}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_FP8_to_F16, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_f16_fp8");
+         }
+@@ -709,7 +671,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK_FP8_F16, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK_FP8_F16, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk_fp8_f16");
+         }
+@@ -734,7 +696,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK_BF8_F16, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK_BF8_F16, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk_bf8_f16");
+         }
+@@ -759,7 +721,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_SR_FP8_F16, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_SR_FP8_F16, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_sr_fp8_f16");
+         }
+@@ -784,7 +746,7 @@ namespace rocisa
+                             std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                             const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_SR_BF8_F16, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_SR_BF8_F16, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_sr_bf8_f16");
+         }
+@@ -806,9 +768,8 @@ namespace rocisa
+                         const std::shared_ptr<Container>&         src,
+                         std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                         std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+-                        const std::vector<int>&                   true16  = {},
+                         const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_BF16_to_F32, dst, {src}, sdwa, vop3, true16, comment)
++            : VCvtInstruction(CvtType::CVT_BF16_to_F32, dst, {src}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_f32_bf16");
+         }
+@@ -832,7 +793,7 @@ namespace rocisa
+                         std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                         std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                         const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_F32_to_BF16, dst, {src0, src1}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_PK_F32_to_BF16, dst, {src0, src1}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_pk_bf16_f32");
+         }
+@@ -856,7 +817,7 @@ namespace rocisa
+                         std::optional<SDWAModifiers>              sdwa    = std::nullopt,
+                         std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                         const std::string&                        comment = "")
+-            : VCvtInstruction(CvtType::CVT_PK_F32_to_F16, dst, {src0, src1}, sdwa, vop3, std::vector<int>({}), comment)
++            : VCvtInstruction(CvtType::CVT_PK_F32_to_F16, dst, {src0, src1}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_pk_f16_f32");
+         }
+@@ -881,7 +842,7 @@ namespace rocisa
+                              std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                              const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK8_FP8_F32, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK8_FP8_F32, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk8_fp8_f32");
+         }
+@@ -906,7 +867,7 @@ namespace rocisa
+                              std::optional<VOP3PModifiers>             vop3    = std::nullopt,
+                              const std::string&                        comment = "")
+             : VCvtInstruction(
+-                CvtType::CVT_SCALEF32_PK8_BF8_F32, dst, {src, scale}, sdwa, vop3, std::vector<int>({}), comment)
++                CvtType::CVT_SCALEF32_PK8_BF8_F32, dst, {src, scale}, sdwa, vop3, comment)
+         {
+             setInst("v_cvt_scalef32_pk8_bf8_f32");
+         }
+diff --git a/tensilelite/rocisa/rocisa/include/instruction/extension.hpp b/tensilelite/rocisa/rocisa/include/instruction/extension.hpp
+index 1d65bd78e5e2..869cec92aa3d 100644
+--- a/tensilelite/rocisa/rocisa/include/instruction/extension.hpp
++++ b/tensilelite/rocisa/rocisa/include/instruction/extension.hpp
+@@ -496,6 +496,44 @@ namespace rocisa
+     //   - SDWA encoding (src0_sel / dst_sel)  on legacy targets.
+     // Callers only provide a semantic `sel` (HighBitSel::LOW or HighBitSel::HIGH).
+     ////////////////////////////////////////////////////////////////////////////////
++
++    // Copy of an InstructionInput with its register operand tagged .l/.h; non-register inputs pass through.
++    inline InstructionInput inputWithHalf(const InstructionInput& src, HighBitSel sel)
++    {
++        if(auto pc = std::get_if<std::shared_ptr<Container>>(&src))
++        {
++            if(auto rc = std::dynamic_pointer_cast<RegisterContainer>(*pc))
++            {
++                // clone() (not make_shared) keeps the dynamic type so a Holder still lowers to its VGPR.
++                auto copy = std::static_pointer_cast<RegisterContainer>(rc->clone());
++                copy->setHalfSelect(sel);
++                return std::static_pointer_cast<Container>(copy);
++            }
++        }
++        return src;
++    }
++
++    // Copy of a register container tagged with a true16 half-select.
++    inline std::shared_ptr<RegisterContainer>
++        regWithHalf(const std::shared_ptr<RegisterContainer>& reg, HighBitSel sel)
++    {
++        // clone() (not make_shared) keeps the dynamic type so a Holder still lowers to its VGPR.
++        auto copy = std::static_pointer_cast<RegisterContainer>(reg->clone());
++        copy->setHalfSelect(sel);
++        return copy;
++    }
++
++    // NoSDWA-gated true16 half-select: tags reg .l/.h on true16 (NoSDWA) targets,
++    // returns it unchanged on legacy (SDWA). Wrap operands at the call site.
++    inline std::shared_ptr<RegisterContainer>
++        t16(const std::shared_ptr<RegisterContainer>& reg, HighBitSel sel)
++    {
++        if(reg && capOrDefault(rocIsa::getInstance().getArchCaps(), "NoSDWA"))
++        {
++            return regWithHalf(reg, sel);
++        }
++        return reg;
++    }
+     /// Convert F16 → F32, selecting src half-word by `sel`.
+     inline std::shared_ptr<Item>
+         ECvtF16toF32(const std::shared_ptr<RegisterContainer>& dst,
+@@ -507,56 +545,49 @@ namespace rocisa
+         if(capOrDefault(instance.getArchCaps(), "NoSDWA"))
+         {
+             return std::make_shared<VCvtF16toF32>(
+-                dst,
+-                src,
+-                std::nullopt,
+-                std::vector<int>{-1, -1, static_cast<int>(sel)},
+-                comment);
++                dst, inputWithHalf(src, sel), std::nullopt, comment);
+         }
+ 
+         SDWAModifiers sdwa;
+         sdwa.src0_sel = (sel == HighBitSel::HIGH) ? SelectBit::WORD_1
+                                                   : SelectBit::WORD_0;
+         return std::make_shared<VCvtF16toF32>(
+-            dst, src, sdwa, std::vector<int>{}, comment);
++            dst, src, sdwa, comment);
+     }
+ 
+-    /**
+-     * Convert F32->F16 with optional half-word packing.
+-     *
+-     * @param sel  std::nullopt -> plain VCvtF32toF16, no half-word modifier.
+-     *             HighBitSel::LOW / HIGH -> pack result into the selected
+-     *             half-word via op_sel (NoSDWA / true16) or SDWA dst_sel
+-     *             (legacy).
+-     */
++    // Convert F32->F16. sel=nullopt writes the low half (plain cvt on legacy;
++    // true16 requires a half, so it defaults to LOW).
+     inline std::shared_ptr<Item>
+         ECvtF32toF16(const std::shared_ptr<RegisterContainer>& dst,
+                      const InstructionInput&                   src,
+                      std::optional<HighBitSel>                 sel     = std::nullopt,
+                      const std::string&                        comment = "")
+     {
++        rocIsa& instance = rocIsa::getInstance();
++        const bool noSDWA = capOrDefault(instance.getArchCaps(), "NoSDWA");
++
+         if(!sel.has_value())
+         {
+-            return std::make_shared<VCvtF32toF16>(
+-                dst, src, std::nullopt, std::vector<int>{}, comment);
++            // Plain 16-bit cvt is legal only on legacy; true16 must select a half.
++            if(!noSDWA)
++            {
++                return std::make_shared<VCvtF32toF16>(
++                    dst, src, std::nullopt, comment);
++            }
++            sel = HighBitSel::LOW;
+         }
+ 
+-        rocIsa& instance = rocIsa::getInstance();
+-        if(capOrDefault(instance.getArchCaps(), "NoSDWA"))
++        if(noSDWA)
+         {
+             return std::make_shared<VCvtF32toF16>(
+-                dst,
+-                src,
+-                std::nullopt,
+-                std::vector<int>{static_cast<int>(*sel)},
+-                comment);
++                regWithHalf(dst, *sel), src, std::nullopt, comment);
+         }
+ 
+         SDWAModifiers sdwa;
+         sdwa.dst_sel = (*sel == HighBitSel::HIGH) ? SelectBit::WORD_1
+                                                   : SelectBit::WORD_0;
+         return std::make_shared<VCvtF32toF16>(
+-            dst, src, sdwa, std::vector<int>{}, comment);
++            dst, src, sdwa, comment);
+     }
+ 
+     /// Unpack packed-FP8 → 2×F32, selecting src half-word by `sel`.
+@@ -566,18 +597,11 @@ namespace rocisa
+                        HighBitSel                                sel,
+                        const std::string&                        comment = "")
+     {
+-        int     selInt   = static_cast<int>(sel);
+         rocIsa& instance = rocIsa::getInstance();
+         if(capOrDefault(instance.getArchCaps(), "NoSDWA"))
+         {
+-            VOP3PModifiers vop3;
+-            vop3.op_sel.push_back(selInt);
+             return std::make_shared<VCvtPkFP8toF32>(
+-                dst,
+-                src,
+-                std::nullopt,
+-                vop3,
+-                std::vector<int>{-1, -1, selInt},
++                dst, inputWithHalf(src, sel), std::nullopt, std::nullopt,
+                 comment);
+         }
+ 
+@@ -585,7 +609,7 @@ namespace rocisa
+         sdwa.src0_sel = (sel == HighBitSel::HIGH) ? SelectBit::WORD_1
+                                                   : SelectBit::WORD_0;
+         return std::make_shared<VCvtPkFP8toF32>(
+-            dst, src, sdwa, std::nullopt, std::vector<int>{}, comment);
++            dst, src, sdwa, std::nullopt, comment);
+     }
+ 
+     /// Unpack packed-BF8 → 2×F32, selecting src half-word by `sel`.
+@@ -595,18 +619,11 @@ namespace rocisa
+                        HighBitSel                                sel,
+                        const std::string&                        comment = "")
+     {
+-        int     selInt   = static_cast<int>(sel);
+         rocIsa& instance = rocIsa::getInstance();
+         if(capOrDefault(instance.getArchCaps(), "NoSDWA"))
+         {
+-            VOP3PModifiers vop3;
+-            vop3.op_sel.push_back(selInt);
+             return std::make_shared<VCvtPkBF8toF32>(
+-                dst,
+-                src,
+-                std::nullopt,
+-                vop3,
+-                std::vector<int>{-1, -1, selInt},
++                dst, inputWithHalf(src, sel), std::nullopt, std::nullopt,
+                 comment);
+         }
+ 
+@@ -614,7 +631,7 @@ namespace rocisa
+         sdwa.src0_sel = (sel == HighBitSel::HIGH) ? SelectBit::WORD_1
+                                                   : SelectBit::WORD_0;
+         return std::make_shared<VCvtPkBF8toF32>(
+-            dst, src, sdwa, std::nullopt, std::vector<int>{}, comment);
++            dst, src, sdwa, std::nullopt, comment);
+     }
+ 
+     inline std::shared_ptr<Item>
+@@ -640,15 +657,15 @@ namespace rocisa
+ 
+         if(capOrDefault(instance.getArchCaps(), "NoSDWA"))
+         {
+-            VOP3PModifiers vop3;
+-            vop3.op_sel.push_back(vi % 2);
++            const HighBitSel sel = (vi % 2) ? HighBitSel::HIGH : HighBitSel::LOW;
+             return std::make_shared<PVCvtBF16toFP32>(
+-                dst, src, std::nullopt, vop3, std::vector<int>{-1, -1, vi % 2}, "cvt bf16 to f32");
++                dst, regWithHalf(src, sel), std::nullopt, std::nullopt,
++                "cvt bf16 to fp32. " + comment);
+         }
+ 
+         SDWAModifiers sdwa;
+         sdwa.src0_sel = (vi % 2 == 1) ? SelectBit::WORD_1 : SelectBit::WORD_0;
+         return std::make_shared<PVCvtBF16toFP32>(
+-            dst, src, sdwa, std::nullopt, std::vector<int>{}, "cvt bf16 to f32");
++            dst, src, sdwa, std::nullopt, "cvt bf16 to fp32. " + comment);
+     }
+ } // namespace rocisa
+diff --git a/tensilelite/rocisa/rocisa/src/container.cpp b/tensilelite/rocisa/rocisa/src/container.cpp
+index cee64c7cef30..35bfb967599e 100644
+--- a/tensilelite/rocisa/rocisa/src/container.cpp
++++ b/tensilelite/rocisa/rocisa/src/container.cpp
+@@ -564,16 +564,6 @@ void init_containers(nb::module_ m)
+                  new(&self) rocisa::VOP3PModifiers(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+              });
+ 
+-    nb::class_<rocisa::True16Modifiers, rocisa::Container>(m_con, "True16Modifiers")
+-        .def(nb::init<const rocisa::HighBitSel>(),
+-             nb::arg("high_bit")  = -1)
+-        .def("__str__", &rocisa::True16Modifiers::toString)
+-        .def("__deepcopy__", [](const rocisa::True16Modifiers& self, nb::dict&) { return rocisa::True16Modifiers(self); })
+-        .def("__getstate__", [](const rocisa::True16Modifiers& self) { return std::make_tuple(self.high_bit); })
+-        .def("__setstate__", [](rocisa::True16Modifiers& self, std::tuple<const rocisa::HighBitSel> t) {
+-            new(&self) rocisa::True16Modifiers(std::get<0>(t));
+-        });
+-    
+     nb::class_<rocisa::EXEC, rocisa::Container>(m_con, "EXEC")
+         .def(nb::init<bool>(), nb::arg("setHi") = false)
+         .def("__str__", &rocisa::EXEC::toString)
+@@ -676,6 +666,9 @@ void init_containers(nb::module_ m)
+         .def("getCompleteRegName", &rocisa::RegisterContainer::getCompleteRegName)
+         .def("splitRegContainer", &rocisa::RegisterContainer::splitRegContainer)
+         .def("setMsb", &rocisa::RegisterContainer::setMsb)
++        .def("setHalfSelect", &rocisa::RegisterContainer::setHalfSelect, nb::arg("sel"))
++        .def("lo", &rocisa::RegisterContainer::lo)
++        .def("hi", &rocisa::RegisterContainer::hi)
+         .def(
+             "__eq__",
+             [](const rocisa::RegisterContainer& self, nb::object other) {
+diff --git a/tensilelite/rocisa/rocisa/src/instruction/common.cpp b/tensilelite/rocisa/rocisa/src/instruction/common.cpp
+index cc539ac24491..d450c33fe2df 100644
+--- a/tensilelite/rocisa/rocisa/src/instruction/common.cpp
++++ b/tensilelite/rocisa/rocisa/src/instruction/common.cpp
+@@ -1992,6 +1992,21 @@ void common_inst(nb::module_ m_common)
+             return new rocisa::VCndMaskB32(self);
+         });
+ 
++    nb::class_<rocisa::VCndMaskB16, rocisa::CommonInstruction>(m_common, "VCndMaskB16")
++        .def(nb::init<const std::shared_ptr<rocisa::Container>&,
++                      const InstructionInput&,
++                      const InstructionInput&,
++                      const std::shared_ptr<rocisa::Container>&,
++                      const std::string&>(),
++             nb::arg("dst"),
++             nb::arg("src0"),
++             nb::arg("src1"),
++             nb::arg("src2")    = std::make_shared<rocisa::VCC>(),
++             nb::arg("comment") = "")
++        .def("__deepcopy__", [](const rocisa::VCndMaskB16& self, nb::dict&) {
++            return new rocisa::VCndMaskB16(self);
++        });
++
+     nb::class_<rocisa::VLShiftLeftB16, rocisa::CommonInstruction>(m_common, "VLShiftLeftB16")
+         .def(nb::init<const std::shared_ptr<rocisa::Container>&,
+                       const InstructionInput&,
+diff --git a/tensilelite/rocisa/rocisa/src/instruction/cvt.cpp b/tensilelite/rocisa/rocisa/src/instruction/cvt.cpp
+index c21e8e69fbfe..61e5e1640dc3 100644
+--- a/tensilelite/rocisa/rocisa/src/instruction/cvt.cpp
++++ b/tensilelite/rocisa/rocisa/src/instruction/cvt.cpp
+@@ -39,26 +39,22 @@ void cvt_inst(nb::module_ m_inst)
+                       const std::vector<InstructionInput>&,
+                       const std::optional<rocisa::SDWAModifiers>,
+                       const std::optional<rocisa::VOP3PModifiers>,
+-                      const std::vector<rocisa::True16Modifiers>&,
+                       const std::string&>(),
+              nb::arg("cvtType"),
+              nb::arg("dst"),
+              nb::arg("srcs"),
+              nb::arg("sdwa")    = std::nullopt,
+              nb::arg("vop3")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<rocisa::True16Modifiers>({}),
+              nb::arg("comment") = "");
+ 
+     nb::class_<rocisa::VCvtF16toF32, rocisa::VCvtInstruction>(m_inst, "VCvtF16toF32")
+         .def(nb::init<const std::shared_ptr<rocisa::RegisterContainer>&,
+                       const InstructionInput&,
+                       const std::optional<rocisa::SDWAModifiers>&,
+-                      const std::vector<int>&,
+                       const std::string&>(),
+              nb::arg("dst"),
+              nb::arg("src"),
+              nb::arg("sdwa")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<int>({}),
+              nb::arg("comment") = "")
+         .def("__deepcopy__", [](const rocisa::VCvtF16toF32& self, const nb::dict&) {
+             return new rocisa::VCvtF16toF32(self);
+@@ -68,12 +64,10 @@ void cvt_inst(nb::module_ m_inst)
+         .def(nb::init<const std::shared_ptr<rocisa::RegisterContainer>&,
+                       const InstructionInput&,
+                       const std::optional<rocisa::SDWAModifiers>&,
+-                      const std::vector<int>&,
+                       const std::string&>(),
+              nb::arg("dst"),
+              nb::arg("src"),
+              nb::arg("sdwa")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<int>({}),
+              nb::arg("comment") = "")
+         .def("__deepcopy__", [](const rocisa::VCvtF32toF16& self, const nb::dict&) {
+             return new rocisa::VCvtF32toF16(self);
+@@ -205,13 +199,11 @@ void cvt_inst(nb::module_ m_inst)
+                       const InstructionInput&,
+                       const std::optional<rocisa::SDWAModifiers>&,
+                       const std::optional<rocisa::VOP3PModifiers>&,
+-                      const std::vector<int>&,
+                       const std::string&>(),
+              nb::arg("dst"),
+              nb::arg("src"),
+              nb::arg("sdwa")    = std::nullopt,
+              nb::arg("vop3")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<int>({}),
+              nb::arg("comment") = "")
+         .def("__deepcopy__", [](const rocisa::VCvtPkFP8toF32& self, const nb::dict&) {
+             return new rocisa::VCvtPkFP8toF32(self);
+@@ -222,13 +214,11 @@ void cvt_inst(nb::module_ m_inst)
+                       const InstructionInput&,
+                       const std::optional<rocisa::SDWAModifiers>&,
+                       const std::optional<rocisa::VOP3PModifiers>&,
+-                      const std::vector<int>&,
+                       const std::string&>(),
+              nb::arg("dst"),
+              nb::arg("src"),
+              nb::arg("sdwa")    = std::nullopt,
+              nb::arg("vop3")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<int>({}),
+              nb::arg("comment") = "")
+         .def("__deepcopy__", [](const rocisa::VCvtPkBF8toF32& self, const nb::dict&) {
+             return new rocisa::VCvtPkBF8toF32(self);
+@@ -448,13 +438,11 @@ void cvt_inst(nb::module_ m_inst)
+                       const std::shared_ptr<rocisa::Container>&,
+                       std::optional<rocisa::SDWAModifiers>,
+                       std::optional<rocisa::VOP3PModifiers>,
+-                      const std::vector<int>&,
+                       const std::string&>(),
+              nb::arg("dst"),
+              nb::arg("src"),
+              nb::arg("sdwa")    = std::nullopt,
+              nb::arg("vop3")    = std::nullopt,
+-             nb::arg("true16")  = std::vector<int>({}),
+              nb::arg("comment") = "")
+         .def("__deepcopy__", [](const rocisa::PVCvtBF16toFP32& self, nb::dict&) {
+             return new rocisa::PVCvtBF16toFP32(self);
+diff --git a/tensilelite/rocisa/rocisa/src/instruction/extension.cpp b/tensilelite/rocisa/rocisa/src/instruction/extension.cpp
+index 9d4684ddf748..ff09d89a2e7a 100644
+--- a/tensilelite/rocisa/rocisa/src/instruction/extension.cpp
++++ b/tensilelite/rocisa/rocisa/src/instruction/extension.cpp
+@@ -108,6 +108,11 @@ void ext_inst(nb::module_ m)
+           nb::arg("hasSMulHi") = false,
+           nb::arg("sign")      = false,
+           nb::arg("comment")   = "");
++    m.def("t16",
++          &rocisa::t16,
++          nb::arg("reg"),
++          nb::arg("sel"),
++          "NoSDWA-gated true16 half-select: tags reg .l/.h on true16, unchanged on legacy.");
+     m.def("ECvtF16toF32",
+           &rocisa::ECvtF16toF32,
+           nb::arg("dst"),
+diff --git a/tensilelite/rocisa/test/test_instruction.py b/tensilelite/rocisa/test/test_instruction.py
+index 81cc681ee351..370be57255e7 100644
+--- a/tensilelite/rocisa/test/test_instruction.py
++++ b/tensilelite/rocisa/test/test_instruction.py
+@@ -432,26 +432,14 @@ def test_instruction_scalar_float():
+         assert "// mutated" not in str(b)
+ 
+ 
+-@pytest.mark.xfail(
+-    reason="ROCM-3994 (W-KNOWN-BUG two-PR flow): the EMaxF16 true16 helper does not "
+-           "exist on develop, so this reproducer fails at import. The true16 fix PR "
+-           "(users/ericwan/true16-patch) must delete this marker; strict=True flips "
+-           "the resulting XPASS to a failure if it is left behind. Time-box: next "
+-           "hipBLASLt release.",
+-    strict=True,
+-    raises=(ImportError, AttributeError),
+-)
+ def test_instruction_vmax_f16_true16():
+-    # Regression for the true16 (real-true16) activation-clamp defect (ROCM-3994).
++    # Regression for the true16 (real-true16) activation-clamp defect.
+     #
+-    # On a NoSDWA target (isaVersion 11/12) the EMaxF16 helper must emit the
+-    # v_max_f16 activation clamp in true16 form, binding a half-word selector
+-    # (.l) to every register operand. The abs() source keeps its suffix *inside*
+-    # the closing paren: abs(v[..].l) is valid, abs(v[..]).l is not.
+-    #
+-    # RED on develop: EMaxF16 (and the VMaxF16 true16 kwarg) do not exist there,
+-    # so the import / construction below fails outright. GREEN on the fix branch:
+-    # the emitted text carries the .l selectors.
++    # On a NoSDWA target (isaVersion 11/12) the v_max_f16 activation clamp must
++    # be emitted in true16 form, binding a half-word selector (.l) to every
++    # register operand via the NoSDWA-gated t16() helper. The abs() source keeps
++    # its suffix *inside* the closing paren: abs(v[..].l) is valid,
++    # abs(v[..]).l is not.
+     #
+     # Assertions are substring/regex based to stay agnostic to the ~50-column
+     # comment padding, matching test_instruction_swait_xcnt / _global_wb.
+@@ -461,9 +449,10 @@ def test_instruction_vmax_f16_true16():
+ 
+     import rocisa
+     from rocisa.container import vgpr
+-    from rocisa.instruction import EMaxF16
++    from rocisa.enum import HighBitSel
++    from rocisa.instruction import VMaxF16, t16
+ 
+-    # Initialize a NoSDWA gfx11 ISA so EMaxF16 selects the true16 path. Resolve
++    # Initialize a NoSDWA gfx11 ISA so t16() selects the true16 path. Resolve
+     # the assembler via ROCM_PATH first (matching test_mubuf.py::_isa_context) so
+     # this works when ROCm's bin dir is not on PATH (common in CI / Windows).
+     isa = (11, 0, 0)
+@@ -478,35 +467,35 @@ def test_instruction_vmax_f16_true16():
+     ri.setKernel(isa, 32)
+     assert ri.getArchCaps()["NoSDWA"], "expected NoSDWA cap for gfx11"
+ 
+-    # How this test works: rocisa instruction objects render their assembly text
+-    # through __str__, so we construct the instruction under test, stringify it,
+-    # and assert on the emitted form. vgpr(name, ...) builds a VGPR operand
+-    # container (symbolic names like "Output"/"Value+0" mirror what the AMax
+-    # generator passes; isAbs=True wraps it in abs()). EMaxF16 is the true16-aware
+-    # max helper under test. Nothing is assembled or run on a device.
+-    # TODO(#9720): decouple this from the toolchain/env init above; a
+-    # string-rendering test should not need a resolved assembler path.
+-
+-    # abs() source (the activation-clamp shape from AMaxGenerator.max_per_data).
+-    inst = EMaxF16(vgpr("Output"), vgpr("Output"), vgpr("Value+0", isAbs=True))
+-    s = str(inst)
+-    assert re.search(
+-        r"v_max_f16\s+v\[vgprOutput\]\.l,\s+v\[vgprOutput\]\.l,\s+abs\(v\[vgprValue\+0\]\.l\)",
+-        s,
+-    ), f"activation clamp not in true16 form: {s!r}"
+-    # The suffix must be inside the abs() paren, never outside it.
+-    assert "abs(v[vgprValue+0].l)" in s
+-    assert "abs(v[vgprValue+0]).l" not in s
+-    # And it must not be the bare fake16 form.
+-    assert "abs(v[vgprValue+0])," not in s and not s.rstrip().endswith("abs(v[vgprValue+0])")
+-
+-    # Plain register sources (the merge_sum shape): every operand gets .l.
+-    inst2 = EMaxF16(vgpr("Output"), vgpr("Output"), vgpr("OutputB"))
+-    s2 = str(inst2)
+-    assert re.search(
+-        r"v_max_f16\s+v\[vgprOutput\]\.l,\s+v\[vgprOutput\]\.l,\s+v\[vgprOutputB\]\.l",
+-        s2,
+-    ), f"merge clamp not in true16 form: {s2!r}"
++    try:
++        low = HighBitSel.LOW
++
++        # abs() source (the activation-clamp shape from AMaxGenerator.max_per_data).
++        inst = VMaxF16(t16(vgpr("Output"), low), t16(vgpr("Output"), low),
++                       t16(vgpr("Value+0", isAbs=True), low))
++        s = str(inst)
++        assert re.search(
++            r"v_max_f16\s+v\[vgprOutput\]\.l,\s+v\[vgprOutput\]\.l,\s+abs\(v\[vgprValue\+0\]\.l\)",
++            s,
++        ), f"activation clamp not in true16 form: {s!r}"
++        # The suffix must be inside the abs() paren, never outside it.
++        assert "abs(v[vgprValue+0].l)" in s
++        assert "abs(v[vgprValue+0]).l" not in s
++        # And it must not be the bare fake16 form.
++        assert "abs(v[vgprValue+0])," not in s and not s.rstrip().endswith("abs(v[vgprValue+0])")
++
++        # Plain register sources (the merge_sum shape): every operand gets .l.
++        inst2 = VMaxF16(t16(vgpr("Output"), low), t16(vgpr("Output"), low),
++                        t16(vgpr("OutputB"), low))
++        s2 = str(inst2)
++        assert re.search(
++            r"v_max_f16\s+v\[vgprOutput\]\.l,\s+v\[vgprOutput\]\.l,\s+v\[vgprOutputB\]\.l",
++            s2,
++        ), f"merge clamp not in true16 form: {s2!r}"
++    finally:
++        legacy = (9, 4, 2)
++        ri.init(legacy, assembler, False)
++        ri.setKernel(legacy, 64)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/tensilelite/rocisa/test/test_true16.py b/tensilelite/rocisa/test/test_true16.py
+new file mode 100644
+index 000000000000..b35474a97115
+--- /dev/null
++++ b/tensilelite/rocisa/test/test_true16.py
+@@ -0,0 +1,138 @@
++# Copyright Advanced Micro Devices, Inc., or its affiliates.
++# SPDX-License-Identifier: MIT
++
++"""Unit tests for the true16 half-select support.
++
++These exercise pure assembly-string generation plus the version-based NoSDWA
++arch-cap lookup, so they require neither LLVM (no assembler is executed by
++rocIsa.init) nor a GPU. They cover:
++
++  * RegisterContainer half-select rendering (.l / .h),
++  * the true16 16-bit conditional select VCndMaskB16,
++  * the ECvt* helpers picking the true16 (NoSDWA) vs legacy (SDWA) encoding,
++  * the NoSDWA-gated t16() helper.
++"""
++
++import os
++import shutil
++
++import pytest
++
++import rocisa
++from rocisa.container import vgpr
++from rocisa.enum import HighBitSel
++from rocisa.instruction import ECvtF16toF32, ECvtF32toF16, VCndMaskB16, t16
++
++# NoSDWA (true16) archs are gfx11/gfx12; legacy SDWA archs are gfx9/gfx10.
++TRUE16_ISA = (12, 0, 0)
++LEGACY_ISA = (9, 4, 2)
++
++
++def _assembler_path():
++    rocm_path = os.environ.get("ROCM_PATH", "/opt/rocm")
++    search_path = os.pathsep.join(
++        [
++            os.path.join(rocm_path, "bin"),
++            os.path.join(rocm_path, "lib", "llvm", "bin"),
++        ]
++    )
++    # rocIsa.init only records the path; it does not run the assembler, so a
++    # missing amdclang++ is fine for these string-only tests.
++    return shutil.which("amdclang++", path=search_path) or "amdclang++"
++
++
++def _use_isa(isa):
++    inst = rocisa.rocIsa.getInstance()
++    inst.init(isa, _assembler_path(), False)  # idempotent per ISA
++    inst.setKernel(isa, 64)
++    return inst
++
++
++@pytest.fixture(autouse=True)
++def _restore_legacy_isa():
++    # rocIsa is a process-global singleton; restore the gfx942 default after each
++    # test so sibling tests that assume the default arch are unaffected.
++    yield
++    _use_isa(LEGACY_ISA)
++
++
++def test_half_select_render():
++    # gfx942 keeps HasVgprMSB off, so a single VGPR renders without an _hi pad.
++    _use_isa(LEGACY_ISA)
++
++    assert str(vgpr(0)) == "v0"
++    assert str(vgpr(0).lo()) == "v0.l"
++    assert str(vgpr(0).hi()) == "v0.h"
++
++    reg = vgpr(0)
++    reg.setHalfSelect(HighBitSel.HIGH)
++    assert str(reg) == "v0.h"
++    reg.setHalfSelect(HighBitSel.NONE)
++    assert str(reg) == "v0"
++
++
++def test_vcndmask_b16_renders_halves():
++    _use_isa(TRUE16_ISA)
++
++    dst, src0, src1 = vgpr(0), vgpr(1), vgpr(2)
++    dst.setHalfSelect(HighBitSel.LOW)
++    src0.setHalfSelect(HighBitSel.LOW)
++    src1.setHalfSelect(HighBitSel.HIGH)
++
++    text = str(VCndMaskB16(dst=dst, src0=src0, src1=src1))
++    assert text.startswith("v_cndmask_b16 ")
++    assert "v0.l" in text
++    assert "v1.l" in text
++    assert "v2.h" in text
++
++
++def test_ecvt_f16_to_f32_true16_vs_legacy():
++    # true16: half selected via the src operand's .h suffix, no SDWA modifier.
++    _use_isa(TRUE16_ISA)
++    text = str(ECvtF16toF32(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++    assert "v_cvt_f32_f16" in text
++    assert "v1.h" in text
++    assert "src0_sel" not in text
++
++    # legacy: half selected via SDWA src0_sel, no true16 suffix.
++    _use_isa(LEGACY_ISA)
++    text = str(ECvtF16toF32(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++    assert "v_cvt_f32_f16" in text
++    assert "src0_sel:WORD_1" in text
++    assert ".h" not in text
++
++
++def test_ecvt_f32_to_f16_true16_vs_legacy():
++    _use_isa(TRUE16_ISA)
++    # No sel on true16 defaults to the low half (a plain 16-bit cvt is illegal there).
++    assert "v0.l" in str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1)))
++    assert "v0.h" in str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++
++    _use_isa(LEGACY_ISA)
++    # No sel on legacy is a plain cvt: no half suffix, no SDWA modifier.
++    text = str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1)))
++    assert "v_cvt_f16_f32 v0, v1" in text
++    assert ".l" not in text and ".h" not in text
++    # sel on legacy packs the result via SDWA dst_sel.
++    assert "dst_sel:WORD_1" in str(
++        ECvtF32toF16(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH)
++    )
++
++
++def test_t16_gating():
++    _use_isa(TRUE16_ISA)
++    assert ".h" in str(t16(vgpr(1), HighBitSel.HIGH))
++    assert ".l" in str(t16(vgpr(1), HighBitSel.LOW))
++
++    # On legacy targets t16 is a no-op: the operand is returned untagged.
++    _use_isa(LEGACY_ISA)
++    assert ".h" not in str(t16(vgpr(1), HighBitSel.HIGH))
++    assert ".l" not in str(t16(vgpr(1), HighBitSel.LOW))
++
++
++if __name__ == "__main__":
++    test_half_select_render()
++    test_vcndmask_b16_renders_halves()
++    test_ecvt_f16_to_f32_true16_vs_legacy()
++    test_ecvt_f32_to_f16_true16_vs_legacy()
++    test_t16_gating()
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/code.py b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/code.py
+index 7bf73277f98c..90fde2aac04b 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/code.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/code.py
+@@ -56,6 +56,19 @@ def _forward_memtoken(rocisa_item: Any, logical: Any) -> None:
+             setter(tokens)
+ 
+ 
++def _forward_true16(rocisa_item: Any, logical: Any) -> None:
++    from .instruction import _apply_true16  # noqa: WPS433
++
++    if isinstance(logical, list):
++        return
++    _apply_true16(
++        logical,
++        getattr(rocisa_item, "dst", None),
++        getattr(rocisa_item, "srcs", None) or [],
++        getattr(rocisa_item, "dst1", None),
++    )
++
++
+ # Synthetic instruction-group name that marks the DAG-scheduler region spanning
+ # the persistent prefetch prologue + main loop. Must match the registered gfx125x
+ # group name (see Gfx1250Backend.cpp) and native's kPGR literal.
+@@ -1537,6 +1550,7 @@ def _populate_one_item(self, lm: Any, it: Any) -> None:
+         # this the DAG scheduler cannot see LDS store->load / barrier ordering
+         # and may reorder tensor_load_to_lds, corrupting the tensor descriptor.
+         _forward_memtoken(it, logical)
++        _forward_true16(it, logical)
+         if isinstance(logical, list):
+             for inst in logical:
+                 if comment and not inst.comment:
+@@ -1561,6 +1575,7 @@ def _collect_logical_insts(self) -> List[Any]:
+             if logical is None:
+                 continue
+             _forward_memtoken(it, logical)
++            _forward_true16(it, logical)
+             if isinstance(logical, list):
+                 out.extend(logical)
+             else:
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/container.py b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/container.py
+index de4c8f514973..cf4c8837ed86 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/container.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/container.py
+@@ -12,10 +12,10 @@
+ import re
+ from abc import ABC, abstractmethod
+ from copy import deepcopy
+-from typing import List, Optional, Tuple, Union
++from typing import Any, List, Optional, Tuple, Union
+ 
+ from .caps import glc_bit_name_from_caps, slc_bit_name_from_caps
+-from .enum import CacheScope, HighBitSel, NonVolatile, SelectBit, TemporalHint, UnusedBit
++from .enum import CacheScope, NonVolatile, SelectBit, TemporalHint, UnusedBit
+ 
+ _P = "rocisa.container"
+ 
+@@ -181,6 +181,7 @@ class RegisterContainer(Container):
+         "isAbs",
+         "isMacro",
+         "isOff",
++        "halfSelect",
+     )
+ 
+     def __init__(
+@@ -205,6 +206,7 @@ def __init__(
+         self.isAbs: bool = isAbs
+         self.isMacro: bool = isMacro
+         self.isOff: bool = isOff
++        self.halfSelect: Optional[Any] = None
+ 
+     # --- Setters. ---------------------------------------------------------
+ 
+@@ -223,6 +225,28 @@ def getMinus(self) -> "RegisterContainer":
+         c.setMinus(True)
+         return c
+ 
++    # --- true16 half-word select. -----------------------------------------
++
++    def setHalfSelect(self, sel: Any) -> None:
++        """Select the ``.l``/``.h`` half-word in place."""
++        self.halfSelect = sel
++
++    def lo(self) -> "RegisterContainer":
++        """Return a copy selecting the low half-word (``.l``)."""
++        from .enum import HighBitSel  # noqa: WPS433
++
++        c = self._shallow_clone()
++        c.halfSelect = HighBitSel.LOW
++        return c
++
++    def hi(self) -> "RegisterContainer":
++        """Return a copy selecting the high half-word (``.h``)."""
++        from .enum import HighBitSel  # noqa: WPS433
++
++        c = self._shallow_clone()
++        c.halfSelect = HighBitSel.HIGH
++        return c
++
+     # --- regName mutation. ------------------------------------------------
+ 
+     def replaceRegName(self, srcName: str, dst: Union[int, str]) -> None:
+@@ -355,6 +379,7 @@ def toString(self) -> str:
+         # Empty when HasVgprMSB cap isn't set or rocIsa wasn't initialised,
+         # so __str__ stays side-effect-free for unit tests.
+         msb_str = self._msb_suffix()
++        half_str = self._half_suffix()
+ 
+         if self.isInlineAsm:
+             return minus_str + "%" + str(self.regIdx) + abs_str
+@@ -372,6 +397,7 @@ def toString(self) -> str:
+                     + str(self.regName)
+                     + msb_str
+                     + "]"
++                    + half_str
+                     + abs_str
+                 )
+             return (
+@@ -403,9 +429,10 @@ def toString(self) -> str:
+                     + str(self.regIdx)
+                     + msb_str
+                     + "]"
++                    + half_str
+                     + abs_str
+                 )
+-            return minus_str + self.regType + str(self.regIdx) + abs_str
++            return minus_str + self.regType + str(self.regIdx) + half_str + abs_str
+ 
+         return (
+             minus_str
+@@ -420,6 +447,18 @@ def toString(self) -> str:
+             + abs_str
+         )
+ 
++    def _half_suffix(self) -> str:
++        """``.l`` / ``.h`` for a selected half-word, else empty.
++
++        ``NONE`` renders as empty just like an unset ``halfSelect``, matching
++        the native ``halfSelect.has_value() && *halfSelect != NONE`` guard.
++        """
++        from .enum import HighBitSel  # noqa: WPS433
++
++        if self.halfSelect is None or self.halfSelect == HighBitSel.NONE:
++            return ""
++        return ".h" if self.halfSelect == HighBitSel.HIGH else ".l"
++
+     def _msb_suffix(self) -> str:
+         """Compute the ``-256*msb`` suffix appended to ``toString``."""
+         try:
+@@ -469,6 +508,7 @@ def _shallow_clone(self) -> "RegisterContainer":
+         c.isAbs = self.isAbs
+         c.isMacro = self.isMacro
+         c.isOff = self.isOff
++        c.halfSelect = self.halfSelect
+         return c
+ 
+     def _deep_clone(self) -> "RegisterContainer":
+@@ -482,7 +522,7 @@ def __copy__(self) -> "RegisterContainer":
+     def __deepcopy__(self, memo: dict) -> "RegisterContainer":
+         return self._shallow_clone()
+ 
+-    def __getstate__(self) -> Tuple[str, Optional[RegName], int, int, bool, bool, bool, bool, bool, int]:
++    def __getstate__(self) -> Tuple[str, Optional[RegName], int, int, bool, bool, bool, bool, bool, int, Any]:
+         return (
+             self.regType,
+             deepcopy(self.regName),
+@@ -494,11 +534,12 @@ def __getstate__(self) -> Tuple[str, Optional[RegName], int, int, bool, bool, bo
+             self.isMacro,
+             self.isOff,
+             self.msb,
++            None if self.halfSelect is None else int(self.halfSelect),
+         )
+ 
+     def __setstate__(
+         self,
+-        state: Tuple[str, Optional[RegName], int, int, bool, bool, bool, bool, bool, int],
++        state: Tuple[str, Optional[RegName], int, int, bool, bool, bool, bool, bool, int, Any],
+     ) -> None:
+         (
+             self.regType,
+@@ -511,7 +552,11 @@ def __setstate__(
+             self.isMacro,
+             self.isOff,
+             self.msb,
++            half,
+         ) = state
++        from .enum import HighBitSel
++
++        self.halfSelect = None if half is None else HighBitSel(half)
+ 
+     # --- logicalIR handoff -------------------------------------------------
+ 
+@@ -834,15 +879,20 @@ def getCopiedRC(self) -> "RegisterContainer":
+         independent: subsequent mutation of either side does not bleed.
+         """
+         if self.holderType == 0:
+-            return RegisterContainer(self.regType, None, self.regIdx, self.regNum)
+-        return RegisterContainer(
+-            self.regType,
+-            RegName(self.regName.name, list(self.regName.offsets))
+-            if self.regName is not None
+-            else None,
+-            self.regIdx,
+-            self.regNum,
+-        )
++            rc = RegisterContainer(self.regType, None, self.regIdx, self.regNum)
++        else:
++            rc = RegisterContainer(
++                self.regType,
++                RegName(self.regName.name, list(self.regName.offsets))
++                if self.regName is not None
++                else None,
++                self.regIdx,
++                self.regNum,
++            )
++        # Preserve the true16 half-select, else the .l/.h suffix is lost and
++        # the operand is invalid on NoSDWA (same as the native getCopiedRC).
++        rc.halfSelect = self.halfSelect
++        return rc
+ 
+     # --- splitRegContainer override. --------------------------------------
+ 
+@@ -1952,35 +2002,3 @@ def __setstate__(self, state: Tuple[List[int], List[int], List[int]]) -> None:
+         self.op_sel = list(self.op_sel)
+         self.op_sel_hi = list(self.op_sel_hi)
+         self.byte_sel = list(self.byte_sel)
+-
+-
+-class True16Modifiers(Container):
+-    """True16 high/low selector (``rocisa::True16Modifiers``)."""
+-
+-    __slots__ = ("high_bit",)
+-
+-    def __init__(self, high_bit: Union[HighBitSel, int] = HighBitSel.NONE) -> None:
+-        if isinstance(high_bit, int):
+-            self.high_bit = HighBitSel(high_bit)
+-        else:
+-            self.high_bit = high_bit
+-
+-    def toString(self) -> str:
+-        if self.high_bit == HighBitSel.NONE:
+-            return ""
+-        return ".h" if self.high_bit == HighBitSel.HIGH else ".l"
+-
+-    def __repr__(self) -> str:
+-        return f"True16Modifiers(high_bit={self.high_bit!r})"
+-
+-    def __copy__(self) -> "True16Modifiers":
+-        return True16Modifiers(self.high_bit)
+-
+-    def __deepcopy__(self, memo: dict) -> "True16Modifiers":
+-        return True16Modifiers(self.high_bit)
+-
+-    def __getstate__(self) -> Tuple[int]:
+-        return (int(self.high_bit),)
+-
+-    def __setstate__(self, state: Tuple[int]) -> None:
+-        self.high_bit = HighBitSel(state[0])
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/enum.py b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/enum.py
+index f7d0c45758ec..4f75a89e300e 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/enum.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/enum.py
+@@ -123,8 +123,9 @@
+ export_enum_values(globals(), ArgType, _ArgType_values)
+ 
+ 
+-_HighBitSel_values = ["NONE", "LOW", "HIGH"]
+-HighBitSel = make_dummy_enum(f"{_P}.HighBitSel", _HighBitSel_values)
++_HighBitSel_members = [("NONE", -1), ("LOW", 0), ("HIGH", 1)]
++_HighBitSel_values = [name for name, _ in _HighBitSel_members]
++HighBitSel = make_bound_enum(f"{_P}.HighBitSel", _HighBitSel_members)
+ export_enum_values(globals(), HighBitSel, _HighBitSel_values)
+ 
+ 
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/instruction.py b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/instruction.py
+index 3aecf0097d7b..cadda20fc2b1 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/instruction.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/rocisa_stinkytofu_adaptor/instruction.py
+@@ -455,6 +455,43 @@ def _to_stinky_register(arg: Any) -> Any:
+     )
+ 
+ 
++def _true16_half_int(op: Any) -> int:
++    """``HighBitSel`` carried by @p op, or ``NONE`` when it carries none.
++
++    Port of ``regHalf`` in ``attachTrue16ModifiersFromOperands``
++    (ToStinkyTofuUtils.cpp): only register operands hold a half-select, so
++    immediates / raw strings / VCC read as NONE.
++    """
++    from .enum import HighBitSel  # noqa: WPS433
++
++    sel = getattr(op, "halfSelect", None)
++    return HighBitSel.NONE if sel is None else sel
++
++
++def _apply_true16(inst: Any, dst: Any, srcs: Any, dst1: Any = None) -> None:
++    """Attach a True16 (.l/.h) modifier derived from half-tagged operands.
++
++    The half rides on the operand (``RegisterContainer.halfSelect``, as in
++    native rocisa) but has to be re-hung on the *instruction* as a
++    True16Modifiers: the register lowers to a plain (structured)
++    StinkyRegister, and stinkytofu's true16-aware SSA/wait passes read the
++    instruction modifier (op_sel would bypass them). Mirrors the compiled
++    path's ``attachTrue16ModifiersFromOperands`` (ToStinkyTofuUtils.cpp); a
++    no-op when no operand is tagged, so 32-bit/packed ops are unaffected.
++    """
++    from .enum import HighBitSel  # noqa: WPS433
++
++    if not hasattr(inst, "set_true16"):
++        return
++    none = HighBitSel.NONE
++    dst0 = _true16_half_int(dst) if dst is not None else none
++    dstHi = _true16_half_int(dst1) if dst1 is not None else none
++    src_sels = [_true16_half_int(s) for s in srcs]
++    if dst0 == none and dstHi == none and all(s == none for s in src_sels):
++        return
++    inst.set_true16(int(dst0), int(dstHi), [int(s) for s in src_sels])
++
++
+ # gfx12+ style suffix on ``s_load_*`` (matches rocisa ``ReadWriteInstruction``
+ # ``typeConvert`` for ``RW_TYPE0`` when ISA major >= 11).
+ _SMEM_LOAD_TYPE_SUFFIX = {
+@@ -1360,7 +1397,8 @@ def to_stinky_logical(self) -> Any:
+         src0_reg = _to_stinky_register(self.srcs[0])
+         src1_reg = _to_stinky_register(self.srcs[1])
+         factory = getattr(_st, class_name)
+-        return factory(dst_reg, src0_reg, src1_reg, comment=self.comment)
++        inst = factory(dst_reg, src0_reg, src1_reg, comment=self.comment)
++        return inst
+ 
+     def __deepcopy__(self, memo):
+         return CommonInstruction.__deepcopy__(self, memo)
+@@ -1465,6 +1503,47 @@ def __deepcopy__(self, memo):
+         return CommonInstruction.__deepcopy__(self, memo)
+ 
+ 
++# -- VCndMaskB16 (native: dst, src0, src1, src2=VCC; true16 16-bit select) --
++# logicalIR: VCndMaskB16
++class VCndMaskB16(CommonInstruction):
++    """``v_cndmask_b16 dst, src0, src1, vcc`` shim (true16 16-bit select).
++
++    Same shape as VCndMaskB32 but 16-bit: the true16 half-word (.l/.h) is carried
++    on the operands themselves. Takes (dst, src0, src1, src2=VCC).
++    """
++
++    def __init__(self, dst: Any, src0: Any = None, src1: Any = None,
++                 src2: Any = None,
++                 sdwa: Any = None, comment: str = "", dpp: Any = None, **kw):
++        _ = kw
++        srcs = [src0, src1]
++        if src2 is not None:
++            srcs.append(src2)
++        super().__init__(
++            instType=InstType.INST_B16,
++            dst=dst,
++            srcs=srcs,
++            dpp=dpp,
++            sdwa=sdwa,
++            vop3=None,
++            comment=comment,
++        )
++        self.setInst("v_cndmask_b16")
++
++    def to_stinky_logical(self) -> Any:
++        import stinkytofu as _st  # noqa: WPS433
++
++        dst_reg = _to_stinky_register(self.dst)
++        src0_reg = _to_stinky_register(self.srcs[0])
++        src1_reg = _to_stinky_register(self.srcs[1])
++        src2_reg = _to_stinky_register(self.srcs[2]) if len(self.srcs) > 2 else _st.Register("vcc_lo")
++        inst = _st.VCndMaskB16(dst_reg, src0_reg, src1_reg, src2_reg, comment=self.comment)
++        return inst
++
++    def __deepcopy__(self, memo):
++        return CommonInstruction.__deepcopy__(self, memo)
++
++
+ # -- VReadfirstlaneB32 (unary: dst, src) --
+ # logicalIR: VReadfirstlaneB32
+ VReadfirstlaneB32 = _make_scalar_unary_class("VReadfirstlaneB32", "v_readfirstlane_b32", InstType.INST_B32)
+@@ -2007,7 +2086,8 @@ def to_stinky_logical(self) -> Any:
+         src0_reg = _to_stinky_register(self.srcs[0])
+         src1_reg = _to_stinky_register(self.srcs[1])
+         factory = getattr(_st, class_name)
+-        return factory(dst_reg, src0_reg, src1_reg, comment=self.comment)
++        inst = factory(dst_reg, src0_reg, src1_reg, comment=self.comment)
++        return inst
+ 
+     def __deepcopy__(self, memo):
+         return CommonInstruction.__deepcopy__(self, memo)
+@@ -2977,6 +3057,7 @@ def getSrcParams(self):
+ # logicalIR: VPrngB32
+ VPrngB32 = _make_scalar_unary_class("VPrngB32", "v_prng_b32", InstType.INST_B32)
+ # VCndMaskB32 — real class (see Vector ALU section above)
++# VCndMaskB16 — real class (see Vector ALU section above)
+ # logicalIR: VLShiftLeftB16
+ VLShiftLeftB16 = _make_vector_shift_class("VLShiftLeftB16", "v_lshlrev_b16", InstType.INST_B16)
+ # VLShiftLeftB32 — real class (see Vector ALU section above)
+@@ -5131,34 +5212,39 @@ def _is_container(val: Any) -> bool:
+ # ==========================================================================
+ 
+ 
+-class _True16Wrap:
+-    """Wraps a register/input and appends a True16 ``.h``/``.l`` suffix."""
++def _input_with_half(src: Any, sel: Any) -> Any:
++    """Port of ``rocisa::inputWithHalf``/``regWithHalf`` (extension.hpp).
+ 
+-    __slots__ = ("_inner", "_suffix")
++    Only register operands take a half-select; the C++ helper guards on
++    ``dynamic_pointer_cast<RegisterContainer>`` and returns non-register inputs
++    (immediates, raw strings) untouched. Python is untyped, so the same guard is
++    applied here - without it an immediate would render nonsense like ``1.0.l``.
+ 
+-    def __init__(self, inner: Any, sel: Any) -> None:
+-        from .enum import HighBitSel  # noqa: WPS433
+-        self._inner = inner
+-        self._suffix = ".h" if sel == HighBitSel.HIGH else ".l"
++    Returns a *copy*: ``regWithHalf`` clones before setting the half so the
++    caller's operand is not mutated when the same VGPR is reused for both
++    halves.
++    """
++    from .container import RegisterContainer  # noqa: WPS433
+ 
+-    def toString(self) -> str:
+-        return _input_to_str(self._inner) + self._suffix
++    if isinstance(src, RegisterContainer):
++        c = src._shallow_clone()
++        c.setHalfSelect(sel)
++        return c
++    return src
+ 
+-    def to_stinky(self) -> Any:
+-        """Return the inner register as a proper StinkyRegister.
+ 
+-        The True16 .h/.l selection is encoded via the VOP3 op_sel modifier
+-        on the instruction, NOT as a string suffix on the register. Returning
+-        the structured register preserves the physical index needed by
+-        InsertVgprMsbPass for correct MSB computation.
+-        """
+-        if hasattr(self._inner, "to_stinky"):
+-            return self._inner.to_stinky()
+-        import stinkytofu as _st  # noqa: WPS433
+-        return _st.Register(self.toString())
++def t16(reg: Any, sel: Any) -> Any:
++    """NoSDWA-gated true16 half-select (extension.hpp::t16).
+ 
+-    def __str__(self) -> str:
+-        return self.toString()
++    On a true16 (NoSDWA) target, tag *reg* with the ``.l``/``.h`` half-word given
++    by *sel*; on legacy (SDWA) targets return *reg* unchanged. Mirrors the C++
++    helper so kernel generators can tag f16 operands unconditionally.
++    """
++    from .base import getArchCaps  # noqa: WPS433
++
++    if reg is not None and getArchCaps().get("NoSDWA", 0):
++        return _input_with_half(reg, sel)
++    return reg
+ 
+ 
+ def ECvtF16toF32(dst: Any, src: Any, sel: Any, comment: str = "") -> Any:
+@@ -5168,7 +5254,7 @@ def ECvtF16toF32(dst: Any, src: Any, sel: Any, comment: str = "") -> Any:
+     from .enum import HighBitSel, SelectBit  # noqa: WPS433
+ 
+     if getArchCaps().get("NoSDWA", 0):
+-        return VCvtF16toF32(dst=dst, src=_True16Wrap(src, sel), comment=comment)
++        return VCvtF16toF32(dst=dst, src=_input_with_half(src, sel), comment=comment)
+ 
+     src0_sel = SelectBit.WORD_1 if sel == HighBitSel.HIGH else SelectBit.WORD_0
+     return VCvtF16toF32(
+@@ -5182,11 +5268,17 @@ def ECvtF32toF16(dst: Any, src: Any, sel: Any = None, comment: str = "") -> Any:
+     from .container import SDWAModifiers  # noqa: WPS433
+     from .enum import HighBitSel, SelectBit  # noqa: WPS433
+ 
++    noSDWA = getArchCaps().get("NoSDWA", 0)
++
+     if sel is None:
+-        return VCvtF32toF16(dst=dst, src=src, comment=comment)
++        # Plain 16-bit cvt is legal only on legacy; true16 must select a half
++        # (a suffix-less v_cvt_f16_f32 is fake16 and rejected by +real-true16).
++        if not noSDWA:
++            return VCvtF32toF16(dst=dst, src=src, comment=comment)
++        sel = HighBitSel.LOW
+ 
+-    if getArchCaps().get("NoSDWA", 0):
+-        return VCvtF32toF16(dst=_True16Wrap(dst, sel), src=src, comment=comment)
++    if noSDWA:
++        return VCvtF32toF16(dst=_input_with_half(dst, sel), src=src, comment=comment)
+ 
+     dst_sel = SelectBit.WORD_1 if sel == HighBitSel.HIGH else SelectBit.WORD_0
+     return VCvtF32toF16(
+@@ -5197,16 +5289,11 @@ def ECvtF32toF16(dst: Any, src: Any, sel: Any = None, comment: str = "") -> Any:
+ def ECvtPkFP8toF32(dst: Any, src: Any, sel: Any, comment: str = "") -> Any:
+     """Unpack packed-FP8 → 2×F32, selecting src half-word (extension.hpp:537)."""
+     from .base import getArchCaps  # noqa: WPS433
+-    from .container import SDWAModifiers, VOP3PModifiers  # noqa: WPS433
++    from .container import SDWAModifiers  # noqa: WPS433
+     from .enum import HighBitSel, SelectBit  # noqa: WPS433
+ 
+-    sel_int = 1 if sel == HighBitSel.HIGH else 0
+     if getArchCaps().get("NoSDWA", 0):
+-        inst = VCvtPkFP8toF32(
+-            dst=dst, src=_True16Wrap(src, sel), comment=comment,
+-        )
+-        inst.vop3 = VOP3PModifiers(op_sel=[sel_int])
+-        return inst
++        return VCvtPkFP8toF32(dst=dst, src=_input_with_half(src, sel), comment=comment)
+ 
+     src0_sel = SelectBit.WORD_1 if sel == HighBitSel.HIGH else SelectBit.WORD_0
+     return VCvtPkFP8toF32(
+@@ -5217,16 +5304,11 @@ def ECvtPkFP8toF32(dst: Any, src: Any, sel: Any, comment: str = "") -> Any:
+ def ECvtPkBF8toF32(dst: Any, src: Any, sel: Any, comment: str = "") -> Any:
+     """Unpack packed-BF8 → 2×F32, selecting src half-word (extension.hpp:566)."""
+     from .base import getArchCaps  # noqa: WPS433
+-    from .container import SDWAModifiers, VOP3PModifiers  # noqa: WPS433
++    from .container import SDWAModifiers  # noqa: WPS433
+     from .enum import HighBitSel, SelectBit  # noqa: WPS433
+ 
+-    sel_int = 1 if sel == HighBitSel.HIGH else 0
+     if getArchCaps().get("NoSDWA", 0):
+-        inst = VCvtPkBF8toF32(
+-            dst=dst, src=_True16Wrap(src, sel), comment=comment,
+-        )
+-        inst.vop3 = VOP3PModifiers(op_sel=[sel_int])
+-        return inst
++        return VCvtPkBF8toF32(dst=dst, src=_input_with_half(src, sel), comment=comment)
+ 
+     src0_sel = SelectBit.WORD_1 if sel == HighBitSel.HIGH else SelectBit.WORD_0
+     return VCvtPkBF8toF32(
+@@ -5238,7 +5320,7 @@ def VCvtBF16toFP32(dst: Any, src: Any, vgprMask: Any, vi: int,
+                    comment: str = "") -> Any:
+     """BF16 → FP32 conversion with architecture dispatch (extension.hpp:594)."""
+     from .base import getAsmCaps, getArchCaps  # noqa: WPS433
+-    from .container import SDWAModifiers, VOP3PModifiers  # noqa: WPS433
++    from .container import SDWAModifiers  # noqa: WPS433
+     from .enum import HighBitSel, SelectBit  # noqa: WPS433
+ 
+     if not getAsmCaps().get("HasBF16CVT", 0):
+@@ -5256,15 +5338,14 @@ def VCvtBF16toFP32(dst: Any, src: Any, vgprMask: Any, vi: int,
+ 
+     if getArchCaps().get("NoSDWA", 0):
+         sel = HighBitSel.HIGH if (vi % 2) == 1 else HighBitSel.LOW
+-        inst = PVCvtBF16toFP32(
+-            dst=dst, src=_True16Wrap(src, sel), comment="cvt bf16 to f32",
++        return PVCvtBF16toFP32(
++            dst=dst, src=_input_with_half(src, sel),
++            comment="cvt bf16 to fp32. " + comment,
+         )
+-        inst.vop3 = VOP3PModifiers(op_sel=[vi % 2])
+-        return inst
+ 
+     src0_sel = SelectBit.WORD_1 if (vi % 2) == 1 else SelectBit.WORD_0
+     return PVCvtBF16toFP32(
+         dst=dst, src=src, sdwa=SDWAModifiers(src0_sel=src0_sel),
+-        comment="cvt bf16 to f32",
++        comment="cvt bf16 to fp32. " + comment,
+     )
+ 
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_container.py b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_container.py
+index c7a5f34ec85b..cca2b255063f 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_container.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_container.py
+@@ -48,7 +48,6 @@
+     MUBUFModifiers,
+     SDWAModifiers,
+     SMEMModifiers,
+-    True16Modifiers,
+     VOP3PModifiers,
+     Holder,
+     HolderContainer,
+@@ -61,7 +60,7 @@
+     sgpr,
+     vgpr,
+ )
+-from rocisa_stinkytofu_adaptor.enum import CacheScope, HighBitSel, NonVolatile, SelectBit, TemporalHint  # noqa: E402
++from rocisa_stinkytofu_adaptor.enum import CacheScope, NonVolatile, SelectBit, TemporalHint  # noqa: E402
+ 
+ 
+ # ===========================================================================
+@@ -1859,12 +1858,6 @@ def test_dpp_modifiers(self):
+         dpp = DPPModifiers(row_shr=1, quad_perm=[0, 1, 2, 3])
+         self.assertEqual(str(dpp), " row_shr:1 quad_perm:[0,1,2,3]")
+ 
+-    def test_true16_modifiers(self):
+-        self.assertEqual(str(True16Modifiers()), "")
+-        self.assertEqual(str(True16Modifiers(HighBitSel.HIGH)), ".h")
+-        self.assertEqual(str(True16Modifiers(HighBitSel.LOW)), ".l")
+-        self.assertEqual(str(True16Modifiers(2)), ".h")
+-
+     def test_is_container(self):
+         self.assertIsInstance(DSModifiers(), Container)
+         self.assertIsInstance(FLATModifiers(), Container)
+@@ -1879,7 +1872,6 @@ def test_clone_and_pickle(self):
+             SDWAModifiers(dst_sel=SelectBit.WORD_0),
+             VOP3PModifiers([1], [2], [3]),
+             DPPModifiers(row_bcast=2),
+-            True16Modifiers(HighBitSel.LOW),
+         ):
+             self.assertEqual(str(obj.clone()), str(obj))
+             self.assertEqual(str(copy.deepcopy(obj)), str(obj))
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_emission_consistency.py b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_emission_consistency.py
+index 5ec08943ef62..970a86a53af1 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_emission_consistency.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_emission_consistency.py
+@@ -61,16 +61,19 @@
+       Path (2) still needs caps for ``getAsmCaps()``; paths (1) and (3) need
+       the active ISA for byte-identical ``toString`` / lowering.
+     - ``s_set_vgpr_msb`` (gfx1250 VGPR-MSB workaround) is *not* triggered
+-      under the current gfx1250 caps snapshot for VGPR indices < 256.
+-      Once we promote tests that touch VGPRs >= 256 OR enable the
+-      ``HasVgprMSB`` cap, the adapter shim's ``CommonInstruction.__str__``
+-      will need to grow ``setMsb`` to keep path (1) == (3); the left-path
+-      side is already covered by ``InsertVgprMsbPass`` in stinkytofu.
++      for VGPR indices < 256, even though probed gfx1250 caps report
++      ``HasVgprMSB=1``. Once we promote tests that touch VGPRs >= 256, the
++      adapter shim's ``CommonInstruction.__str__`` will need to grow
++      ``setMsb`` to keep path (1) == (3); the left-path side is already
++      covered by ``InsertVgprMsbPass`` in stinkytofu.
+ """
+ 
+ from __future__ import annotations
+ 
++import base64
+ import os
++import pickle
++import shutil
+ import subprocess
+ import sys
+ import textwrap
+@@ -97,6 +100,31 @@
+     _STINKY_OK = False
+ 
+ 
++def _assembler_path():
++    """Locate an assembler for ``rocIsa.init``.
++
++    Unlike the string-only unit tests, ``rocIsa::init`` here cannot take an
++    empty path: ``initAsmCaps`` execs the assembler once per cap probe and
++    ``hardware_caps.hpp`` raises on exit code 127, so every path would fail
++    before building a Module. Probing also gives the *real* gfx1250 caps,
++    which is what paths (1) and (2) must be compared under.
++    """
++    rocm_path = os.environ.get("ROCM_PATH", "/opt/rocm")
++    search_path = os.pathsep.join(
++        [
++            os.path.join(rocm_path, "bin"),
++            os.path.join(rocm_path, "lib", "llvm", "bin"),
++            os.environ.get("PATH", ""),
++        ]
++    )
++    return shutil.which("amdclang++", path=search_path)
++
++
++_ASM_PATH = _assembler_path()
++_ASM_OK = _ASM_PATH is not None
++_PATHS_OK = _STINKY_OK and _ASM_OK
++
++
+ # ===========================================================================
+ # Subprocess runner
+ # ===========================================================================
+@@ -179,6 +207,41 @@ def _run_in_subproc(script: str, *, backend, timeout: float = 30) -> str:
+ """)
+ 
+ 
++# ``initAsmCaps`` execs the assembler once per cap probe, so a real ``init``
++# costs ~1min. Each test method spawns 2-3 subprocesses, which would put the
++# suite in the multi-hour range. rocIsa exposes getData/setData (its pickling
++# hooks), so probe once per arch here and inject the result instead.
++_PROBE_SCRIPT = textwrap.dedent("""\
++    import base64, pickle, sys
++    import rocisa
++    _ri = rocisa.rocIsa.getInstance()
++    _ri.init({arch_tuple}, {asm_path!r}, False)
++    sys.stdout.write({begin!r})
++    sys.stdout.write(base64.b64encode(pickle.dumps(_ri.getData())).decode())
++    sys.stdout.write({end!r})
++    sys.stdout.flush()
++""")
++
++_CAPS_CACHE: dict = {}
++
++
++def _caps_blob(arch_tuple) -> str:
++    """base64 pickle of probed rocIsa state for @p arch_tuple.
++
++    Probed in a subprocess so the parent runner's rocIsa singleton stays
++    untouched (sibling test modules register their own ISAs).
++    """
++    key = tuple(arch_tuple)
++    if key not in _CAPS_CACHE:
++        _CAPS_CACHE[key] = _run_in_subproc(
++            _PROBE_SCRIPT.format(arch_tuple=key, asm_path=_ASM_PATH,
++                                 begin=_BEGIN, end=_END),
++            backend=None,
++            timeout=600,
++        )
++    return _CAPS_CACHE[key]
++
++
+ # ===========================================================================
+ # Path emitters
+ # ===========================================================================
+@@ -226,7 +289,8 @@ def emit_path1_rocisa_tostring(build_snippet: str, *,
+                                arch_tuple=(12, 5, 0)) -> str:
+     """Path 1 -- default rocisa native + ``str(module)``."""
+     script = (
+-        _INIT_PREAMBLE.format(arch_tuple=arch_tuple)
++        _INIT_PREAMBLE.format(arch_tuple=arch_tuple,
++                              caps_blob=_caps_blob(arch_tuple))
+         + build_snippet
+         + "\n_payload = str(module)\n"
+         + _EMIT_TAIL
+@@ -245,7 +309,8 @@ def emit_path2_rocisa_stinkyasm(build_snippet: str, *,
+     compared.
+     """
+     script = (
+-        _INIT_PREAMBLE.format(arch_tuple=arch_tuple)
++        _INIT_PREAMBLE.format(arch_tuple=arch_tuple,
++                              caps_blob=_caps_blob(arch_tuple))
+         + build_snippet
+         + textwrap.dedent(f"""\
+ 
+@@ -285,7 +350,8 @@ def emit_path3_adapter_logical(build_snippet: str, *,
+     via ``lower_logical_module``.
+     """
+     script = (
+-        _INIT_PREAMBLE.format(arch_tuple=arch_tuple)
++        _INIT_PREAMBLE.format(arch_tuple=arch_tuple,
++                              caps_blob=_caps_blob(arch_tuple))
+         + build_snippet
+         + textwrap.dedent(f"""\
+ 
+@@ -320,8 +386,8 @@ class _ThreePathEqualityCase:
+     ARCH_TUPLE: tuple = (12, 5, 0)
+     KERNEL_NAME: str = "k"
+ 
+-    @unittest.skipUnless(_STINKY_OK,
+-                         "path-3 needs the stinkytofu Python binding")
++    @unittest.skipUnless(_PATHS_OK,
++                         "path-3 needs the stinkytofu binding and an assembler")
+     def test_path1_equals_path3(self):
+         """Native ``toString`` == adapter logical-IR pipeline emit.
+ 
+@@ -338,8 +404,8 @@ def test_path1_equals_path3(self):
+             f"\n[path-3 adapter   ] {b!r}",
+         )
+ 
+-    @unittest.skipUnless(_STINKY_OK,
+-                         "path-2 needs stinkytofu compiled into rocisa")
++    @unittest.skipUnless(_PATHS_OK,
++                         "path-2 needs stinkytofu in rocisa and an assembler")
+     def test_path1_equals_path2(self):
+         """Native ``toString`` == native ``toStinkyTofuModule`` body.
+ 
+@@ -356,8 +422,8 @@ def test_path1_equals_path2(self):
+             f"\n[path-2 stinky-asm] {b!r}",
+         )
+ 
+-    @unittest.skipUnless(_STINKY_OK,
+-                         "paths 2 and 3 need the stinkytofu binding")
++    @unittest.skipUnless(_PATHS_OK,
++                         "paths 2 and 3 need the stinkytofu binding and an assembler")
+     def test_path2_equals_path3(self):
+         """Native ``toStinkyTofuModule`` body == adapter logical-IR emit.
+ 
+@@ -1606,6 +1672,106 @@ def test_adapter_emits_forced_scaled_wmma(self):
+         self.assertEqual(got, self.EXPECTED, f"\n[adapter] {got!r}")
+ 
+ 
++# ===========================================================================
++# true16 half-select (gfx1250 is NoSDWA, so these take the true16 encoding)
++# ===========================================================================
++#
++# These are the cases that pin the adaptor's own
++# ``t16 -> _apply_true16 -> to_stinky_logical`` chain against both native
++# paths: path 3 carries the half on the operand, re-hangs it on the logical
++# instruction as True16Modifiers, and must come back out of ``emitAssembly``
++# as the same ``.l``/``.h`` text the native ``toString`` prints.
++#
++# The legacy (SDWA) encoding of the same helpers is not three-path testable --
++# stinkytofu only registers a gfx1250 backend, so path 3 has nothing to lower
++# to on gfx9/gfx10. It is covered instead by ``tests/test_true16.py``, which
++# pins both targets' text directly.
++
++
++class TestECvtF16toF32True16Emission(unittest.TestCase, _ThreePathEqualityCase):
++    """``v_cvt_f32_f16 v0, v1.h`` -- half on the f16 *source*."""
++
++    BUILD_MODULE_SNIPPET = textwrap.dedent("""\
++        from rocisa.code import Module
++        from rocisa.container import vgpr
++        from rocisa.enum import HighBitSel
++        from rocisa.instruction import ECvtF16toF32
++        module = Module("k")
++        module.add(ECvtF16toF32(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++    """)
++
++
++class TestECvtF32toF16True16Emission(unittest.TestCase, _ThreePathEqualityCase):
++    """``v_cvt_f16_f32 v0.h, v1`` -- half on the f16 *destination*."""
++
++    BUILD_MODULE_SNIPPET = textwrap.dedent("""\
++        from rocisa.code import Module
++        from rocisa.container import vgpr
++        from rocisa.enum import HighBitSel
++        from rocisa.instruction import ECvtF32toF16
++        module = Module("k")
++        module.add(ECvtF32toF16(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++    """)
++
++
++class TestECvtF32toF16DefaultHalfEmission(unittest.TestCase,
++                                          _ThreePathEqualityCase):
++    """``sel`` omitted: both sides must fall back to the low half.
++
++    A suffix-less 16-bit destination is illegal on NoSDWA, so this pins the
++    two implementations to the *same* default rather than letting one emit a
++    bare ``v0``.
++    """
++
++    BUILD_MODULE_SNIPPET = textwrap.dedent("""\
++        from rocisa.code import Module
++        from rocisa.container import vgpr
++        from rocisa.instruction import ECvtF32toF16
++        module = Module("k")
++        module.add(ECvtF32toF16(dst=vgpr(0), src=vgpr(1)))
++    """)
++
++
++class TestVMaxF16True16Emission(unittest.TestCase, _ThreePathEqualityCase):
++    """``v_max_f16 v0.l, v1.l, v2.h`` -- t16-tagged binary f16 ALU."""
++
++    BUILD_MODULE_SNIPPET = textwrap.dedent("""\
++        from rocisa.code import Module
++        from rocisa.container import vgpr
++        from rocisa.enum import HighBitSel
++        from rocisa.instruction import VMaxF16, t16
++        module = Module("k")
++        module.add(VMaxF16(
++            dst=t16(vgpr(0), HighBitSel.LOW),
++            src0=t16(vgpr(1), HighBitSel.LOW),
++            src1=t16(vgpr(2), HighBitSel.HIGH),
++        ))
++    """)
++
++
++class TestVCndMaskB16True16Emission(unittest.TestCase, _ThreePathEqualityCase):
++    """``v_cndmask_b16`` -- t16-tagged select whose mask src has no half.
++
++    The mask is passed explicitly: left implicit, path 1 prints ``vcc`` while
++    path 3 prints ``vcc_lo``, a pre-existing naming divergence in the shim's
++    default that has nothing to do with the half-select under test here.
++    """
++
++    BUILD_MODULE_SNIPPET = textwrap.dedent("""\
++        from rocisa.code import Module
++        from rocisa.container import sgpr, vgpr
++        from rocisa.enum import HighBitSel
++        from rocisa.instruction import VCndMaskB16, t16
++        module = Module("k")
++        module.add(VCndMaskB16(
++            dst=t16(vgpr(0), HighBitSel.LOW),
++            src0=t16(vgpr(1), HighBitSel.LOW),
++            src1=t16(vgpr(2), HighBitSel.HIGH),
++            src2=sgpr(0),
++        ))
++    """)
++
++
+ ## DSBPermuteB32 emission consistency is skipped: native rocisa path-1 toString()
+ ## and path-2 toStinkyTofuModule produce different asm for this instruction
+ ## (mismatch unrelated to our adaptor), so three-path equality is not achievable.
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_enum_values.py b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_enum_values.py
+index 2c024cb39630..ec68e89901ab 100644
+--- a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_enum_values.py
++++ b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_enum_values.py
+@@ -13,6 +13,7 @@
+     sys.path.insert(0, _PKG_PARENT)
+ 
+ from rocisa_stinkytofu_adaptor.enum import (  # noqa: E402
++    HighBitSel,
+     InstType,
+     NonVolatile,
+     TemporalHint,
+@@ -37,6 +38,11 @@ def test_inst_type_b192_value(self):
+         self.assertEqual(InstType.INST_B192, 22)
+         self.assertEqual(InstType.INST_NOTYPE, 68)
+ 
++    def test_high_bit_sel_values(self):
++        self.assertEqual(HighBitSel.NONE, -1)
++        self.assertEqual(HighBitSel.LOW, 0)
++        self.assertEqual(HighBitSel.HIGH, 1)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/tensilelite/rocisa_stinkytofu_adaptor/tests/test_true16.py b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_true16.py
+new file mode 100644
+index 000000000000..b30d715017ce
+--- /dev/null
++++ b/tensilelite/rocisa_stinkytofu_adaptor/tests/test_true16.py
+@@ -0,0 +1,432 @@
++# Copyright Advanced Micro Devices, Inc., or its affiliates.
++# SPDX-License-Identifier: MIT
++"""Adaptor-side tests for true16 half-select support.
++
++Mirrors ``rocisa/test/test_true16.py`` so the pure-Python adaptor and native
++rocisa are held to the same observable contract:
++
++  * ``RegisterContainer`` half-select rendering (.l / .h),
++  * the true16 16-bit conditional select ``VCndMaskB16``,
++  * the ``ECvt*`` helpers picking the true16 (NoSDWA) vs legacy (SDWA)
++    encoding,
++  * the NoSDWA-gated ``t16()`` helper.
++
++Plus two things the native suite cannot cover, because they only exist on the
++adaptor's logical-IR path:
++
++  * ``_apply_true16`` re-hanging the operand half onto the instruction as
++    True16Modifiers, in stinkytofu's wire values -- the
++    ``t16 -> _apply_true16 -> to_stinky_logical`` derivation that
++    ``LogicalToAsmPipelineTest.True16HalfSelectSurvivesLowering`` skips by
++    injecting an already-derived modifier in C++.
++  * the negative case: an untagged instruction must attach no modifier at
++    all, so 32-bit and packed ops stay untouched.
++
++Byte-equality of the emitted assembly across all three production paths for
++t16-tagged instructions lives in ``tests/test_emission_consistency.py``.
++"""
++
++from __future__ import annotations
++
++import copy
++import os
++import pickle
++import shutil
++import sys
++import unittest
++
++_HERE = os.path.dirname(os.path.abspath(__file__))
++_PKG_PARENT = os.path.normpath(os.path.join(_HERE, ".."))
++if _PKG_PARENT not in sys.path:
++    sys.path.insert(0, _PKG_PARENT)
++
++from rocisa_stinkytofu_adaptor import base as abase  # noqa: E402
++from rocisa_stinkytofu_adaptor.code import Module  # noqa: E402
++from rocisa_stinkytofu_adaptor.container import HolderContainer, vgpr  # noqa: E402
++from rocisa_stinkytofu_adaptor.enum import HighBitSel  # noqa: E402
++from rocisa_stinkytofu_adaptor.instruction import (  # noqa: E402
++    CommonInstruction,
++    ECvtF16toF32,
++    ECvtF32toF16,
++    VCndMaskB16,
++    VMaxF16,
++    _apply_true16,
++    t16,
++)
++
++try:
++    import stinkytofu as _stinky  # noqa: F401
++    _STINKY_OK = True
++except ImportError:
++    _STINKY_OK = False
++
++
++# gfx1250 is the NoSDWA (true16) target stinkytofu registers caps for; gfx942
++# is a legacy SDWA target, reached through the native-rocisa cap fallback.
++TRUE16_ISA = (12, 5, 0)
++LEGACY_ISA = (9, 4, 2)
++
++
++def _assembler_path():
++    """Assembler for the legacy ISA's native cap fallback.
++
++    ``caps.getCaps`` only knows stinkytofu-registered backends, so selecting
++    a legacy ISA shells out to native rocisa -- which probes a real
++    assembler. gfx1250 needs none.
++    """
++    rocm_path = os.environ.get("ROCM_PATH", "/opt/rocm")
++    search_path = os.pathsep.join(
++        [
++            os.path.join(rocm_path, "bin"),
++            os.path.join(rocm_path, "lib", "llvm", "bin"),
++            os.environ.get("PATH", ""),
++        ]
++    )
++    return shutil.which("amdclang++", path=search_path)
++
++
++_ASM_PATH = _assembler_path()
++
++
++class _IsaCase(unittest.TestCase):
++    """Base restoring the process-global ISA state after each test.
++
++    ``rocisa_stinkytofu_adaptor.base`` is a module-level singleton, so a test
++    that pins an ISA would otherwise leak caps (notably gfx1250's
++    ``HasVgprMSB``) into sibling test modules sharing the process.
++    """
++
++    def setUp(self):
++        self._saved_data = dict(abase.getData())
++        self._saved_kernel = abase.getKernel()
++
++    def tearDown(self):
++        abase.setData(self._saved_data)
++        abase.setKernelInfo(self._saved_kernel)
++
++    def use_isa(self, isa):
++        """Pin @p isa, skipping when its caps need an unavailable assembler."""
++        if isa != TRUE16_ISA and _ASM_PATH is None:
++            self.skipTest(f"caps for {isa} need an assembler (none found)")
++        abase.init(isa, _ASM_PATH or "", False)
++        abase.setKernel(isa, 64)
++
++
++class TestHalfSelectRender(_IsaCase):
++    """``RegisterContainer`` half-select rendering (native: test_half_select_render)."""
++
++    def test_lo_hi_render(self):
++        # gfx942 keeps HasVgprMSB off, so a single VGPR renders without an
++        # _hi pad -- same reason the native test picks the legacy ISA here.
++        self.use_isa(LEGACY_ISA)
++
++        self.assertEqual(str(vgpr(0)), "v0")
++        self.assertEqual(str(vgpr(0).lo()), "v0.l")
++        self.assertEqual(str(vgpr(0).hi()), "v0.h")
++
++    def test_set_half_select(self):
++        self.use_isa(LEGACY_ISA)
++
++        reg = vgpr(0)
++        reg.setHalfSelect(HighBitSel.HIGH)
++        self.assertEqual(str(reg), "v0.h")
++        reg.setHalfSelect(HighBitSel.LOW)
++        self.assertEqual(str(reg), "v0.l")
++        # NONE renders like an unset halfSelect, matching the native
++        # ``*halfSelect != HighBitSel::NONE`` guard.
++        reg.setHalfSelect(HighBitSel.NONE)
++        self.assertEqual(str(reg), "v0")
++
++    def test_lo_hi_do_not_mutate_source(self):
++        # Native lo()/hi() return by value; the same VGPR is routinely reused
++        # for both halves, so tagging one must not disturb the other.
++        self.use_isa(LEGACY_ISA)
++
++        reg = vgpr(0)
++        self.assertEqual(str(reg.hi()), "v0.h")
++        self.assertIsNone(reg.halfSelect)
++        self.assertEqual(str(reg), "v0")
++
++    def test_multi_register_has_no_half(self):
++        # Native only appends halfStr on the regNum == 1 branches: a
++        # half-word of a register *range* is not expressible.
++        self.use_isa(LEGACY_ISA)
++
++        self.assertEqual(str(vgpr(0, 2).hi()), "v[0:1]")
++
++    def test_survives_deepcopy(self):
++        self.use_isa(LEGACY_ISA)
++
++        self.assertEqual(str(copy.deepcopy(vgpr(0).hi())), "v0.h")
++
++    def test_survives_pickle(self):
++        # Tensile ships RegisterContainers to ParallelMap2 workers by pickle,
++        # so a tagged operand has to make the trip. The state is a plain int
++        # rather than the enum member: the adaptor's enums claim
++        # ``__module__ = "rocisa.enum"``, which pickle would resolve to native
++        # rocisa's HighBitSel whenever both are loaded.
++        self.use_isa(LEGACY_ISA)
++
++        self.assertEqual(str(pickle.loads(pickle.dumps(vgpr(0).hi()))), "v0.h")
++        self.assertEqual(str(pickle.loads(pickle.dumps(vgpr(0)))), "v0")
++
++    def test_holder_copy_keeps_half(self):
++        # ``replaceHolder`` swaps a HolderContainer for its getCopiedRC()
++        # snapshot; dropping the half there would emit a suffix-less 16-bit
++        # operand, which NoSDWA rejects.
++        self.use_isa(LEGACY_ISA)
++
++        holder = HolderContainer("v", 0, 1)
++        holder.setHalfSelect(HighBitSel.HIGH)
++        self.assertEqual(str(holder.getCopiedRC()), "v0.h")
++
++
++class TestT16Gating(_IsaCase):
++    """``t16`` NoSDWA gating (native: test_t16_gating)."""
++
++    def test_tags_on_true16_target(self):
++        self.use_isa(TRUE16_ISA)
++
++        self.assertEqual(str(t16(vgpr(1), HighBitSel.HIGH)), "v1.h")
++        self.assertEqual(str(t16(vgpr(1), HighBitSel.LOW)), "v1.l")
++
++    def test_noop_on_legacy_target(self):
++        self.use_isa(LEGACY_ISA)
++
++        self.assertEqual(str(t16(vgpr(1), HighBitSel.HIGH)), "v1")
++        self.assertEqual(str(t16(vgpr(1), HighBitSel.LOW)), "v1")
++
++    def test_passes_through_non_registers(self):
++        # ``inputWithHalf`` guards on the operand being a register, so an
++        # immediate is returned untouched rather than rendered as "1.0.l".
++        self.use_isa(TRUE16_ISA)
++
++        self.assertEqual(t16(1.0, HighBitSel.LOW), 1.0)
++        self.assertEqual(t16("vcc", HighBitSel.LOW), "vcc")
++        self.assertIsNone(t16(None, HighBitSel.LOW))
++
++
++class TestVCndMaskB16Construction(_IsaCase):
++    """VCndMaskB16 (true16 16-bit select; native: test_vcndmask_b16_renders_halves)."""
++
++    def _tagged(self):
++        dst, src0, src1 = vgpr(0), vgpr(1), vgpr(2)
++        dst.setHalfSelect(HighBitSel.LOW)
++        src0.setHalfSelect(HighBitSel.LOW)
++        src1.setHalfSelect(HighBitSel.HIGH)
++        return VCndMaskB16(dst=dst, src0=src0, src1=src1)
++
++    def test_construction_and_str(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = self._tagged()
++        self.assertIsInstance(inst, CommonInstruction)
++        self.assertEqual(inst.instStr, "v_cndmask_b16")
++        text = str(inst)
++        self.assertIn("v0.l", text)
++        self.assertIn("v1.l", text)
++        self.assertIn("v2.h", text)
++
++    def test_deepcopy(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = self._tagged()
++        c = copy.deepcopy(inst)
++        self.assertIsInstance(c, VCndMaskB16)
++        self.assertEqual(str(c), str(inst))
++
++    def test_has_to_stinky_logical(self):
++        self.use_isa(TRUE16_ISA)
++
++        self.assertTrue(
++            callable(getattr(self._tagged(), "to_stinky_logical", None))
++        )
++
++    @unittest.skipUnless(_STINKY_OK, "stinkytofu binding not built")
++    def test_collected_by_module(self):
++        self.use_isa(TRUE16_ISA)
++
++        m = Module()
++        m.add(self._tagged())
++        self.assertEqual(len(m._collect_logical_insts()), 1)
++
++
++class TestECvtF16toF32(_IsaCase):
++    """``ECvtF16toF32`` encoding choice (native: test_ecvt_f16_to_f32_true16_vs_legacy)."""
++
++    def test_true16_uses_operand_suffix(self):
++        self.use_isa(TRUE16_ISA)
++
++        text = str(ECvtF16toF32(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++        self.assertIn("v_cvt_f32_f16", text)
++        self.assertIn("v1.h", text)
++        self.assertNotIn("src0_sel", text)
++
++    def test_legacy_uses_sdwa_src_sel(self):
++        self.use_isa(LEGACY_ISA)
++
++        text = str(ECvtF16toF32(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH))
++        self.assertIn("v_cvt_f32_f16", text)
++        self.assertIn("src0_sel:WORD_1", text)
++        self.assertNotIn(".h", text)
++
++
++class TestECvtF32toF16(_IsaCase):
++    """``ECvtF32toF16`` encoding choice (native: test_ecvt_f32_to_f16_true16_vs_legacy)."""
++
++    def test_true16_defaults_to_low_half(self):
++        self.use_isa(TRUE16_ISA)
++
++        # A suffix-less 16-bit dst is illegal on NoSDWA, so sel=None has to
++        # resolve to the low half rather than emit a bare register.
++        self.assertIn("v0.l", str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1))))
++
++    def test_true16_honours_explicit_sel(self):
++        self.use_isa(TRUE16_ISA)
++
++        self.assertIn(
++            "v0.h",
++            str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH)),
++        )
++
++    def test_legacy_without_sel_is_plain_cvt(self):
++        self.use_isa(LEGACY_ISA)
++
++        text = str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1)))
++        self.assertIn("v_cvt_f16_f32 v0, v1", text)
++        self.assertNotIn(".l", text)
++        self.assertNotIn(".h", text)
++
++    def test_legacy_with_sel_uses_sdwa_dst_sel(self):
++        self.use_isa(LEGACY_ISA)
++
++        self.assertIn(
++            "dst_sel:WORD_1",
++            str(ECvtF32toF16(dst=vgpr(0), src=vgpr(1), sel=HighBitSel.HIGH)),
++        )
++
++
++class _RecordingInst:
++    """Stand-in for a stinkytofu logical instruction.
++
++    The binding exposes ``set_true16`` but no getter, so recording the call is
++    the only way to assert the derived wire values directly.
++    """
++
++    def __init__(self):
++        self.calls = []
++
++    def set_true16(self, dst0, dst1, srcs):
++        self.calls.append((dst0, dst1, list(srcs)))
++
++
++class TestApplyTrue16Derivation(_IsaCase):
++    """``_apply_true16`` operand-half -> instruction-modifier derivation.
++
++    This is the step ``LogicalToAsmPipelineTest.True16HalfSelectSurvivesLowering``
++    deliberately skips (it injects a ready-made True16Modifiers in C++), and
++    the port of ``attachTrue16ModifiersFromOperands``.
++    """
++
++    def test_derives_wire_values_from_operand_halves(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(
++            inst,
++            vgpr(0).hi(),
++            [vgpr(1).lo(), vgpr(2).hi()],
++        )
++        # stinkytofu's HighBitSel integers, not 0-based indices: the C++
++        # bridge static_casts straight between the two enums.
++        self.assertEqual(inst.calls, [(1, -1, [0, 1])])
++
++    def test_untagged_operands_attach_no_modifier(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(inst, vgpr(0), [vgpr(1), vgpr(2)])
++        self.assertEqual(inst.calls, [])
++
++    def test_non_register_operands_read_as_none(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(inst, vgpr(0).lo(), [1.0, "vcc"])
++        self.assertEqual(inst.calls, [(0, -1, [-1, -1])])
++
++    def test_dst1_half_is_carried(self):
++        self.use_isa(TRUE16_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(inst, vgpr(0).lo(), [vgpr(1).lo()], vgpr(2).hi())
++        self.assertEqual(inst.calls, [(0, 1, [0])])
++
++    def test_t16_tagged_operands_reach_the_derivation(self):
++        # The full chain generators actually use: t16() tags the operand and
++        # the factory's to_stinky_logical hands it to _apply_true16.
++        self.use_isa(TRUE16_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(
++            inst,
++            t16(vgpr(0), HighBitSel.LOW),
++            [t16(vgpr(1), HighBitSel.LOW), t16(vgpr(2), HighBitSel.HIGH)],
++        )
++        self.assertEqual(inst.calls, [(0, -1, [0, 1])])
++
++    def test_legacy_target_derives_nothing(self):
++        # t16 is a no-op off NoSDWA, so the same generator code must not grow
++        # a true16 modifier on legacy targets.
++        self.use_isa(LEGACY_ISA)
++
++        inst = _RecordingInst()
++        _apply_true16(
++            inst,
++            t16(vgpr(0), HighBitSel.LOW),
++            [t16(vgpr(1), HighBitSel.LOW)],
++        )
++        self.assertEqual(inst.calls, [])
++
++    def test_instruction_without_set_true16_is_ignored(self):
++        self.use_isa(TRUE16_ISA)
++
++        class _NoModifierSupport:
++            pass
++
++        # Must not raise: the collector calls _apply_true16 for every shim,
++        # including ones whose stinkytofu counterpart has no true16 slot.
++        _apply_true16(_NoModifierSupport(), vgpr(0).hi(), [vgpr(1).hi()])
++
++
++class TestVMaxF16True16(_IsaCase):
++    """A t16-tagged binary f16 ALU op, the shape AMax / Activation emit."""
++
++    def test_renders_halves(self):
++        self.use_isa(TRUE16_ISA)
++
++        text = str(VMaxF16(
++            dst=t16(vgpr(0), HighBitSel.LOW),
++            src0=t16(vgpr(1), HighBitSel.LOW),
++            src1=t16(vgpr(2), HighBitSel.HIGH),
++        ))
++        self.assertIn("v_max_f16", text)
++        self.assertIn("v0.l", text)
++        self.assertIn("v1.l", text)
++        self.assertIn("v2.h", text)
++
++    def test_legacy_renders_no_halves(self):
++        self.use_isa(LEGACY_ISA)
++
++        text = str(VMaxF16(
++            dst=t16(vgpr(0), HighBitSel.LOW),
++            src0=t16(vgpr(1), HighBitSel.LOW),
++            src1=t16(vgpr(2), HighBitSel.HIGH),
++        ))
++        self.assertIn("v_max_f16", text)
++        self.assertNotIn(".l", text)
++        self.assertNotIn(".h", text)
++
++
++if __name__ == "__main__":
++    unittest.main()

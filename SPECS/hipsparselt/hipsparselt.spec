@@ -42,6 +42,8 @@ Source4:        0001-hipblaslt-find-origami-package.patch
 Source5:        2000-tensilelite-add-heartbeat-during-parallel-map.patch
 # Use the distribution nanobind for the bundled hipBLASLt sources.
 Source6:        2001-hipblaslt-tensilelite-use-system-nanobind.patch
+Source7:        2004-upstream-true16-hipblaslt.patch
+Source8:        2003-upstream-true16-stinkytofu.patch
 BuildSystem:    cmake
 
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/flexiblas
@@ -83,7 +85,8 @@ BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
-BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}
+# Match the bundled rocisa conversion glue to the installed optimizer.
+BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}-5
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
@@ -159,10 +162,12 @@ cd hipblaslt
 # find_package still links the separately built system StinkyTofu library.
 mkdir -p ../../shared
 tar -xf %{SOURCE2} -C ../../shared
+(cd ../../shared/stinkytofu && patch --fuzz=0 -p1 < %{SOURCE8})
 patch -p1 < %{SOURCE3}
 patch -p1 < %{SOURCE4}
 patch -p1 < %{SOURCE5}
 patch -p1 < %{SOURCE6}
+patch --fuzz=0 -p1 < %{SOURCE7}
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 cd ..
 
