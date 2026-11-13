@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.14.1
+%global rocm_version 10.1.0
 
 Name:           rocprofiler-register
 Version:        %{rocm_version}
@@ -13,8 +13,9 @@ Release:        %autorelease
 Summary:        A rocprofiler helper library
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocprofiler-register
-#!RemoteAsset:  sha256:ddec091afa8bfe7b2062c6fc7017eb2f3ba4e5259fd6cb8ba1c0ee41af92b088
-Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rocprofiler-register.tar.gz
+# ROCm 10.1.0 source release uses the therock-10.1 tag.
+#!RemoteAsset:  sha256:a1f23f5146343ddcf1819e4d76c36efbc81b73c3a5e2179a121f8c53f0e3c274
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/rocprofiler-register.tar.gz
 BuildSystem:    cmake
 
 # Use system glog
@@ -22,6 +23,7 @@ Patch0:         0001-use-system-buildreq.patch
 
 BuildOption(prep):  -n rocprofiler-register
 
+BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_TESTS=ON
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_FMT=OFF
 BuildOption(conf):  -DROCPROFILER_REGISTER_BUILD_GLOG=OFF
 
