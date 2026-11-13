@@ -135,6 +135,10 @@ sed -i "/install(PROGRAMS.*{[Hh][Ii][Pp][Cc]/d" hipamd/CMakeLists.txt
 sed -i -e 's@add_subdirectory(packaging)@#add_subdirectory(packaging)@' hipamd/CMakeLists.txt
 sed -i -e 's@add_subdirectory(packaging)@#add_subdirectory(packaging)@' opencl/CMakeLists.txt
 
+# Imported HIP targets carry the correct multilib runtime location. Clang's
+# implicit HIP runtime lookup assumes prefix/lib and must not add a second path.
+sed -i 's/--hip-link/--hip-link -no-hip-rt/g' hipamd/hip-config-amd.cmake.in
+
 # cmake version
 sed -i -e 's@cmake_minimum_required(VERSION 3.3)@cmake_minimum_required(VERSION 3.5)@' hipamd/src/hiprtc/cmake/hiprtc-config.cmake.in
 
