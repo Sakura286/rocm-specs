@@ -55,6 +55,7 @@ BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
+BuildRequires:  rocr-runtime-devel >= %{rocm_version}
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  llvm-devel(major) = %{llvm_maj_ver}
