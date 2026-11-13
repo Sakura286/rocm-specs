@@ -14,6 +14,11 @@
 
 %global llvm_maj_ver 24
 
+%ifarch x86_64 riscv64
+# Compiling the full four-GPU test suite took 3445s with only four x86 jobs.
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           hipcub
 Version:        %{rocm_version}
 Release:        %autorelease
