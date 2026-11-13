@@ -114,7 +114,7 @@ LD_LIBRARY_PATH="$PWD/lib:$PWD/plugins/tb/lib" \
 %license LICENSE.md
 %{_bindir}/rocm-bandwidth-test
 %{_bindir}/rocm_bandwidth_test
-%{_libdir}/libamd_work_bench.so
+%{_libdir}/libamd_work_bench.so*
 %{_libdir}/libamd_tb.so*
 %{_libdir}/rocm_bandwidth_test/
 
