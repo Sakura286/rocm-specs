@@ -33,6 +33,8 @@ BuildSystem:    cmake
 
 Patch0:         0001-Add-riscv64-support.patch
 Patch1:         0002-Replace-fence-instructions-for-riscv64.patch
+# The new SDMA reservation loops also need a portable CPU pause.
+2000-port-sdma-spin-loops-to-riscv.patch
 
 BuildOption(prep):  -n rocr-runtime
 

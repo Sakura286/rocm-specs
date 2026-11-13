@@ -1,0 +1,31 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Use RISC-V pause hint in the new SDMA spin loops
+
+--- a/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp
++++ b/runtime/hsa-runtime/core/runtime/amd_blit_sdma.cpp
+@@ -1725,7 +1725,12 @@
+ 
+     // CAS failed -- reuse the observed value directly, skip redundant atomic Load.
+     curr_index = observed;
++#if defined(__riscv)
++    // Zihintpause is encoded as a harmless FENCE on older RISC-V CPUs.
++    asm volatile(".insn 0x0100000f" ::: "memory");
++#else
+     _mm_pause();
++#endif
+   }
+ 
+   return nullptr;
+@@ -1795,7 +1800,12 @@
+   // Check whether the engine has finished using this region.
+   if (CanWriteUpto(new_index) == false) {
+     // Engine hasn't freed this region yet.  Pause briefly.
++#if defined(__riscv)
++    // Zihintpause is encoded as a harmless FENCE on older RISC-V CPUs.
++    asm volatile(".insn 0x0100000f" ::: "memory");
++#else
+     _mm_pause();
++#endif
+     return;
+   }
+ 
