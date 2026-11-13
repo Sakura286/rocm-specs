@@ -30,7 +30,15 @@ BuildOption(prep):  -n hipsolver
 
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
+%ifarch riscv64
+# The native GCC directory omits the GNU environment required by offload IDs.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform}"
+%endif
+%ifarch riscv64
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform}"
+%else
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu"
+%endif
 BuildOption(conf):  -G Ninja
 %if %{with test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
