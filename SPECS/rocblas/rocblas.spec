@@ -32,7 +32,17 @@ BuildOption(prep):  -n rocblas
 BuildOption(conf):  -G Ninja
 # Offload bundle IDs require an explicit host environment component.
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
+%ifarch riscv64
+# The native GCC directory omits the GNU environment required by offload IDs.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
+%else
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="-resource-dir=$PWD/clang-resource"
+%endif
+%ifarch riscv64
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
+%else
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu -resource-dir=$PWD/clang-resource"
+%endif
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/cblas
 BuildOption(conf):  -DBLAS_LIBRARY=cblas
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
@@ -123,6 +133,15 @@ Requires:       diffutils
 %endif
 
 %conf -p
+# The explicit GNU host target uses the same native ABI, but compiler-rt is
+# installed under the distribution triple without the environment suffix.
+# Use Clang's resource-dir option with build-local aliases; retain builtins and
+# coverage instrumentation without changing the system LLVM installation.
+mkdir -p clang-resource/lib
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/include clang-resource/include
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/amdgcn clang-resource/amdgcn
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_platform}
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_cpu}-openruyi-linux-gnu
 # TensileConfig captures PATH for its build command; this version does not
 # forward a Tensile_ASSEMBLER CMake variable to --assembler.
 test -x "$PWD/tensile-assembler/clang++"
