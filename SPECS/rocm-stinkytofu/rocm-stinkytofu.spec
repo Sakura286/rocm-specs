@@ -55,6 +55,8 @@ Headers and CMake exports for the StinkyTofu optimizer library.
 # Upstream hard-codes lib for its libraries, CMake exports and intrinsic data.
 sed -i 's/DESTINATION lib/DESTINATION %{_lib}/g' \
     CMakeLists.txt tools/intrinsic-compiler/CMakeLists.txt
+sed -i 's/DESTINATION "lib\//DESTINATION "%{_lib}\//g' \
+    examples/plugins/CMakeLists.txt
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
