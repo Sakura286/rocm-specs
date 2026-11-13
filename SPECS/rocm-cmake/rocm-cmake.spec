@@ -26,6 +26,8 @@ BuildSystem:    cmake
 
 # https://github.com/ROCm/rocm-cmake/issues/276
 Patch0:         0001-rocm-cmake-follow-cmake-install-rules.patch
+# Respect distribution multilib paths during HIP compiler probes.
+Patch1:         2000-find-multilib-runtime-for-target-probes.patch
 
 BuildRequires:  cmake
 

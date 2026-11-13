@@ -1,0 +1,21 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] Resolve the HIP runtime explicitly in GPU target probes
+
+--- a/share/rocmcmakebuildtools/cmake/ROCMCheckTargetIds.cmake
++++ b/share/rocmcmakebuildtools/cmake/ROCMCheckTargetIds.cmake
+@@ -22,6 +22,15 @@
+         _rocm_sanitize_target_id("${_target_id}" _result_var)
+         set(_result_var "COMPILER_HAS_TARGET_ID_${_result_var}")
+         set(CMAKE_REQUIRED_LINK_OPTIONS "--hip-link")
++        # Clang assumes prefix/lib when it adds the HIP runtime implicitly.
++        # Resolve the library explicitly for distribution multilib layouts.
++        find_library(_rocm_hip_runtime NAMES amdhip64
++                     HINTS "${ROCM_PATH}" "$ENV{ROCM_PATH}" "/usr"
++                     PATH_SUFFIXES lib64 lib)
++        if(_rocm_hip_runtime)
++            list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-no-hip-rt")
++            set(CMAKE_REQUIRED_LIBRARIES "${_rocm_hip_runtime}")
++        endif()
+         check_cxx_compiler_flag("-xhip --offload-arch=${_target_id}" "${_result_var}")
+         if(${_result_var})
+             list(APPEND _supported_target_ids "${_target_id}")
