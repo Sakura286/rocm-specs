@@ -53,9 +53,8 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with test}
+# Benchmark clients share utilities that link GTest.
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  cmake(hip)
 BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
