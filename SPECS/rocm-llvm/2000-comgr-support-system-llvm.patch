@@ -46,3 +46,23 @@ Include headers directly instead of relying on transitive LLVM includes.
 +#include "llvm/TargetParser/AMDGPUTargetParser.h"
  #include "llvm/TargetParser/TargetParser.h"
  #include "llvm/TargetParser/Triple.h"
+
+--- a/amd/comgr/src/comgr-unbundle-command.cpp
++++ b/amd/comgr/src/comgr-unbundle-command.cpp
+@@ -16,6 +16,7 @@
+
+ #include <clang/Driver/OffloadBundler.h>
+ #include <llvm/BinaryFormat/Magic.h>
++#include <llvm/Object/OffloadBundle.h>
+
+ namespace COMGR {
+ using namespace llvm;
+@@ -143,7 +144,7 @@
+
+   MemoryBuffer &InputBuffer = **MaybeInputBuffer;
+
+-  using Header = CompressedOffloadBundle::CompressedBundleHeader;
++  using Header = llvm::object::CompressedOffloadBundle::CompressedBundleHeader;
+   Expected<Header> MaybeHeader = Header::tryParse(InputBuffer.getBuffer());
+   if (!MaybeHeader)
+     return MaybeHeader.takeError();
