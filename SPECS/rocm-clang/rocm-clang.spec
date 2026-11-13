@@ -38,6 +38,7 @@ BuildOption(conf):  -DCMAKE_INSTALL_LIBDIR=lib
 BuildOption(conf):  -DCMAKE_C_COMPILER=gcc
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=g++
 BuildOption(conf):  -DLLVM_USE_LINKER=lld
+BuildOption(conf):  -DBUILD_SHARED_LIBS=OFF
 BuildOption(conf):  -DLLVM_LINK_LLVM_DYLIB=ON
 BuildOption(conf):  -DCLANG_LINK_CLANG_DYLIB=ON
 BuildOption(conf):  -DCLANG_BUILD_TOOLS=ON
@@ -91,6 +92,13 @@ export LD_LIBRARY_PATH="$PWD/%{_vpath_builddir}/lib:%{_libdir}/llvm%{llvm_major}
 %{_vpath_builddir}/bin/clang-linker-wrapper --dry-run --host-triple=%{_target_platform} --emit-fatbin-only host-triple.out -o host-triple.hipfb > host-triple.log 2>&1
 grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
 %{_vpath_builddir}/bin/clang -x hip -nogpuinc -nogpulib --offload-arch=gfx1100 -fsyntax-only %{SOURCE1}
+
+# Exercise the installed tool set, without the build-tree component libraries.
+# Linker-wrapper links clangBasic directly; individual Clang components must be
+# static while the driver uses the shipped monolithic clang-cpp shared library.
+LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
+    %{buildroot}%{compiler_prefix}/bin/clang -x hip -nogpuinc -nogpulib \
+    --offload-arch=gfx1100 -fPIC -c %{SOURCE1} -o deployed-device-constexpr.o
 
 %files
 %license llvm/LICENSE.TXT
