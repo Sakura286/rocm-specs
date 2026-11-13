@@ -7,9 +7,9 @@
 
 %bcond test 0
 
-%global rocm_version 7.2.4
+%global rocm_version 7.14.1
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocsparse
 Version:        %{rocm_version}
@@ -17,9 +17,11 @@ Release:        %autorelease
 Summary:        SPARSE implementation for ROCm
 License:        MIT
 URL:            https://github.com/ROCm/rocSPARSE
-#!RemoteAsset:  sha256:0f1a6d1340909a0aa91c70410f62e227d0fc22b30eb2fb19584eeccabd984450
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:3b3be7502ee97ca05db8ff781b7f1b5968ee6e5dd69c8dcf5aafce1231f471fc
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocsparse.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocsparse
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_WITH_OFFLOAD_COMPRESS=ON
@@ -43,12 +45,15 @@ BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt23
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocprim)
+BuildRequires:  rocprim-devel >= 7.14.1
 BuildRequires:  hipcc
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
@@ -60,6 +65,7 @@ BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel >= 7.14.1
 %if %{with test}
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(openmp)
