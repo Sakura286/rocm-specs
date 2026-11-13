@@ -79,3 +79,13 @@
 - rocPRIM/rocThrust 实际 x86_64 RPM：`validation/template-kernel-x86_64.o` 包含 gfx1100/gfx1200 编译结果，联合使用 block_reduce 与 thrust::transform；未运行 GPU 内核。
 - rocFFT：`llvm-config --targets-built` 确认系统 LLVM 24 未编入 SPIR-V。检索到的上游 FFT/SPIR-V 提交未提供缺失后端的兼容方案；配方仅移除客户端的额外 `amdgcnspirv` 回退，保留四个原生 GPU 目标，并恢复正常 RPM LTO。这不是 ABI backport，也不声称支持未预编译 GPU 的 SPIR-V 回退。
 - rocBLAS：Tensile CMake 不转发 `Tensile_ASSEMBLER`，实际通过配置期 PATH 选择汇编器；`%conf -p` 中 `buildsubdir` 尚未定义，最终用 `$PWD/tensile-assembler` 并检查 executable 存在。保持原有 HIP/C++ 编译器入口，只改变 Tensile 汇编器模式。验证脚本记录 `validation/tensile-assembler-resolution.json`；同一 Fake16 汇编在 SG2044 原生 Clang 24 也通过。
+
+
+## 后续检查点：HSA 上游可移植 helper 与客户端安装
+
+- HSA riscv64 已在 `sg2044-0317:8` 成功安装 LLVM 静态依赖并进入源码编译，暴露 SDMA 新增的两处无条件 `_mm_pause()`。配方 `e5bee1b` 回移 ROCm 合并提交 [3a6a0d89e39e2dbcf28b066a31b7d2ec4c020712](https://github.com/ROCm/rocm-systems/commit/3a6a0d89e39e2dbcf28b066a31b7d2ec4c020712)（PR #11310，包含评审后的全部修改），只调整 standalone 归档路径，无额外源码前置提交；所有 hunk 在 10.1 资产上以 fuzz=0 应用。替换原发行版的 pause/fence 覆盖，保留独立的 glibc ELF 地址调整。该修复是宿主架构可移植性修复，不是 LLVM ABI 适配。
+- 上游最终版本的 RISC-V store fence 为 `fence ow, ow`，完整 fence 为 `fence iorw, iorw`，包含 I/O 顺序；早期 PR 提交和旧本地补丁的语义不应混同。实际 x86_64/SG2044 LLVM 24 头文件编译探测分别生成对应 x86 指令与 RISC-V pause/fence，证据 `validation/hsa-portable-helpers-*`。完整 OBS 构建与产物验证尚待结果。
+- 上游 `cacheline_flush()` 在 RISC-V 仍发出未实现警告；本资产的调用位于 XDNA 驱动，不能以 fence 或无操作声称完成缓存刷新。原本地补丁的 Zicbom 条件实现未冒充上游保留；本次不宣称 XDNA/RISC-V 非一致缓存设备可用，须待相应设备与缓存一致性验证。
+- rocFFT 在移除缺失的 SPIR-V fallback 后已完整编译库与客户端；RPM 清单随后暴露旧 `rtc_helper_crash` 条目。`7533410` 移除未安装的内部测试工具条目，并保留/打包实际运行时所需的版本化 `rocfft_rtc_helper`。准备了 `validation/fft-api-rtc.py` 对实际 RPM 的 CPU API 与独立 HIPRTC helper 进行离线编译验证，等待新 RPM。
+- hipFFT 客户端同样只移除缺失后端的 `amdgcnspirv` fallback；hipSPARSE 改用新版客户端开关以确实构建 benchmark，保留 Fortran，并显式配置 LLVM OpenMP 的库路径。rocSOLVER 在 riscv64 使用 jobs>=32 worker，编译池 8 配合已有每 TU 4 个 HIP 任务、链接池 1，限制嵌套并发。
+- RCCL x86_64 已推进至 5106/6013，HIPIFY riscv64 已进入最终链接，AMD SMI riscv64 已至 228/230；这些是构建过程进展，不是验收通过。继续跟踪全部 34 个包。
