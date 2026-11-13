@@ -19,8 +19,8 @@
 %global lto_partitions %(nproc)
 %endif
 
-%ifarch riscv64
-# GPU LTO and generated kernels need the native workers with larger job slots.
+%ifarch x86_64 riscv64
+# Large kernel builds need the 32-job workers on both validation architectures.
 #!BuildConstraint: hardware:jobs 32
 %endif
 
