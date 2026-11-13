@@ -67,24 +67,20 @@ BuildRequires:  gcc-fortran
 BuildRequires:  python3dist(pyyaml)
 %endif
 
-%global _description %{expand:
+%description
 rocSPARSE exposes a common interface that provides Basic
 Linear Algebra Subroutines for sparse computation
 implemented on top of AMD's Radeon Open eCosystem Platform
 ROCm runtime and toolchains. rocSPARSE is created using
 the HIP programming language and optimized for AMD's
 latest discrete GPUs.
-}
-
-%description
-%{_description}
 
 %package        devel
 Summary:        Libraries and headers for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
-%{_description}
+%{summary}
 
 %if %{with test}
 %package        test
@@ -92,7 +88,7 @@ Summary:        Tests for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    test
-%{_description}
+%{summary}
 %endif
 
 %prep -a
