@@ -94,8 +94,8 @@ Requires:       gcc-c++
 
 %patchlist
 2002-workaround-half-float-expr-deduction.patch
-2003-disable-fno-offload-uniform-block.patch
 2004-fix-clang-rel-path.patch
+2005-use-version-header-in-cxx20.patch
 
 %global _description %{expand:
 AMD's library for high performance machine learning primitives.

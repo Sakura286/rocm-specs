@@ -1,0 +1,14 @@
+Use the standard C++20 header for implementation version macros.
+GCC 16 diagnoses the removed ciso646 header under -Werror.
+
+--- a/src/include/miopen/serializable.hpp
++++ b/src/include/miopen/serializable.hpp
+@@ -27,7 +27,7 @@
+ #ifndef GUARD_MLOPEN_SERIALIZABLE_HPP
+ #define GUARD_MLOPEN_SERIALIZABLE_HPP
+ 
+-#include <ciso646>
++#include <version>
+ #include <miopen/config.h>
+ #include <iostream>
+ #include <sstream>
