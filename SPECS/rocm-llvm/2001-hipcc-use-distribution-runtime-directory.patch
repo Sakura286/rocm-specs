@@ -35,7 +35,7 @@ objects and disable the driver's hardcoded prefix/lib lookup.
 +  // Clang assumes $HIP_PATH/lib, but the distribution uses a multilib directory.
 +  // Keep the runtime after user objects so --as-needed does not discard it.
 +  if (needLDFLAGS && !compileOnly) {
-+    CMD += " \"" + getHipLibPath() + "/libamdhip64.so\"";
++    CMD += " -lamdhip64";
 +  }
    if ((needCFLAGS || needCXXFLAGS) &&
        !var.hipccCompileFlagsAppendEnv_.empty()) {
