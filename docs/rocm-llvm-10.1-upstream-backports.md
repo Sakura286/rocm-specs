@@ -53,3 +53,5 @@
 旧 OBS revision 11 的 x86_64 结果只作为实验对照，不能替代删除 `2005` 后的新构建验证。新配方必须重新完成 x86_64 快速验证，再以 riscv64 构建、实际 RPM 和功能测试作最终验收。当前进度以[持续计划](rocm-10.1.0-port-plan.md)为准。
 
 首轮上游回移（`a824c7c`，OBS revision 12）在 x86_64 通过 device-libs 33/33、COMGR CTest 39/39 和 unit 310/310；lit 仅 generic gfx12.5 的新增 XNACK 预期失败。补齐上游后续提交 `1009`；96 条 ISA parsing 命令在旧 RPM 上的局部验证通过，新 RPM 的完整测试仍以接下来的 OBS 构建为准。
+
+补齐后的 `a09779d` / OBS revision 13 在 x86_64 全部通过：device-libs 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail；日志 `upstream-review/x86-rev13-current-2.log`。当前仍在签名，实际 RPM 验证与 riscv64 最终验收尚未完成。另用当前 x86_64 Clang 原始 postopt 路径和现有 10.1 设备库完成 `cbrt` / `printf` kernel 编译、链接，代码对象无未解析符号（`native-device-link-x86_64/`）；此诊断不代替新 RPM 验收，也不代表 GPU 执行验证。

@@ -10,7 +10,7 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 已替换为九项有来源的上游回移，恢复系统 LLVM 原生 postopt，见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方提交 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，x86_64 构建中，riscv64 正常排队等待六台符合约束的 worker；尚未最终验收。旧 revision 11 仅作实验对照。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 已替换为九项有来源的上游回移，恢复系统 LLVM 原生 postopt，见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方提交 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`。x86_64 全部构建测试通过，等待签名／发布，新 RPM 尚不可下载；riscv64 正常排队等待六台符合约束的 worker，尚未最终验收。旧 revision 11 仅作实验对照。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
@@ -27,7 +27,9 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
 | rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | revision 13 在 epyc-massive-04:2 构建；revision 12 的 33 项 device/39 项 COMGR CTest 和 310 项 unit 已通过，唯一 lit 失败已用上游后续提交修复 | revision 13 排队，waiting for 6 compliant workers | 新配方待验证；系统 LLVM 的原始 postopt pipeline 4/4 通过 | 未通过 |
+| rocm-llvm | revision 13 构建测试通过：device 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail；OBS signing，尚待新 RPM 功能验证 | revision 13 排队，waiting for 6 compliant workers | 新配方待验证；系统 LLVM 的原始 postopt pipeline 4/4 通过 | 未通过 |
+
+下一步：先等签名完成，确认下载列表为 `10.1.0-13.1.nor`，再保存旧 `artifacts/x86_64` 与 `artifact-root/x86_64` 为 `x86_64-rev11` 并下载新产物。截至本检查点仍是旧 RPM 列表，版本断言已阻止误测旧包，尚未移动这两个目录。用 `tests/inspect-artifacts.py x86_64`、`TEST_REVISION=rev13 tests/validate-artifacts.py`（通过 Python 执行）和 `tests/validate-cmake.sh` 完成新产物验证。旧验证日志已另存 `upstream-review/previous-rev11-artifact-logs/`。随后跟进 riscv64 构建、产物和目标机功能测试。不要重新启用已经停止的旧 custom-patch native-build 下载／构建流程；它仍是实验对照。
 
 ## 固定边界和目标环境
 
