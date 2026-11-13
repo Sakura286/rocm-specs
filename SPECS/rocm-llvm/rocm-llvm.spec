@@ -29,6 +29,7 @@
 %global targets_to_build "X86;AMDGPU"
 %endif
 %ifarch riscv64
+#!BuildConstraint: hardware:jobs 32
 %global targets_to_build "RISCV;AMDGPU"
 %endif
 
