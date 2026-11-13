@@ -48,6 +48,7 @@ BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linu
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{version}
 BuildOption(conf):  -DROCM_PATH=%{_prefix}
+BuildOption(conf):  -DCMAKE_TRY_COMPILE_PLATFORM_VARIABLES=ROCM_PATH
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DBUILD_TESTS=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
@@ -130,8 +131,6 @@ sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-am
 # Preserve compiler-probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
 export PATH=%{rocmllvm_bindir}:$PATH
-# CMake try_compile reloads the toolchain without the parent ROCM_PATH cache.
-export ROCM_PATH=%{_prefix}
 
 %build
 %ifarch riscv64
