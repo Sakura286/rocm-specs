@@ -30,6 +30,9 @@ BuildSystem:    cmake
 BuildOption(prep):  -n rocblas
 
 BuildOption(conf):  -G Ninja
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DBLAS_INCLUDE_DIR=%{_includedir}/cblas
 BuildOption(conf):  -DBLAS_LIBRARY=cblas
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
