@@ -8,8 +8,8 @@
 
 %global upstreamname ROCR-Runtime
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.14
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
 #Image support is x86 only
@@ -27,25 +27,27 @@ Release:        %autorelease
 Summary:        ROCm Runtime Library
 License:        NCSA
 URL:            https://github.com/ROCm/ROCR-Runtime
-#!RemoteAsset:  sha256:60532cd86edce5a603aa18df406ec1f5a3d18f0663d79b3b7822ff721c5a04ec
-Source0:        %{url}/archive/refs/tags/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:7ed4d0fbbab7498302533675f4f7107748d739d14162c3ff4ce3c2df95fc1313
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/rocr-runtime.tar.gz
 BuildSystem:    cmake
 
 Patch0:         0001-Add-riscv64-support.patch
 Patch1:         0002-Replace-fence-instructions-for-riscv64.patch
+
+BuildOption(prep):  -n rocr-runtime
 
 BuildOption(conf):  -DCMAKE_PREFIX_PATH=%{rocmllvm_cmakedir}/..
 BuildOption(conf):  -DCMAKE_SHARED_LINKER_FLAGS=-ldrm_amdgpu
 BuildOption(conf):  -DINCLUDE_PATH_COMPATIBILITY=OFF
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
-BuildRequires:  clang22-devel
-BuildRequires:  clang22-static
+BuildRequires:  clang23-devel
+BuildRequires:  clang23-static
 BuildRequires:  cmake
-BuildRequires:  lld22
-BuildRequires:  lld22-devel
-BuildRequires:  llvm22-devel
-BuildRequires:  llvm22-static
+BuildRequires:  lld23
+BuildRequires:  lld23-devel
+BuildRequires:  llvm23-devel
+BuildRequires:  llvm23-static
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libelf)

@@ -28,7 +28,7 @@ replace _mm_clflush with cbo.flush (Zicbom extension).
 --- a/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 +++ b/runtime/hsa-runtime/core/runtime/amd_aql_queue.cpp
 @@ -474,7 +474,11 @@
-     HSAKMT_CALL(hsaKmtQueueRingDoorbell(queue_id_));
+     HSAKMT_CALL(hsaKmtQueueRingDoorbell(queue_id_, value));
    } else {
      // Hardware doorbell supports AQL semantics.
 +#if !defined(__riscv)
