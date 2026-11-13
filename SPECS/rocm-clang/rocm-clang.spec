@@ -67,6 +67,10 @@ BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(liblzma)
 BuildRequires:  pkgconfig(libxml-2.0)
 Requires:       llvm24-libs = %{snapshot_version}
+Requires:       llvm24 = %{snapshot_version}
+Requires:       clang24 = %{snapshot_version}
+Requires:       clang24-tools-extra = %{snapshot_version}
+Requires:       lld(major) = %{llvm_major}
 Requires:       clang24-libs = %{snapshot_version}
 
 %description
@@ -86,6 +90,8 @@ export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
 
 %install
 DESTDIR=%{buildroot} cmake --build %{_vpath_builddir} --target install-clang install-clang-linker-wrapper install-clang-cpp
+# The default GNU linker discovers the matching LLVM LTO plugin beside Clang.
+ln -s %{_libdir}/llvm%{llvm_major}/lib/LLVMgold.so %{buildroot}%{compiler_prefix}/lib/LLVMgold.so
 
 %check
 export PATH=%{_libdir}/llvm%{llvm_major}/bin:$PATH
@@ -105,11 +111,17 @@ LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/
     %{buildroot}%{compiler_prefix}/bin/clang -x hip \
     --offload-arch=gfx1100 -fPIC -c %{SOURCE1} -o deployed-device-constexpr.o
 
+printf 'int main(void) { return 0; }\n' > installed-lto.c
+LD_LIBRARY_PATH=%{buildroot}%{compiler_prefix}/lib:%{_libdir}/llvm%{llvm_major}/lib \
+    %{buildroot}%{compiler_prefix}/bin/clang -flto=auto installed-lto.c -o installed-lto
+./installed-lto
+
 %files
 %license llvm/LICENSE.TXT
 %doc README.md
 %{compiler_prefix}/bin/clang*
 %{compiler_prefix}/lib/libclang-cpp.so*
+%{compiler_prefix}/lib/LLVMgold.so
 
 %changelog
 %autochangelog
