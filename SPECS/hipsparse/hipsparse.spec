@@ -58,9 +58,8 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
-%if %{with test}
+# The benchmark also links clients-common, which requires GTest in 10.1.
 BuildRequires:  cmake(GTest)
-%endif
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
