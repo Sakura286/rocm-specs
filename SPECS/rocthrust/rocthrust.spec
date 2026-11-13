@@ -49,7 +49,9 @@ BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(rocprim)
+BuildRequires:  rocprim-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
