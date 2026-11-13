@@ -23,6 +23,9 @@ BuildSystem:    cmake
 
 BuildOption(prep):  -n rocsparse
 
+# LLVM 23's HIP bundler requires the host triple's environment field.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_WITH_OFFLOAD_COMPRESS=ON
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
@@ -116,6 +119,16 @@ install -pm 644 %{_builddir}/rocsparse-test-matrices/* %{buildroot}/%{_datadir}/
 export LD_LIBRARY_PATH=%{_vpath_builddir}/library:$LD_LIBRARY_PATH
 %{_vpath_builddir}/clients/staging/rocsparse-test
 %endif
+
+%build -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+
+%conf -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 
 %files
 %doc README.md
