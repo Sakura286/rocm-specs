@@ -20,14 +20,14 @@
 | hipsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/Jacobi 配置与非法参数 API | unresolvable；依赖待解 |
 | hipsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | unresolvable；依赖待解 |
 | hipsparselt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 property/version/error API | unresolvable；依赖待解 |
-| miopen | 继续构建／实际 RPM 验证 | blocked；跟踪新结果 | blocked；跟踪新结果 |
+| miopen | 继续构建／实际 RPM 验证 | succeeded；实际 RPM API 子集/CMake/tensor 描述符 | unresolvable；依赖待解 |
 | python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | unresolvable；依赖待解 |
+| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | scheduled；跟踪新结果 |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
-| rocm-clang | 继续构建／实际 RPM 验证 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | building；跟踪新结果 |
+| rocm-clang | 本阶段无 GPU 验证通过 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
 | rocm-core | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | rocm-llvm | 本阶段无 GPU 验证通过 | succeeded；COMGR、HIP/设备库离线编译 | succeeded；COMGR、HIP/设备库离线编译 |
@@ -40,11 +40,11 @@
 | rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
 | rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
 | rocsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/3.37.0 版本 API | unresolvable；依赖待解 |
-| rocsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | unresolvable；依赖待解 |
+| rocsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | scheduled；跟踪新结果 |
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-13T22:46:11.424837+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-13T23:17:50.948413+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -212,3 +212,30 @@
 
 - 同一 PR 13016 还包含 FP8 MFMA/WMMA 的 signed-vector 参数转换。当前新增 `1002-upstream-hipconv-fp8-operands.patch`，只取三文件的独立兼容 hunk 及 int32x4/8/16 别名；cdna4 hunk 的尾部两行上下文调整为旧版 closing class，不改上游新增语句。精确 release 上 fuzz=0 应用。gfx950 FP8 fixture 已生成 v_mfma_f32_16x16x128_f8f6f4，见 `validation/hipconv-fp8-codegen-x86_64.log` / `hipconv-fp8-gfx950.s`。
 - 为减少完整 MIOpen 重建次数，新增完整 hipconv 子库四目标本地预构建；发现 std::array constexpr 在 GCC 15 headers 下达到 Clang 1048576 步上限，其他 host-variable 错误是其级联诊断。已取得合入的 PR 11989 / `37920953b271d40f1cce9f2ab38d5e4d68c0cd2b`，完整单文件 hunk 为 `1003-upstream-hipconv-constexpr-limit.patch`。其 PR 描述仍说提高 fconstexpr-steps，但实际 merged commit 删除昂贵 rounds_are_rungs static_assert；按实际代码回移，保留其余布局断言和运行算法。完整 hipconv 四目标 x86_64 预构建已通过并生成 libhipconv.a，见 `validation/hipconv-full-constexpr-x86_64.log` / `hipconv-full-x86_64.json`。1002/1003 已随 `010d325` 提交推送，MIOpen 完整 RPM 重建仍待结果。原生预构建重现同一 constexpr 上限，待当前任务结束后应用 1003 再复测，不把预构建结果当成 RPM 验收。
+
+### 23:05 UTC：正式 riscv64 Clang 验收完成，继续后续 10 包
+
+- rocm-clang 24.0.0~git20261109.b1de84e-13.1 的正式 riscv64 RPM 已构建成功并完成实际产物复验：普通/RDC gfx1100/gfx1200 编译链接、LTO 编译执行、资源路径、RISC-V host features、HIPCC 不显式指定 host triple 均通过。BF16 wrapper 的原源码 negative control、四目标原失败 TU 编译和 gfx950 MFMA codegen 在实际 RPM 再次通过，见 `validation/private-clang-final-riscv64.log` / `hipcc-private-final-riscv64.log` / `hipconv-bf16-final-riscv64.log`。正式支持包已完成双架构无 GPU 验收；不再以源码预构建代替它。
+- 完整 hipconv 子库四目标原生源码预构建也通过（1001/1002/1003 均已应用），见 `validation/hipconv-full-constexpr-source-riscv64.log`，不等同于完整 MIOpen RPM。
+- 当前实际通过账本为 25/35 双架构。原生 rocSPARSE 与 rocFFT 已解除依赖阻塞并 scheduled，等待 4 个 compliant workers；其余数学库沿依赖链推进。MIOpen x86_64 完整构建已到 687/736，此时仍 building，不提前标记成功。自动实际产物检查继续运行。
+- `finish-miopen-x86.py` 等待当前新构建 succeeded 后执行完整 RPM 远程保留与本机 API 子集检查；结果写 `validation/miopen-consumer-x86_64-result.json`，全过程见 `finish-miopen-x86.log`。本机磁盘余量小，不直接完整解包数据库。`stage-artifacts.py` 现增加实际 host architecture guard，防止未来在 SG 把 x86 产物覆盖到原生测试 root。
+
+### x86_64 全部 35 包已完成快速验证
+
+- MIOpen 10.1.0-9.1 x86_64 完整构建成功；源码 service revision 9 / srcmd5 `e490f52b723efc98b121a5120278ab94`，Git `010d325a4c08d23fbc5e92387147d01402b8f4d4`。实际 RPM 的 CMake 导入、3.6.1 版本 API、tensor descriptor create/set/get/destroy、维度/stride 回读检查通过，见 `validation/miopen-consumer-x86_64.log` / `miopen-consumer-x86_64-result.json`。
+- 完整 runtime/devel RPM 保存在 SG2044 独立 x86 artifacts 目录，校验 digest 后只同步实际库/头文件/CMake/helper 到本机，未完整解包本机不需要的数据库。开发 RPM 大小 1,383,692,234 字节；首次 OBS API 流在约 1.096 GB 中断，API 也忽略 Range。公共发布仓明确支持 206/Content-Range，分 64 MiB 从保留断点续传后完整 RPM digest 通过。原失败日志保留为 `finish-miopen-x86.log`，成功为 `finish-miopen-x86-resumed.log` / `validation/miopen-x86-public-resume.log`。不是源码或 RPM 损坏。
+- `fetch-native-artifacts.py` 对后续 >=1 GiB 的原生产物改用 `download-native-public-range.py`，在 SG 保留文件并验证 64 MiB ranges；发布尚未可见时最多等待 30 分钟，不传输认证凭据。其余实际产物检查继续由 `finish-native-pending.py` 串行执行。
+- 现在 35/35 已通过 x86_64 构建及对应快速功能检查，25/35 已完成双架构无 GPU 验收。仍必须完成余下 10 包原生构建/实际 RPM；rocSPARSE/rocFFT 等待 4 个符合条件的 SG worker。当前这些 worker 正运行主线 ROCm 或 openruyi 的合法任务，不中止或修改它们，不把排队当成构建失败。
+
+### 选择本实验的 HIP 编译器
+
+`rocm-clang` 使用与系统相同的 LLVM snapshot 源码基线，工具安装在私有前缀。进行 HIP 离线开发时选择它，实际双架构验证已覆盖默认 host triple 和 RDC：
+
+```sh
+export HIP_CLANG_PATH=/usr/lib64/rocm/llvm24/bin
+export PATH="$HIP_CLANG_PATH:/usr/lib64/llvm24/bin:$PATH"
+```
+
+不需要测试 runner 的 LD_LIBRARY_PATH 覆盖；runner 专门为隔离 RPM 运行库设置该变量，常规环境使用私有工具自身的 RUNPATH。当前支持包的三项 LLVM PR 216938、233925、168164 尚未合入，仍为有固定 SHA 的实验性回移。GPU 数值计算未验证。
+
+检查点时间：2026-11-13T23:18:23.753502+00:00。继续全部原生包，不在此处停止。
