@@ -7,6 +7,8 @@
 %global snapshot_version 24.0.0~git20261109.b1de84e
 %global source_commit b1de84ea1aa8c686639f4c0144e045e4a2a12510
 %global compiler_prefix %{_libdir}/rocm/llvm%{llvm_major}
+# This private frontend must not satisfy other packages' system Clang ABI.
+%global __provides_exclude_from ^%{compiler_prefix}/lib/.*$
 # Rebuild only Clang against the distribution LLVM, without RPM LTO.
 %global build_cflags %{?build_cflags} -fno-lto
 %global build_cxxflags %{?build_cxxflags} -fno-lto
