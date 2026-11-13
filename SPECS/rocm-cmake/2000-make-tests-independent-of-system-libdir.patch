@@ -1,0 +1,22 @@
+From: CHEN Xuan <chenxuan@iscas.ac.cn>
+Subject: [PATCH] tests: use explicit fixture paths with distribution CMake
+
+The upstream fixtures assert paths below lib. Keep that choice explicit when
+the distribution's module defaults to lib64. Installed-test fixtures use
+absolute destinations intentionally; newer CMake versions warn about these,
+so do not promote that specific diagnostic to an error in the test harness.
+Other developer warnings remain errors. This changes only the test harness.
+
+--- a/test/test.cmake
++++ b/test/test.cmake
+@@ -111,8 +111,8 @@ function(configure_dir DIR)
+     if(NOT EXISTS ${BUILD_DIR})
+         file(MAKE_DIRECTORY ${BUILD_DIR})
+     endif()
+-    test_exec(COMMAND ${CMAKE_COMMAND} -Werror=dev ${ADDITIONAL_CONFIGURE_ARGS} -DCMAKE_PREFIX_PATH=${PREFIX}
+-                      -DCMAKE_INSTALL_PREFIX=${PREFIX} -DROCM_ERROR_TOOLCHAIN_VAR=On ${PARSE_CMAKE_ARGS} ${DIR}
++    test_exec(COMMAND ${CMAKE_COMMAND} -Werror=dev -Wno-error=install-absolute-destination ${ADDITIONAL_CONFIGURE_ARGS} -DCMAKE_PREFIX_PATH=${PREFIX}
++                      -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_INSTALL_LIBDIR=lib -DROCM_ERROR_TOOLCHAIN_VAR=On ${PARSE_CMAKE_ARGS} ${DIR}
+               WORKING_DIRECTORY ${BUILD_DIR})
+     foreach(TARGET ${PARSE_TARGETS})
+         if("${TARGET}" STREQUAL all)

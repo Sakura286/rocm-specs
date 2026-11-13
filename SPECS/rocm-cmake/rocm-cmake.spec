@@ -9,9 +9,10 @@
 # there is no debug package - this is just cmake modules
 %global debug_package %{nil}
 
-%global rocm_release 7.14
-%global rocm_patch 1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
+%global source_tag therock-%{rocm_release}
 
 Name:           rocm-cmake
 Version:        %{rocm_version}
@@ -19,15 +20,24 @@ Release:        %autorelease
 Summary:        CMake modules for common build and development tasks for ROCm
 License:        MIT
 URL:            https://github.com/ROCm/rocm-cmake
-#!RemoteAsset:  sha256:4c6148528c3d5bc6d9fbc5ea8aca0a95c7d844fa40161a19cca3a7f1bf11f2f5
-Source:         %{url}/archive/refs/tags/therock-%{version}.tar.gz
+#!RemoteAsset:  sha256:41b034780028684a3ee281fcc2b8ed0573a64b55a5ef38d10bb59deddd3d9710
+Source:         %{url}/archive/refs/tags/%{source_tag}.tar.gz
 BuildArch:      noarch
 BuildSystem:    cmake
 
 # https://github.com/ROCm/rocm-cmake/issues/276
 Patch0:         0001-rocm-cmake-follow-cmake-install-rules.patch
+# Keep upstream test paths explicit and tolerate intentional absolute test installs.
+Patch1:         2000-make-tests-independent-of-system-libdir.patch
+
+BuildOption(prep):  -n %{name}-%{source_tag}
+# PRIVATE/PREFIX tests assume upstream's non-FHS layout; version-parent requires
+# Git history absent from release archives; documentation tools are not packaged.
+BuildOption(check):  -E '^pass-(doc-sphinxdoxygen|libprivate|simple-prefix|version-parent)$'
 
 BuildRequires:  cmake
+BuildRequires:  gcc-c++
+BuildRequires:  git-core
 
 Requires:       cmake
 
@@ -44,10 +54,6 @@ is required for building some of the libraries that are a part of ROCm.
 # Fix hardcoding of libdir
 sed -i -e "s@set(CMAKE_INSTALL_LIBDIR \"lib\"@set(CMAKE_INSTALL_LIBDIR \"%{_lib}\"@" share/rocmcmakebuildtools/cmake/ROCMCreatePackage.cmake
 sed -i -e "s@set(CMAKE_INSTALL_LIBDIR \"lib\"@set(CMAKE_INSTALL_LIBDIR \"%{_lib}\"@" share/rocmcmakebuildtools/cmake/ROCMInstallTargets.cmake
-
-# Skip ctest because rocm-cmake use private lib path to test
-%check
-:
 
 %install -a
 
