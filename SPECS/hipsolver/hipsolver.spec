@@ -5,9 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-# TODO: hipSOLVER need lapack to build test/benchmark/sample
-# But openblas on openRuyi does not provide this
-# Also, it need GPU to run test
+# hipSOLVER tests require a GPU.
 %bcond test 0
 
 %global rocm_release 10.1
@@ -40,6 +38,8 @@ BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-lin
 BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu"
 %endif
 BuildOption(conf):  -G Ninja
+# The geev CPU fallback uses the system LAPACK instead of fetching OpenBLAS.
+BuildOption(conf):  -DHIPSOLVER_INTERNAL_LAPACK_BUILD=OFF
 %if %{with test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
@@ -65,6 +65,7 @@ BuildRequires:  rocsparse-devel >= %{rocm_version}
 BuildRequires:  cmake(rocsparse)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
+BuildRequires:  lapack-devel
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
