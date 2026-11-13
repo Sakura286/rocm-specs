@@ -177,3 +177,12 @@ x86_64 与 `sh-plct-sg2044` 的 riscv64 实际 RPM 均通过模块发现、共�
 第四轮 revision `5` / srcmd5 `2150f077f10922e4eef84b486d3bbde3`：x86_64 成功链接 COMGR 主库，后续 `DemangleSymbolNameTest` 缺少 llvm_gtest 依赖的 LLVM Support 符号。补丁按 COMGR 相同的 LLVM 链接模式补齐依赖；同时修正 lit 工具目录错误地跟随 Python runner 路径的问题。日志 `logs/build-x86_64-fourth-latest.log`。
 
 riscv64 已用解包的 bubblewrap 建立隔离挂载环境，默认 `/usr/lib64/llvm24/bin/clang` 启动通过，脚本 `tests/prepare-isolation.py`，日志 `logs/remote-bwrap-runtime-retry.log`。postopt 双阶段方案已在独立小型程序中验证可行；该诊断使用旧主线设备库，仅用于验证方案，不计入 ROCm10 验收，待真实新产物回归。
+
+第五轮 revision `6` / srcmd5 `e6576e135c2a761de56c6ea7184ec49f`：编译和安装成功后，device-libs 原始 33 项 CTest 失败 17 项，COMGR CTest 32 项通过 30 项（两个原始 OpenCL 链接测试失败），unit 全部通过，lit 205 项中失败 8 项。完整日志 `logs/build-x86_64-fifth-final.log`。当前准备第六轮：
+
+- 在 COMGR 内截获 AMD postopt 标记，先优化、再执行禁止优化的 IR 链接；保留驱动选择的设备库及 Clang 属性传播，不修改 API 调用方或 OpenCL 功能测试。补丁 `2005`。
+- 本地以系统 LLVM 24 动态库构建新 device-libs，复现全部 17 项失败。按实际等价 lowering 修正寄存器检查边界、half rsqrt、finite 比较、NaN-preserving min、IR 名称及 MMRA 命名，补丁 `2006`。修正后 33 项检查通过，日志 `logs/local-device-tests-final.log`。这是本地诊断构建，不替代 OBS／riscv64 验收。
+- 明确测试限制：原有完整 `lgamma_r` 常量折叠的两项测试保留但排除，系统 LLVM 不会折叠某些 target reciprocal intrinsic；同时新增两架构的严格特殊值、符号及已支持常量结果检查。无穷／NaN 的 IR 格式也已变化。不能声称原始完整优化测试通过，不能据此宣称 GPU 数值执行已验证。
+- lit 适配 canonical AMDGPU subarch triple 和 gfx1250 XNACK 能力，libstdc++ 头文件共存夹具使用 constexpr array，以免依赖 GNU 运行时访问器的 device 注解。补丁 `2007`。所有补丁在干净源码子集应用成功，postopt 补丁整理前后源码完全一致。
+
+本地调试入口：`tmp/rocm10-rocm-llvm/run-build.sh`（允许系统 C++ 头文件，用于编译诊断工具）与 `run-runtime.sh`（隐藏宿主 C++ 头文件，检查嵌入 libc++）。本地 device-libs 源码／构建位于 `sources/llvm-project-therock-10.1/amd/device-libs/`、`build/local-device-libs/`。`tests/pristine-device-tests/` 保存未修改测试用于差异审查。
