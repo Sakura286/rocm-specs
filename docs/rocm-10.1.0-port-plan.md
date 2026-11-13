@@ -169,3 +169,7 @@ x86_64 与 `sh-plct-sg2044` 的 riscv64 实际 RPM 均通过模块发现、共�
 保留 signed-char 补丁；删除上游已包含的两个 device-libs 补丁。COMGR 系统适配重写为显式 unordered_set 头文件、系统 libc++ 头文件入口及暂时移除 AMD 私有 postopt 选项。最后一项的设备库链接语义仍须修复和验证，不能因编译成功视为完成。hipcc 新版路径初始化已改为必须精确命中一次的替换；保留用户 HIP_CLANG_PATH 覆盖。所有 device-libs 和 COMGR CTest 已启用。
 
 首轮 x86_64 在 CMake 配置阶段失败：ClangTargets 引用的 `libMLIRCIRAnalysis.a` 未安装。当前 snapshot 的 ClangIR 导出还引用 MLIR targets，配方增加 `mlir24-devel`（带静态库依赖）。同时将 device-libs 测试的 amdgcn 链接改为构建目录内的相对路径，避免指向未安装的宿主路径。首轮 OBS revision `2` / srcmd5 `587ceb272d44274e33200e83194ccc01` / `.obsinfo` 已核对为 `874d465db12b3b506574988e4d43728ce04bb918`；buildinfo 确认为本项目 rocm-cmake `10.1.0-3.1.nor` 和 LLVM snapshot `24.0.0~git20261109.b1de84e-11.1.or`。日志 `logs/build-x86_64-first-latest.log`。
+
+第二轮 OBS revision `3` / srcmd5 `9bd82baaebc092f566090f7b91031a94` 已越过配置，device-libs 编译完成；COMGR 元数据代码因 LLVM 24 删除 `getArchAttrAMDGCN` 和旧特性掩码而失败。修复提交 `9532c51` 改为 feature bitset，并使用 XNACK/SRAMECC 的可切换模式位。实际 x86_64 snapshot 库的 gfx900、gfx90a、gfx1100、gfx1250 查询检查通过（`logs/target-features.log`）；不等同于 COMGR 产物验收。当前继续第三轮构建。riscv64 独立目录 `/home/openruyi/tmp/rocm10-rocm-llvm/` 已解包 LLVM 24 运行依赖，Clang 启动通过。
+
+第三轮 revision `4` / srcmd5 `b83adc892abdfdc7005b525f0403bd64` 的 x86_64 编译进一步暴露已删除的 Clang `OffloadUnbundlingJobClass`。该枚举仅作为 COMGR 缓存键类型，分配独立于 driver／SPIR-V 的类型 ID 进行修复。测试检查还发现 CTest 不覆盖已有的 unit／lit 套件；保留源码归档内的 Python lit runner（不编译私有 LLVM），并在 `%check` 显式运行两套测试。日志 `logs/build-x86_64-third-progress.log`。
