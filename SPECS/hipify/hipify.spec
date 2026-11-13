@@ -11,6 +11,11 @@
 
 %global llvm_maj_ver 24
 
+%ifarch riscv64
+# Large Clang/MLIR static dependencies need the larger native worker pool.
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           hipify
 Version:        %{rocm_version}
 Release:        %autorelease
