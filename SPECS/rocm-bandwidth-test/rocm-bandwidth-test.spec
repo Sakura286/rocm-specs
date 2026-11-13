@@ -49,7 +49,7 @@ BuildRequires:  make
 BuildRequires:  gcc-c++
 BuildRequires:  git-core
 BuildRequires:  cmake
-BuildRequires:  cmake(Boost)
+BuildRequires:  boost-devel
 BuildRequires:  cmake(Catch2)
 BuildRequires:  cmake(CLI11)
 BuildRequires:  cmake(fmt)
