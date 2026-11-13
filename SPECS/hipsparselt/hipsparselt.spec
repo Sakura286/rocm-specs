@@ -60,6 +60,9 @@ BuildOption(conf):  -DTensile_VERBOSE=1
 BuildOption(conf):  -DVIRTUALENV_BIN_DIR=%{_bindir}
 BuildOption(conf):  -Dnanobind_ROOT=%(python3 -m nanobind --cmake_dir)
 BuildOption(conf):  -G Ninja
+# Offload bundle IDs require an explicit host environment component.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DHIPSPARSELT_HIPBLASLT_PATH=%{_builddir}/%{buildsubdir}/hipblaslt
 BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
