@@ -107,3 +107,14 @@
 - 已通过 `_buildinfo` 核实 rocBLAS/RCCL 的 `hardware:jobs 32`，实际调度分别为 `epyc-massive-02-n0h:8` / `epyc-massive-03:9`，日志均为 `-j32`。RCCL 104 秒到 1186/6013，继续跟踪后段 CE-reduce 与链接。HSA riscv64 当前 worker `sg2044-0317:8` 仍在安装最后的 clang24-static；旧 `_mm_pause` 错误日志不是新修订的结果。
 - 本机剩余磁盘有限，大产物归档优先存放 SG2044 的任务目录（约 450 GiB 可用）。实际 RPM 解包脚本更新为在同一文件系统中用 hardlink 连接 staging 与只读验证 root，避免重复的大库副本；保留所有 RPM/日志/实验产物。覆盖借用的 Python stdlib 目录时保留缺失宿主条目，防止新包的 site-packages 覆盖导致隔离环境缺少 encodings。
 - 恢复任务时继续查询全部 34 包的最新 OBS 状态、失败日志和 source revision，再推进实际 RPM 的 x86_64 与 SG2044 验证；不要把本检查点或所有 SPEC 已升级视为工作完成。
+
+## 后续检查点：原生 HSA 与 GNU target 的运行库目录
+
+- HSA 10.1.0-7.1 双架构构建成功。实际 RPM 的 CMake 导入、链接和三个状态字符串 API 在 x86_64 与 SG2044 均通过；两个 ELF 的 280 个 `hsa_*` 导出完全一致。证据为 `validation/hsa-consumer-*`、`hsa-symbol-comparison.json`。无 AMD GPU 时 `hsa_init` 返回 OUT_OF_RESOURCES，未计为 GPU 运行通过。RISC-V 构建还出现 `kfd_runtime_info` 前置声明导致的 ThunkLoader LTO ODR 警告，尚未发现上游修复，需保留关注；不等于已观察到运行期 ABI 故障。
+- bandwidth-test 7.2.4-8.1 的 `--help`、`--version`、插件列表、tb 插件信息均正常退出，正确发现 lib64 下的插件，原 unload 崩溃已修复。`run tb --help` 会先初始化 GPU 引擎，无 GPU 时仍因设备属性获取失败崩溃；不将前四项 CLI 通过写成引擎运行验收。证据 `validation/bandwidth-cli-x86_64.json`。
+- RCCL `7675db5` 移除上游 CMake 内部再次设置的 `ENV{ROCM_PATH}`；最小真实编译探测证实该环境变量令 Fabric API/handle 等检测失败，删除后通过。新完整构建已越过原类型重定义错误，在 5732/6013 的覆盖率测试链接处暴露 compiler-rt 路径问题。
+- HIP 的原 RISC-V PCH/RTC 汇编配置只设 lp64d，没有启用 F/D 指令集。`30e39f9` 同时指定 `--target-abi=lp64d -mattr=+f,+d`；LLVM 上游 ABI 测试提交 `fea4957177315f83746dca90cb4c9013eb465c46` 说明该约束。SG2044 实际 LLVM 24 汇编、ELF double-float ABI、共享库链接及读取 marker=42 均通过，见 `validation/hip-pch-abi-native-riscv64.log`。该提交已随下一批推送，不能把此前失败日志算成新修订失败。
+- hipCUB 额外采用双架构 jobs>=32；其新 x86_64 完整构建成功。此前“未重建已完成 FFT/CUB”的描述仅指当时的 worker 调整批次，后续原生目标配置仍需重建。
+- 显式 GNU target 对应的 RISC-V GCC 搜索路径和 compiler-rt 路径与发行版目录不同。SG2044 使用上游已有 `--gcc-triple=riscv64-openruyi-linux` 后，带 GNU target 的编译、链接、执行及 HSA CMake 消费者通过。15 个已设 GNU target 的配方逐包补充该选项，包括 RCCL 自定义 device-linker 和 bandwidth-test 外部 HIPCC 子构建。
+- rocBLAS 已完成 486 个编译任务和全部 Tensile 生成，在最终链接因 GNU triple 下不存在 `libclang_rt.builtins.a` 失败；RCCL 同类错误涉及 `libclang_rt.profile.a`。`74513aa` / `7196ce0` 用 Clang 标准 `-resource-dir` 指向构建目录内的资源别名，复用系统原有 native compiler-rt、头文件及设备库；不改系统 LLVM、不禁用覆盖率、不伪造运行库。实际两架构的 compiler-rt 链接/运行/覆盖率数据读取通过，x86_64 gfx1100/gfx1200 HIP 编译和 RCCL Fabric 探测也通过，见 `validation/compiler-resource-*`、`rccl-feature-resource-x86_64.log`。
+- 上述 15 包独立提交和 pre-commit 均通过，连同 HIP 修复推送至 `6ad423c`。OBS 完整重建尚待结果；后续继续全部数学库依赖链与原生实际产物验证。
