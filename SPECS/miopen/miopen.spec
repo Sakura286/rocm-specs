@@ -36,24 +36,17 @@ BuildOption(conf):  -G Ninja
 # standalone fallback, which fetches even disabled AI/test dependencies.
 BuildOption(conf):  -DCMAKE_TOOLCHAIN_FILE=/dev/null
 BuildOption(conf):  -DMIOPEN_STANDALONE_BUILD=OFF
-# Offload bundle IDs require an explicit host environment component.
-BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
-%ifarch riscv64
-# The native GCC directory omits the GNU environment required by offload IDs.
-BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform}"
-%endif
-%ifarch riscv64
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform}"
-%else
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu"
-%endif
+# Upstream-fixed host bundle/feature handling permits the native distro triple,
+# which also matches the installed compiler-rt directory.
+BuildOption(conf):  -DCMAKE_HIP_COMPILER=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin/clang++
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_ROCM_ROOT=%{_prefix}
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBoost_USE_STATIC_LIBS=OFF
 BuildOption(conf):  -DMIOPEN_BUILD_DRIVER=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK=OFF
 BuildOption(conf):  -DMIOPEN_ENABLE_AI_KERNEL_TUNING=OFF
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin/clang++
 %if %{with test}
 BuildOption(conf):  -DBUILD_TESTING=ON
 BuildOption(conf):  -DMIOPEN_TEST_ALL=ON
@@ -80,6 +73,7 @@ BuildRequires:  cmake(rocrand)
 BuildRequires:  cmake(GTest)
 %endif
 BuildRequires:  clang(major) = %{llvm_maj_ver}
+BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e-13
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  half
@@ -144,7 +138,12 @@ sed -i -e 's@add_subdirectory(speedtests)@#add_subdirectory(speedtests)@' CMakeL
 sed -i -e 's@GetLibPath().parent_path() / "share/miopen/db"@"%{_datadir}/miopen/db"@' src/db_path.cpp.in
 
 %conf -p
-export PATH=%{rocmllvm_bindir}:$PATH
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
+
+%build -p
+export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
+export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/miopen-hip/LICENSE.md
