@@ -9,6 +9,11 @@
 
 %global llvm_maj_ver 24
 
+%ifarch riscv64
+# Each HIP compilation launches four GPU jobs; use a large native worker.
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 # consume too much time
 %bcond test 0
 %bcond sample 0
@@ -41,6 +46,10 @@ BuildOption(conf):  -DHIP_PLATFORM=amd
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_OFFLOAD_COMPRESS=ON
 BuildOption(conf):  -DBUILD_PARALLEL_HIP_JOBS=ON
+BuildOption(conf):  -DROCSOLVER_PARALLEL_LINK_JOBS=1
+%ifarch riscv64
+BuildOption(conf):  -DROCSOLVER_PARALLEL_COMPILE_JOBS=8
+%endif
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=%{?with_test:ON}%{!?with_test:OFF}
 BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=%{?with_benchmark:ON}%{!?with_benchmark:OFF}
 BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=%{?with_sample:ON}%{!?with_sample:OFF}
