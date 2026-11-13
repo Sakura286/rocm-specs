@@ -36,6 +36,8 @@ Patch0:         0001-cmake-use-gnu-installdirs.patch
 
 BuildOption(conf):  -G Ninja
 # Offload bundle IDs require an explicit host environment component.
+# The LLVM runtime RPMs retain the distribution triple without the GNU suffix.
+BuildOption(conf):  -DCMAKE_INSTALL_RPATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT=--target=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
@@ -99,6 +101,10 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 # Preserve compiler and OpenMP probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
 export PATH=%{rocmllvm_bindir}:$PATH
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
+
+%build -p
+export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a
 # we don't need the rocfft_rtc_helper binary and client-info file
