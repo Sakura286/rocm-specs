@@ -34,13 +34,18 @@ BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gn
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
-BuildOption(conf):  -DBUILD_CLIENTS_SAMPLES=OFF
-BuildOption(conf):  -DBUILD_CLIENTS_BENCHMARKS=ON
+BuildOption(conf):  -DHIPSPARSE_ENABLE_SAMPLES=OFF
+BuildOption(conf):  -DHIPSPARSE_ENABLE_CLIENT=ON
+BuildOption(conf):  -DHIPSPARSE_ENABLE_BENCHMARKS=ON
 %if %{with test}
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=on
+BuildOption(conf):  -DHIPSPARSE_BUILD_TESTING=ON
 %else
-BuildOption(conf):  -DBUILD_CLIENTS_TESTS=off
+BuildOption(conf):  -DHIPSPARSE_BUILD_TESTING=OFF
 %endif
+# LLVM OpenMP is installed under the native system target.
+BuildOption(conf):  -DOpenMP_CXX_FLAGS=-fopenmp=libomp
+BuildOption(conf):  -DOpenMP_CXX_LIB_NAMES=omp
+BuildOption(conf):  -DOpenMP_omp_LIBRARY=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}/libomp.so
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
@@ -61,6 +66,7 @@ BuildRequires:  cmake(rocsparse)
 BuildRequires:  rocsparse-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
+BuildRequires:  libomp-devel(major) = %{llvm_maj_ver}
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
 BuildRequires:  ninja
