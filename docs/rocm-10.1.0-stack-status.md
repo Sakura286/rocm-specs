@@ -25,15 +25,15 @@
 | rccl | 继续构建／实际 RPM 验证 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | building；跟踪新结果 |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 继续构建／实际 RPM 验证 | building；跟踪新结果 | unresolvable；依赖待解 |
+| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | unresolvable；依赖待解 |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
-| rocm-clang | 继续构建／实际 RPM 验证 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | building；跟踪新结果 |
+| rocm-clang | 继续构建／实际 RPM 验证 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | scheduled；跟踪新结果 |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
 | rocm-core | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | rocm-llvm | 本阶段无 GPU 验证通过 | succeeded；COMGR、HIP/设备库离线编译 | succeeded；COMGR、HIP/设备库离线编译 |
 | rocm-origami | 本阶段无 GPU 验证通过 | succeeded；CMake/gfx1100 硬件模型 API | succeeded；CMake/gfx1100 硬件模型 API |
 | rocm-smi | 本阶段无 GPU 验证通过 | succeeded；CLI/版本 API（无 GPU） | succeeded；CLI/版本 API（无 GPU） |
-| rocm-stinkytofu | 本阶段无 GPU 验证通过 | succeeded；1500 CTest、CMake/解析/优化 | succeeded；1500 CTest、CMake/解析/优化 |
+| rocm-stinkytofu | 继续构建／实际 RPM 验证 | succeeded；产物验证待完成 | building；跟踪新结果 |
 | rocminfo | 本阶段无 GPU 验证通过 | succeeded；无 GPU 诊断/目标枚举 | succeeded；无 GPU 诊断/目标枚举 |
 | rocprim | 本阶段无 GPU 验证通过 | succeeded；BlockReduce 离线 gfx1100/1200 | succeeded；BlockReduce 离线 gfx1100/1200 |
 | rocprofiler-register | 本阶段无 GPU 验证通过 | succeeded；132 上游测试、CMake/错误 API | succeeded；132 上游测试、CMake/错误 API |
@@ -44,7 +44,7 @@
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-13T20:56:15.143889+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-13T21:11:07.229528+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -183,3 +183,13 @@
 - hipBLASLt 的外部算子 AMax 在 gfx11/gfx12 输出 legacy Fake16 v_max_f16。上游 bf56af2e… 的完整 true16 特性提交跨 rocisa/StinkyTofu 38 个文件，并非本次 release 的小型 ABI 修复。沿用 LLVM 已有的 -real-true16 兼容模式，仅给该包外部算子的 CMake ASM TUs；不更改指令生成源码或重建 StinkyTofu ABI。四个目标的 v_max_f16/abs legacy 与 .l 写法生成完全相同 .text，见 `llvm-driver-review/amax-asm-mode-validation.json`。`fa62772` 已推送，完整重建正在 Tensile 生成阶段；后续仍需看完整结果。
 - 原生仓库尚未发布某些新 RPM，直接公共仓下载 rocBLAS 返回 404。`fetch-native-artifacts.py` 已改为从本机有认证的 osc API 直接流式传至 SG2044，不在本机保存大型原生 RPM，也不传输凭据；之后校验大小与 RPM digest，再写 current manifest。此前“只从发布仓下载”的描述是首次实现，最终入口以此为准。
 - 原生通用消费者脚本 `validation/run-native-api-consumer.py <包>` 已同步到 SG2044，覆盖待验收的 BLAS/sparse/solver/Lt/MIOpen。Clang 实际工具检查为 `validate-private-clang.py`（默认实际安装前缀）；ROCM10_CPP_PREFIX 与 ROCM10_CLANG_RESULT_LABEL 仅用于上述源码预构建，最终 RPM 验收不要设置它们。持续检查 `watch-results.log` / `obs-live-state.json`，另用 monitor.py 保留完成日志；当前仍有包未完成，不在本检查点停止。
+
+### True16 主内核回移（覆盖前一检查点的临时方案）
+
+- hipBLASLt 的外部 ASM TUs 选择 Fake16 后，完整 Tensile 主内核仍失败：工具主动带 +real-true16，但生成 v_cvt_f16_f32 v15, v14 等无 half selector 的操作数。不能把外部 ASM 修好当成完整库通过，也不能把“机器码相同”扩大成混合语法已正确。临时 CMAKE_ASM_FLAGS 已从最终配方移除。
+- 已回移 **完整**已合入 ROCm 提交 [bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2](https://github.com/ROCm/rocm-libraries/commit/bf56af2e53b7ba22b4ac86e8d8cd25df8040b0f2)（PR 10052，2026-09-18），按 projects/hipblaslt 与 shared/stinkytofu 两个 subtree 拆分，仅去掉路径前缀。两部分都在实际 therock-10.1 归档对应文件上 fuzz=0 应用，无额外源码前置提交；包含上游测试与全部配套变更，不只摘取 AMax 单行。检查证据为 `llvm-driver-review/true16-{hipblaslt,stinkytofu}-release-check.log`。没有手工重写转换算法。
+- `399239a` 为 rocm-stinkytofu（预期 release 5.1），`ddfb162` 为 hipBLASLt，`8d62bca` 为 hipSPARSELt 的对应转换源码；两项 Lt 包要求 StinkyTofu devel>=10.1.0-5，避免新胶合代码使用旧库/旧头文件。hipSPARSELt 同时 patch 其 bundled hipBLASLt；同一源归档版本和同一完整上游提交配套。
+- `3fc0660` / `6ba44a6` 在两个 Lt 包先构建 `_rocisa`，随后执行上游 `test_amax_true16_activation.py` 的纯宿主回归，最后才生成完整设备库。pytest 的 confcutdir 限于 unit 目录，避免上层 GPU 分配 fixture；文件自身按 gfx1100/1101/1102/1103/1150/1151/1152/1153/1200/1201/1250 强制目标检查 half-selector，不依赖 GPU。测试尚待新 OBS 构建的真实结果，不能提前标记通过。
+- 旧 StinkyTofu 4.1 的双架构 1500 CTest/实际 RPM 验证证据保留；新 5.x 须重新跟踪完整测试并验证实际 RPM。因此表格暂时撤下该包当前产物的通过标记。两个架构的新 StinkyTofu 正在构建，下游等待对应新开发包。
+- rocFFT 使用 Clang 12.1 的 x86_64 完整重建已经成功；新实际 RPM 的版本/plan description API、RTC helper gfx1100/gfx1200（各 4544 字节 ELF）及已编译 hipFFT 联合消费者再次通过，见 `validation/fft-api-rtc-rdc-x86_64.json`、`fft-api-rdc-x86_64.log`。原生 FFT 仍待正式 Clang RPM。
+- 当前所有工作继续；优先跟踪新 StinkyTofu→Lt 主链、原生 Clang→rocSPARSE/FFT、RCCL，以及后续 MIOpen。原生 rocBLAS 已验收，无需为这个检查点重建它。最新 Git HEAD `6ba44a6`（文档提交之前），不要把旧 feature 之前的成功日志算作新修订结果。
