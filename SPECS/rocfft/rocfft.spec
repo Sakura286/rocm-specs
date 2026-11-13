@@ -37,6 +37,10 @@ BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
+# LLVM's OpenMP runtime is packaged under the native system target.
+BuildOption(conf):  -DOpenMP_CXX_FLAGS=-fopenmp=libomp
+BuildOption(conf):  -DOpenMP_CXX_LIB_NAMES=omp
+BuildOption(conf):  -DOpenMP_omp_LIBRARY=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}/libomp.so
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
