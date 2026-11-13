@@ -108,6 +108,7 @@ BuildRequires:  pkgconfig(msgpack)
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  python3dist(joblib)
+BuildRequires:  python3dist(pytest)
 BuildRequires:  python3dist(packaging)
 BuildRequires:  python3dist(filelock)
 BuildRequires:  python3dist(numpy)
@@ -178,8 +179,16 @@ export PATH=%{rocmllvm_bindir}:$PATH
 export TENSILE_ROCM_ASSEMBLER_PATH=%{rocmllvm_bindir}/clang++
 export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=%{rocmllvm_bindir}/clang-offload-bundler
 
-%build -p
+%build
+export PATH=%{rocmllvm_bindir}:$PATH
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
+# Check upstream host-only true16 regressions before generating the full library.
+%cmake_build --target _rocisa
+export PYTHONPATH="$PWD/%{_vpath_builddir}/hipblaslt/tensilelite/rocisa:$PWD/hipblaslt/tensilelite${PYTHONPATH:+:$PYTHONPATH}"
+ROCISA_BACKEND=rocisa python3 -m pytest -q -o addopts= \
+    --confcutdir=hipblaslt/tensilelite/Tensile/Tests/unit \
+    hipblaslt/tensilelite/Tensile/Tests/unit/test_amax_true16_activation.py
+%cmake_build
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipsparselt/LICENSE.md
