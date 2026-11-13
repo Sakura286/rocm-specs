@@ -65,6 +65,7 @@ BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
+BuildRequires:  rocm-stinkytofu-devel >= %{rocm_version}
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
