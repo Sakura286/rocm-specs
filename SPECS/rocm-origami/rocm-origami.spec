@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.14
-%global rocm_patch   1
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 23
+%global llvm_maj_ver 24
 
 Name:           rocm-origami
 Version:        %{rocm_version}
@@ -17,8 +17,8 @@ Release:        %autorelease
 Summary:        Analytical GEMM Solution Selection
 License:        MIT
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:c2a229a3c1733b84646672311fd98b00f18792976cf93d69d964757487d484c6
-Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/origami.tar.gz
+#!RemoteAsset:  sha256:ba24ebe60fa75f523c8b56db22aa9b2de6197ddae12fe5dd34ae7ea0fd259554
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/origami.tar.gz
 BuildSystem:    cmake
 
 BuildOption(prep):  -n origami
@@ -35,6 +35,7 @@ BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  cmake
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  lld(major) = %{llvm_maj_ver}
 BuildRequires:  llvm(major) = %{llvm_maj_ver}
