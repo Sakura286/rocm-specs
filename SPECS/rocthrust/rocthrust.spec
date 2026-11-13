@@ -8,11 +8,11 @@
 # rocThrust's test client is HIP device-test code, need GPU to run
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           rocthrust
 Version:        %{rocm_version}
@@ -28,10 +28,13 @@ URL:            https://github.com/ROCm/rocThrust
 # ./thrust/detail/allocator/allocator_traits.h is dual Apache 2.0 and MIT
 # ./thrust/detail/complex contains BSD 2 clause licensed headers
 License:        Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
-#!RemoteAsset:  sha256:b49bac5243d33092b242823cdf1d33fe7f05556bbbd2ca9ac4d5394e49f68b1c
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:63808be10cf288fdea5ce088926e9776f0dc9a65e86bd96860308ce6ebe6338d
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/rocthrust.tar.gz
 BuildSystem:    cmake
 
+BuildOption(prep):  -n rocthrust
+
+BuildOption(conf):  -DROCPRIM_FETCH_METHOD=PACKAGE
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 %if %{with test}
