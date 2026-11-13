@@ -36,12 +36,14 @@ BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 %ifarch riscv64
 # The native GCC directory omits the GNU environment required by offload IDs.
-BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform}"
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="--gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
+%else
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_ARG1="-resource-dir=$PWD/clang-resource"
 %endif
 %ifarch riscv64
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform}"
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu --gcc-triple=%{_target_platform} -resource-dir=$PWD/clang-resource"
 %else
-BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu"
+BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu -resource-dir=$PWD/clang-resource"
 %endif
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=hipcc
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
@@ -111,6 +113,14 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{summary}
 %endif
+
+%conf -p
+# Match the explicit GNU offload target to the existing native compiler-rt.
+mkdir -p clang-resource/lib
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/include clang-resource/include
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/amdgcn clang-resource/amdgcn
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_platform}
+ln -s %{_libdir}/llvm%{llvm_maj_ver}/lib/clang/%{llvm_maj_ver}/lib/%{_target_platform} clang-resource/lib/%{_target_cpu}-openruyi-linux-gnu
 
 %install -a
 rm -f %{buildroot}%{_prefix}/share/doc/rocsolver/LICENSE.md
