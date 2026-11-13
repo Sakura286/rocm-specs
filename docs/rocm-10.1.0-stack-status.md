@@ -136,3 +136,13 @@
 - 最新快照 x86_64 26 succeeded、8 依赖待解、Clang building；riscv64 18 succeeded、11 依赖待解、6 building。该计数不代表 35 包已完成验收。继续跟踪 Clang→rocSPARSE→rocSOLVER→hipBLAS→hipBLASLt→MIOpen 及其余依赖分支，原生 rocBLAS/RCCL 仍在构建。
 - 原生实际 RPM 新增：Origami gfx1100 硬件模型和 ROCtracer 4.1 API 通过（`validation/native-model-riscv64.log`）；rocPRIM/rocThrust 联合 block reduction 和 transform 的 gfx1100/gfx1200 编译通过（`validation/template-kernel-native-riscv64.log`，对象在 SG2044）。无 GPU 执行。
 - 全部临时构建源码与补丁检查保留于 `sh-plct-sg2044:/home/openruyi/tmp/rocm10-clang/`。此处完整 LLVM 归档已解包；不要重复下载/解包或反复对已应用源码再次 patch。验证 root 的 standalone CMake 探测因未 staging LLVM 静态库被 LLVMExports 拒绝，不是 OBS 开发包缺失的证据；OBS 通过 llvm24-devel 自动安装对应静态开发包。
+
+### 实际 RPM 与安装目录检查（继续跟踪）
+
+- 用户休息前要求继续把列表全部包构建、验证完成；持续推进全部 35 包及 riscv64 无 GPU 验收，不在检查点停止。
+- Clang `41c4624` 补齐直接 cc1 调用的 lit resource include；随后 host/device 两项上游诊断测试、host triple 检查、rocSPARSE 模式语法复现全部通过。README 清单误用旧文件名，`f8fbf15` 改为归档中存在的根 README.md。x86_64 首个 RPM 为 `24.0.0~git20261109.b1de84e-7.1`，构建/测试/出包成功，但实际 RPM 的 HIP 编译暴露 linker-wrapper 仍需未打包 libclangBasic.so.24.0，故尚未验收通过。
+- `9691be3` 明确 BUILD_SHARED_LIBS=OFF，让 wrapper 的 Clang 内部组件静态链接，保留 driver 使用的 monolithic clang-cpp；新增只用安装目录库执行 HIP 对象编译的检查，避免 build/lib 掩盖安装缺项。`582a948` 令 rocSPARSE 要求 release>=8，等待修正后的工具，防止继续使用已知不完整的 7.1。新完整构建仍在进行。
+- 实际工具验证脚本 `validation/private-clang.py` 在隔离 runner 内将私有 lib 置于 LD_LIBRARY_PATH 首位；runner 原默认会优先加载系统 clang-cpp，不能把那种混用算成候选前端验证。真实 OBS 构建无此测试 runner 的环境覆盖。原失败证据为 `validation/rocm-clang-rpm-before-component-fix-x86_64.log`，后续新产物验证写回 `rocm-clang-rpm-x86_64.log`。
+- rocRAND 与 hipRAND 原生构建完成，实际 RPM 的联合 CMake/API/Philox 验证通过：版本 API 均 500000、256 个样本可重复且两接口一致；同一消费者的 StinkyTofu/Origami/ROCtracer API 通过，见 `validation/math-consumer-native-riscv64.log`。构建目录首次新建并实际编译、链接、执行；SG2044 时钟比 RPM mtime 慢约 319 秒，Make 有 clock-skew 提示，未修改机器全局时钟。
+- rocminfo 实际 riscv64 RPM 在无 GPU 环境正常给出 ROCk 未加载诊断并返回 1；显式 ROCM_TARGET_LST 配置枚举正确输出 gfx1100/gfx1200。证据 `validation/rocminfo-native-riscv64.log`，GPU agent 发现未验证。
+- 原生 rocBLAS 完成全部 Tensile 生成（约 2322 秒），现编译库本体；RCCL、hipCUB、FFT、带宽工具及 Clang 的原生构建继续跟踪。后续仍先修 Clang→rocSPARSE 主链，并及时验证已发布的实际 RPM。
