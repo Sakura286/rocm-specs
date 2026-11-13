@@ -14,6 +14,9 @@
 %bcond sample 0
 %bcond benchmark 0
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           rocsolver
 Version:        %{rocm_version}
 Release:        %autorelease
