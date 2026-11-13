@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 # ROCclr loads comgr at run time by soversion, so this needs to be checked when
 # updating this package as it's used for the comgr requires for opencl and hip:
@@ -14,8 +14,8 @@
 # https://github.com/ROCm-Developer-Tools/ROCclr/blob/develop/device/comgrctx.cpp#L62
 
 %global rocm_major 7
-%global rocm_minor 2
-%global rocm_patch 4
+%global rocm_minor 14
+%global rocm_patch 1
 %global rocm_release %{rocm_major}.%{rocm_minor}
 %global rocm_version %{rocm_release}.%{rocm_patch}
 %global upstreamname clr
@@ -26,10 +26,10 @@ Release:        %autorelease
 Summary:        ROCm Compute Language Runtime
 License:        MIT
 URL:            https://github.com/ROCm/rocm-systems
-#!RemoteAsset:  sha256:c9670697ee47b2d33dde84e4c815a62f594061da9ff184b133b87a227a1a1f02
-Source0:        %{url}/releases/download/rocm-%{version}/%{upstreamname}.tar.gz
-#!RemoteAsset:  sha256:76c3d6909e531f30b84c908984891559d221d8c427d44abc88be5dbb123f9ad6
-Source1:        %{url}/releases/download/rocm-%{version}/hip.tar.gz
+#!RemoteAsset:  sha256:c667d644a52b1cbcb4cd12687aa2b79c6a1d5c1c1a4467ea057d7b2e7b369364
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/clr.tar.gz
+#!RemoteAsset:  sha256:30b71e77b8ff27fc4916d6c5b249952490d39519b793c710299d26ef7c3e4214
+Source1:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/hip.tar.gz
 BuildSystem:    cmake
 
 BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
