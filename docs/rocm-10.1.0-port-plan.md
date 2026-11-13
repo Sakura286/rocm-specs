@@ -4,14 +4,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；rocm-llvm 首轮配方已推送，两个架构正在构建。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已通过双架构构建及 riscv64 最终功能验收；rocm-llvm 主库已在 x86_64 链接，正在修复测试集成并跟进两个架构构建。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 首轮 OBS 构建中 | 配方 `874d465` 已推送，Actions 43412226757 成功；系统 LLVM 24，COMGR API 3.5，device-libs 和 COMGR CTest 已启用 |
+| rocm-llvm | 构建／测试适配中 | 已修复 ClangIR 依赖、AMDGPU bitset API、unbundle 缓存类型；第四轮停在 unit 测试 LLVM 依赖链接，修复后继续 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -173,3 +173,7 @@ x86_64 与 `sh-plct-sg2044` 的 riscv64 实际 RPM 均通过模块发现、共�
 第二轮 OBS revision `3` / srcmd5 `9bd82baaebc092f566090f7b91031a94` 已越过配置，device-libs 编译完成；COMGR 元数据代码因 LLVM 24 删除 `getArchAttrAMDGCN` 和旧特性掩码而失败。修复提交 `9532c51` 改为 feature bitset，并使用 XNACK/SRAMECC 的可切换模式位。实际 x86_64 snapshot 库的 gfx900、gfx90a、gfx1100、gfx1250 查询检查通过（`logs/target-features.log`）；不等同于 COMGR 产物验收。当前继续第三轮构建。riscv64 独立目录 `/home/openruyi/tmp/rocm10-rocm-llvm/` 已解包 LLVM 24 运行依赖，Clang 启动通过。
 
 第三轮 revision `4` / srcmd5 `b83adc892abdfdc7005b525f0403bd64` 的 x86_64 编译进一步暴露已删除的 Clang `OffloadUnbundlingJobClass`。该枚举仅作为 COMGR 缓存键类型，分配独立于 driver／SPIR-V 的类型 ID 进行修复。测试检查还发现 CTest 不覆盖已有的 unit／lit 套件；保留源码归档内的 Python lit runner（不编译私有 LLVM），并在 `%check` 显式运行两套测试。日志 `logs/build-x86_64-third-progress.log`。
+
+第四轮 revision `5` / srcmd5 `2150f077f10922e4eef84b486d3bbde3`：x86_64 成功链接 COMGR 主库，后续 `DemangleSymbolNameTest` 缺少 llvm_gtest 依赖的 LLVM Support 符号。补丁按 COMGR 相同的 LLVM 链接模式补齐依赖；同时修正 lit 工具目录错误地跟随 Python runner 路径的问题。日志 `logs/build-x86_64-fourth-latest.log`。
+
+riscv64 已用解包的 bubblewrap 建立隔离挂载环境，默认 `/usr/lib64/llvm24/bin/clang` 启动通过，脚本 `tests/prepare-isolation.py`，日志 `logs/remote-bwrap-runtime-retry.log`。postopt 双阶段方案已在独立小型程序中验证可行；该诊断使用旧主线设备库，仅用于验证方案，不计入 ROCm10 验收，待真实新产物回归。
