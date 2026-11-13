@@ -5,11 +5,11 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 10.1
+%global rocm_patch 0
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
 
 # hipBLASlt needs GPU to run
 %bcond test 0
@@ -23,15 +23,22 @@
 # The problem with the fork has been raised here.
 # https://github.com/ROCm/hipBLASLt/issues/908
 
+%ifarch riscv64
+# Generated kernels need native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
+%endif
+
 Name:           hipblaslt
 Version:        %{rocm_version}
 Release:        %autorelease
 Summary:        ROCm general matrix operations beyond BLAS
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/ROCm/rocm-libraries
-#!RemoteAsset:  sha256:72ad0a8db025c6d47397791a9fce5c80cde1b89fc830523d0b34e5138329de63
-Source0:        %{url}/releases/download/rocm-%{version}/%{name}.tar.gz
+#!RemoteAsset:  sha256:5b2bf3102ef1c04f9e5afad61f8da077e8fb6f34d6395d32d11906f7987d04ff
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/hipblaslt.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipblaslt
 
 %if %{with test}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
@@ -41,6 +48,7 @@ BuildOption(conf):  -DBUILD_CLIENTS_TESTS=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_CLIENT=OFF
 %endif
 BuildOption(conf):  -DCMAKE_VERBOSE_MAKEFILE=ON
+BuildOption(conf):  -DCMAKE_SKIP_INSTALL_RPATH=ON
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DHIPBLASLT_ENABLE_MARKER=OFF
 BuildOption(conf):  -DHIPBLASLT_ENABLE_OPENMP=OFF
@@ -58,11 +66,15 @@ BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
+BuildRequires:  hipblas-devel >= %{rocm_version}
+BuildRequires:  cmake(hipblas-common)
 BuildRequires:  cmake(hipblas)
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  cmake(msgpack)
 BuildRequires:  cmake(origami)
+BuildRequires:  rocblas-devel >= %{rocm_version}
 BuildRequires:  cmake(rocblas)
 BuildRequires:  cmake(rocm_smi)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
@@ -75,6 +87,9 @@ BuildRequires:  pkgconfig(libzstd)
 BuildRequires:  pkgconfig(python3)
 BuildRequires:  pkgconfig(zlib)
 # https://github.com/ROCm/hipBLASLt/issues/1734
+BuildRequires:  python3dist(packaging)
+BuildRequires:  python3dist(filelock)
+BuildRequires:  python3dist(numpy)
 BuildRequires:  python3dist(msgpack)
 BuildRequires:  python3dist(nanobind)
 BuildRequires:  python3dist(setuptools)
@@ -131,54 +146,13 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %endif
 
 %prep -a
-# Use PATH to find where TensileGetPath and other tensile bins are
-sed -i -e 's@${Tensile_PREFIX}/bin/TensileGetPath@TensileGetPath@g' tensilelite/Tensile/cmake/TensileConfig.cmake
-
-# defer to cmdline
-sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' CMakeLists.txt
-
-# Do not use virtualenv_install
-sed -i -e 's@virtualenv_install@#virtualenv_install@' CMakeLists.txt
-
-# Disable trying to download rocm-cmake
-sed -i -e 's@if(NOT ROCmCMakeBuildTools_FOUND)@if(FALSE)@' cmake/dependencies.cmake
-
-# HIPBLASLT_ENABLE_OPENMP is OFF yet it is still being used
-# https://github.com/ROCm/rocm-libraries/issues/3201
-sed -i -e '/OpenMP::OpenMP_CXX/d' clients/CMakeLists.txt
-sed -i -e '/omp/d'                clients/common/src/blis_interface.cpp
-sed -i -e '/#include <omp.h>/d'   clients/common/include/testing_matmul.hpp
-sed -i -e '/#include <omp.h>/d'   clients/common/include/hipblaslt_init.hpp
-sed -i -e '/#include <omp.h>/d'   clients/common/src/cblas_interface.cpp
-
-# We are building from a tarball, not a git repo
-sed -i -e 's@find_package(Git REQUIRED)@#find_package(Git REQUIRED)@' cmake/dependencies.cmake
-
-# Forcefully replace all mentions of 'amdclang' with 'clang' in the Tensile Python files
+# Use the system compiler names in source-tree Tensile invocations.
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 
 %conf -p
 export PATH=%{rocmllvm_bindir}:$PATH
-
-%build -p
-# Do a manual install instead of cmake's virtualenv
-cd tensilelite
-TL=$PWD
-
-%__python3 setup.py install --root $TL
-cd ..
-
-CLANG_PATH=`hipconfig --hipclangpath`
-ROCM_CLANG=${CLANG_PATH}/clang
-RESOURCE_DIR=`${ROCM_CLANG} -print-resource-dir`
-export DEVICE_LIB_PATH=${RESOURCE_DIR}/amdgcn/bitcode
-export TENSILE_ROCM_ASSEMBLER_PATH=${CLANG_PATH}/clang++
-export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=${CLANG_PATH}/clang-offload-bundler
-
-# Look for the just built tensilelite
-export PATH=${TL}/%{_bindir}:$PATH
-export PYTHONPATH=${TL}%{python3_sitelib}:$PYTHONPATH
-export Tensile_DIR=${TL}%{python3_sitelib}/Tensile
+export TENSILE_ROCM_ASSEMBLER_PATH=%{rocmllvm_bindir}/clang++
+export TENSILE_ROCM_OFFLOAD_BUNDLER_PATH=%{rocmllvm_bindir}/clang-offload-bundler
 
 %install -a
 rm -f %{buildroot}%{_datadir}/doc/hipblaslt/LICENSE.md
