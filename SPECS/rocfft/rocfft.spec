@@ -98,6 +98,11 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %description    test
 %{_description}
 
+%prep -a
+# openRuyi LLVM 24 is built without the SPIR-V backend. Keep the configured
+# native GPU targets, but omit the clients' additional generic SPIR-V fallback.
+sed -i '/target_.*_options(.*--offload-arch=amdgcnspirv/d' clients/tests/CMakeLists.txt
+
 %conf -p
 # Preserve compiler and OpenMP probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
