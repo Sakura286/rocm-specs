@@ -23,8 +23,8 @@
 # The problem with the fork has been raised here.
 # https://github.com/ROCm/hipBLASLt/issues/908
 
-%ifarch riscv64
-# Generated kernels need native workers with larger job slots.
+%ifarch x86_64 riscv64
+# Large kernel builds need the 32-job workers on both validation architectures.
 #!BuildConstraint: hardware:jobs 32
 %endif
 
