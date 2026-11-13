@@ -37,6 +37,8 @@ License:        BSD-3-Clause AND MIT AND Apache-2.0
 URL:            https://github.com/ROCm/rccl
 #!RemoteAsset:  sha256:314d0a54e68217efb12eafd2aacd439d4928f443795c778711d846355d262355
 Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-10.1/rccl.tar.gz
+# https://github.com/ROCm/rocm-systems/commit/6305765daacadbbef27e921c1907f13674e71fbd
+Patch0:         0001-upstream-generic-hip-gdr-read.patch
 BuildSystem:    cmake
 
 BuildOption(prep):  -n rccl
