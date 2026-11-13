@@ -7,11 +7,11 @@
 # amdSMI's gtest client (amdsmitst) needs GPU/driver to run
 %bcond run_test 0
 
-%global rocm_release 7.2
-%global rocm_patch 4
+%global rocm_release 7.14
+%global rocm_patch 1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global esmi_ver 4.2
+%global esmi_ver 5.2.1.1
 %global pkg_library_version 26
 
 Name:           amdsmi
@@ -27,9 +27,9 @@ Summary:        AMD System Management Interface
 # Bundled esmi_ib_library is NCSA
 License:        MIT AND (GPL-2.0-only WITH Linux-syscall-note) AND NCSA
 URL:            https://github.com/ROCm/amdsmi
-#!RemoteAsset:  sha256:1075067f450860313445edc97026ba430c33e93c18a9c1b1440d71a1f210d1cb
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
-#!RemoteAsset:  sha256:de19d222d09e2171f47f8bbd6608e5648bd547c82543379bb8fb5ed2e379e141
+#!RemoteAsset:  sha256:6c814c8e44a627a114327375472c92a2586cd1b57fd0a6e13385475280dbc8ce
+Source0:        https://github.com/ROCm/rocm-systems/releases/download/therock-%{version}/amdsmi.tar.gz
+#!RemoteAsset:  sha256:f369d15cefc68d06c246881e8eba3c6091e532cb9de02d7f079a6686c1801e5e
 Source1:        https://github.com/amd/esmi_ib_library/archive/refs/tags/esmi_pkg_ver-%{esmi_ver}.tar.gz
 BuildSystem:    cmake
 
@@ -50,9 +50,6 @@ BuildRequires:  pkgconfig(python3)
 Requires:       python3dist(pyyaml)
 
 %patchlist
-# Support libdrm 2.4.130+
-# https://github.com/ROCm/amdsmi/pull/165
-0001-Fix-compilation-with-libdrm-2.4.130.patch
 # -DENABLE_ESMI_LIB=OFF is not enough
 # Goamdshim calls CPU/ESMI-only APIs; skip building it when ESMI is off
 2001-Disable-goamdsmi_shim-when-ESMI-is-off.patch
@@ -84,7 +81,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 %{_description}
 
 %prep
-%autosetup -p1 -C
+%autosetup -p1 -n amdsmi
 
 # ESMI - EPYC System Management Interface
 # esmi_ib_library uses x86-only cpuid.h; guard it for non-x86 builds
