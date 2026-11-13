@@ -15,7 +15,6 @@
 %ifarch riscv64
 # LLVM/Clang static development packages exceed the small worker build roots.
 #!BuildConstraint: hardware:jobs 32
-#!BuildConstraint: hardware:disk:size unit=G 32
 %endif
 
 #Image support is x86 only
