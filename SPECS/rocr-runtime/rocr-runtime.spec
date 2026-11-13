@@ -48,6 +48,7 @@ BuildRequires:  lld24
 BuildRequires:  lld24-devel
 BuildRequires:  llvm24-devel
 BuildRequires:  llvm24-static
+BuildRequires:  mlir24-devel
 BuildRequires:  pkgconfig(numa)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libelf)
