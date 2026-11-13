@@ -64,7 +64,7 @@ BuildOption(conf):  -DTensile_LOGIC=asm_full
 BuildOption(conf):  -DTensile_CODE_OBJECT_VERSION=default
 BuildOption(conf):  -DTensile_SEPARATE_ARCHITECTURES=ON
 BuildOption(conf):  -DTensile_LAZY_LIBRARY_LOADING=ON
-BuildOption(conf):  -DTensile_ASSEMBLER=%{rocmllvm_bindir}/clang++
+BuildOption(conf):  -DTensile_ASSEMBLER=%{_builddir}/%{buildsubdir}/tensile-assembler/clang++
 BuildOption(conf):  -DCMAKE_PROGRAM_PATH=%{rocmllvm_bindir}
 
 Patch0:         0001-fixup-install-of-tensile-output.patch
@@ -127,6 +127,16 @@ Requires:       diffutils
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %prep -a
+# Legacy Tensile emits Fake16 operands; LLVM upstream forbids those in Real16
+# mode (bf02d3b7b028850c1130ce80291d26d5a5fdc42c). Select its existing Fake16
+# assembler mode for both capability probes and generated assembly only.
+# https://github.com/llvm/llvm-project/commit/bf02d3b7b028850c1130ce80291d26d5a5fdc42c
+mkdir -p tensile-assembler
+cat > tensile-assembler/clang++ <<'EOF'
+#!/bin/sh
+exec %{rocmllvm_bindir}/clang++ -Xclangas -target-feature -Xclangas -real-true16 "$@"
+EOF
+chmod 755 tensile-assembler/clang++
 sed -i -e 's@target_link_libraries( rocblas-test PRIVATE ${BLAS_LIBRARY} ${GTEST_BOTH_LIBRARIES} roc::rocblas )@target_link_libraries( rocblas-test PRIVATE cblas ${GTEST_BOTH_LIBRARIES} roc::rocblas )@' clients/gtest/CMakeLists.txt
 
 # no git in this build
