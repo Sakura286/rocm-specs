@@ -7,9 +7,14 @@
 
 %bcond test 0
 
-%global rocm_version 7.2.4
+%global rocm_version 10.1.0
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
+
+%ifarch riscv64
+# Generated GPU kernels require native workers with larger job slots.
+#!BuildConstraint: hardware:jobs 32
+%endif
 
 Name:           rocsparse
 Version:        %{rocm_version}
@@ -17,9 +22,11 @@ Release:        %autorelease
 Summary:        SPARSE implementation for ROCm
 License:        MIT
 URL:            https://github.com/ROCm/rocSPARSE
-#!RemoteAsset:  sha256:0f1a6d1340909a0aa91c70410f62e227d0fc22b30eb2fb19584eeccabd984450
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:96a950a0587af7658811bef32f7f3502049bfa8261f332356b7c1cbf0cc6be84
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/rocsparse.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n rocsparse
 
 BuildOption(conf):  -DBUILD_FILE_REORG_BACKWARD_COMPATIBILITY=OFF
 BuildOption(conf):  -DBUILD_WITH_OFFLOAD_COMPRESS=ON
@@ -43,11 +50,13 @@ BuildOption(conf):  -DCMAKE_MATRICES_DIR=%{_builddir}/rocsparse-test-matrices/
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
-BuildRequires:  compiler-rt22
+BuildRequires:  compiler-rt24
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocprim-devel >= %{rocm_version}
 BuildRequires:  cmake(rocprim)
 BuildRequires:  hipcc
 BuildRequires:  lld(major) = %{llvm_maj_ver}
@@ -59,6 +68,7 @@ BuildRequires:  python3
 BuildRequires:  rocm-cmake
 BuildRequires:  rocm-llvm-macros
 BuildRequires:  rocminfo
+BuildRequires:  rocblas-devel >= %{rocm_version}
 BuildRequires:  cmake(rocblas)
 %if %{with test}
 BuildRequires:  cmake(GTest)
