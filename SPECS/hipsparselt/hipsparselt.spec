@@ -30,6 +30,7 @@ Source2:        0001-hipblaslt-tensilelite-use-system-paths.patch
 Source3:        0001-hipblaslt-find-origami-package.patch
 Source4:        2001-hipblaslt-tensilelite-use-system-nanobind.patch
 Source5:        2000-tensilelite-add-heartbeat-during-parallel-map.patch
+Source6:        2003-use-installed-stinkytofu-conversion-sources.patch
 # -mf16c is an x86-only clang flag (F16C intrinsics); guard it on x86 so the
 # hipSPARSELt library builds on non-x86 hosts like riscv64. cf. ollama PR #8129
 Patch2000:      2000-hipsparselt-guard-mf16c-to-x86.patch
@@ -76,6 +77,8 @@ BuildRequires:  cmake(hipsparse)
 BuildRequires:  hipsparse-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
 BuildRequires:  rocr-runtime-devel >= 7.14.1
+BuildRequires:  cmake(stinkytofu)
+BuildRequires:  stinkytofu-devel >= 7.14.1
 BuildRequires:  cmake(origami)
 BuildRequires:  rocm-origami-devel >= 7.14.1
 BuildRequires:  cmake(rocm_smi)
@@ -146,6 +149,7 @@ patch -p1 < %{SOURCE2}
 patch -p1 < %{SOURCE3}
 patch -p1 < %{SOURCE4}
 patch -p1 < %{SOURCE5}
+patch -p1 < %{SOURCE6}
 find tensilelite -type f -name "*.py" -exec sed -i 's/amdclang++/clang++/g; s/amdclang/clang/g' {} +
 cd ..
 
