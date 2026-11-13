@@ -15,7 +15,8 @@
 
 %bcond test 0
 
-%ifarch riscv64
+%ifarch x86_64 riscv64
+# Large kernel builds need the 32-job workers on both validation architectures.
 #!BuildConstraint: hardware:jobs 32
 %endif
 
