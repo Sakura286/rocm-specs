@@ -219,3 +219,7 @@ riscv64 第六轮在 obsworker-pico-itx-box02-0 的构建根初始化阶段失�
 x86_64 最新实际产物 `10.1.0-11.1.nor` 已全部复验通过，`_statistics` 的 srcmd5 与 revision 11 一致。证据：`logs/artifacts-x86_64.json`、`logs/artifact-validation-final-x86_64.log`、`logs/cmake-validation-final-x86_64.log`；宏展开指向 LLVM 24。当前 riscv64 排队监视脚本 `tests/wait-riscv-build.py`，进度保存在 `logs/result-monitor.jsonl`，进入构建后脚本退出，届时跟踪新日志和实际 worker。
 
 2026-11-13 12:19 UTC 监视到 riscv64 调度到 sg2044-0317:9；worker 日志实际开始时间 12:21:40 UTC，srcmd5 正确，内存上限约 84 GiB，已越过此前故障 worker 的初始化步骤并安装 LLVM 24 静态依赖。日志 `logs/build-riscv64-final-start.log`。排队期间还在目标机准备了备用原生诊断构建，源码及脚本在 `native-sources/`、`native-recipe/`、`tests/*native*`；大型静态包下载中，尚未编译，不计作任何验收。
+
+### 2026-11-14 验收范围与新增编译器支持包
+
+用户已确认目前无带 AMD GPU 的 riscv64 机器，先完成全部包的无 GPU 验证：riscv64 构建、实际 RPM 的 CPU/API 与离线编译。GPU 数值运算保留为未验证项，不再等待硬件答复。全栈状态及 LLVM PR 216938/233925、独立 rocm-clang 支持包的准备进展见全栈进度文档最新检查点。两项 PR 均未合并，必须保留来源、完整提交及实验性状态；使用系统 LLVM 24 相同源码基线，不扩展到主线工程。
