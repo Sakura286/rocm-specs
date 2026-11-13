@@ -36,6 +36,9 @@ BuildSystem:    cmake
 
 BuildOption(prep):  -n rccl
 
+# LLVM 23's HIP bundler requires the host triple's environment field.
+BuildOption(conf):  -DCMAKE_CXX_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
+BuildOption(conf):  -DCMAKE_HIP_COMPILER_TARGET=%{_target_cpu}-openruyi-linux-gnu
 BuildOption(conf):  -G Ninja
 BuildOption(conf):  -DGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DEXPLICIT_ROCM_VERSION=%{version}
@@ -120,11 +123,17 @@ sed -i -e 's@set(CMAKE_INSTALL_LIBDIR@#set(CMAKE_INSTALL_LIBDIR@' cmake/Dependen
 sed -i -e 's@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16")@target_link_options(rccl PRIVATE "SHELL:-Xoffload-linker -mllvm=-amdgpu-s-branch-bits=15" "SHELL:-Xoffload-linker -mllvm=-amdgpu-long-branch-factor=2" "SHELL:-Xoffload-linker -mllvm=-amdgpu-kernarg-preload-count=16" "SHELL:-Xoffload-linker --lto-partitions=%{lto_partitions}" "SHELL:-Xoffload-linker --verbose")@' CMakeLists.txt
 
 %conf -p
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 # The toolchain is reloaded by CMake compiler probes.
 export ROCM_PATH=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 
 %build
+# Also cover hipcc launched directly by generated kernel build scripts.
+export HIPCC_COMPILE_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
+export HIPCC_LINK_FLAGS_APPEND="--target=%{_target_cpu}-openruyi-linux-gnu"
 export ROCM_PATH=%{_prefix}
 export PATH=%{rocmllvm_bindir}:$PATH
 %ifarch riscv64
