@@ -8,24 +8,24 @@
 
 | 源码包 | 当前步骤 | x86_64 | riscv64 |
 | --- | --- | --- | --- |
-| amdsmi | 已提交，构建／验证中 | succeeded；实际 RPM Python 版本 API 通过 | building；产物验证待完成 |
+| amdsmi | 已提交，构建／验证中 | succeeded；实际 RPM Python 版本 API 通过 | succeeded；产物验证待完成 |
 | half | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | hipblas | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | hipblas-common | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
 | hipblaslt | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipcub | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipfft | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipify | 已提交，构建／验证中 | succeeded；实际 RPM 自动资源发现与 API 翻译通过（声明夹具） | building；产物验证待完成 |
+| hipcub | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
+| hipfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
+| hipify | 已提交，构建／验证中 | succeeded；实际 RPM 自动资源发现与 API 翻译通过（声明夹具） | succeeded；产物验证待完成 |
 | hiprand | 已提交，构建／验证中 | succeeded；实际 RPM CMake/版本 API/Philox CPU 算法通过 | unresolvable；产物验证待完成 |
 | hipsolver | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | hipsparse | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
-| hipsparselt | 已提交，构建／验证中 | blocked；产物验证待完成 | unresolvable；产物验证待完成 |
+| hipsparselt | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | miopen | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | python-tensile | 已提交，构建／验证中 | succeeded；Python 导入和 CLI 通过，生成验证待完成 | succeeded；Python 导入和 CLI 通过，生成验证待完成 |
 | rccl | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocblas | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocclr | 已提交，构建／验证中 | succeeded；指定 GNU host triple 后离线 HIP 编译/链接通过 | unresolvable；产物验证待完成 |
-| rocfft | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
+| rocfft | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocm-bandwidth-test | 已提交，构建／验证中 | building；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocm-cmake | 双架构实际 RPM 验收通过 | 通过 | 通过 |
 | rocm-core | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
@@ -36,7 +36,7 @@
 | rocminfo | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocprim | 已提交，构建／验证中 | succeeded；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocprofiler-register | 已提交，构建／验证中 | succeeded；实际 RPM CMake/API 通过 | succeeded；实际 RPM CMake/API 通过 |
-| rocr-runtime | 已提交，构建／验证中 | blocked；产物验证待完成 | blocked；产物验证待完成 |
+| rocr-runtime | 已提交，构建／验证中 | succeeded；产物验证待完成 | building；产物验证待完成 |
 | rocrand | 已提交，构建／验证中 | succeeded；实际 RPM CMake/版本 API/Philox CPU 算法通过 | unresolvable；产物验证待完成 |
 | rocsolver | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
 | rocsparse | 已提交，构建／验证中 | unresolvable；产物验证待完成 | unresolvable；产物验证待完成 |
@@ -89,3 +89,13 @@
 - rocFFT 在移除缺失的 SPIR-V fallback 后已完整编译库与客户端；RPM 清单随后暴露旧 `rtc_helper_crash` 条目。`7533410` 移除未安装的内部测试工具条目，并保留/打包实际运行时所需的版本化 `rocfft_rtc_helper`。准备了 `validation/fft-api-rtc.py` 对实际 RPM 的 CPU API 与独立 HIPRTC helper 进行离线编译验证，等待新 RPM。
 - hipFFT 客户端同样只移除缺失后端的 `amdgcnspirv` fallback；hipSPARSE 改用新版客户端开关以确实构建 benchmark，保留 Fortran，并显式配置 LLVM OpenMP 的库路径。rocSOLVER 在 riscv64 使用 jobs>=32 worker，编译池 8 配合已有每 TU 4 个 HIP 任务、链接池 1，限制嵌套并发。
 - RCCL x86_64 已推进至 5106/6013，HIPIFY riscv64 已进入最终链接，AMD SMI riscv64 已至 228/230；这些是构建过程进展，不是验收通过。继续跟踪全部 34 个包。
+
+
+## 后续检查点：实际产物覆盖与运行期缺陷
+
+- 当前 OBS 快照为 x86_64 23 个 succeeded、3 个 building、8 个 unresolvable；riscv64 11 个 succeeded、HSA building、22 个依赖待解。仅记录构建结果，未把无 GPU 的验证算成 GPU 运算验收。全部 34 个包的展开源码已审计与当前分支对应包内容一致，见 `source-audit/audit-current.json`。
+- HIPIFY riscv64 10.1.0-7.1 在 SG2044 用实际 RPM 自动资源发现完成 CUDA→HIP 声明夹具翻译，使用仅含声明的 cuda_runtime.h 夹具，未安装完整 CUDA SDK。剔除 LLVM LD_LIBRARY_PATH 后仍通过；`validation/hipify-native-riscv64.json` 保存输出及 SDK 预探测提示。
+- AMD SMI riscv64 已构建发布；隔离环境明确导入实际 RPM 的 Python 模块，加载 SONAME 27，版本 API 返回 27.1.0/build 2，见 `validation/amdsmi-native-riscv64.json`。测试环境原有 26.x 库不算本次验证；无 GPU 的目标机不能验证 GPU 监控功能。
+- rocFFT、hipFFT、hipCUB x86_64 实际 RPM 联合 CMake 消费者通过，导入各自 target；rocFFT/hipFFT 组件版本一致为 1.0.40，hipCUB block reduction 编译为 gfx1100/gfx1200。见 `validation/fft-cub-*x86_64.log`。rocFFT 独立 RTC helper 离线编译两个目标均生成 4544 字节 ELF（`fft-api-rtc-x86_64.json`）。`execution_info_create` 会枚举 HIP 设备，无 GPU 时失败；保留原失败日志，不声称该 API 或 FFT 运算通过。
+- RCCL 在 5100 多个编译任务后，CE-reduce 自定义命令仍使用不完整 host triple。`87bc074` 为独立 DeviceLinker 命令补上同一 GNU target；四目标直接 Clang 编译复现通过，完整重建待结果。常规 CMake compiler target 不会自动传播到这些自定义命令。
+- bandwidth-test 实际 RPM 退出时在 `PluginManagement_t::plugin_unload()` 空 vector::back 上触发断言，GDB 已定位。上游 develop 及文件的三项历史提交均仍有错误，未找到可回移提交；`e436b15` 增加有调查记录的一行发行版补丁：以实际被 pop 的库 handle 容器作为循环条件。另将默认插件搜索路径补全至 GNUInstallDirs 的 lib64/rocm_bandwidth_test/plugins。此为普通 C++ 运行时错误及安装路径修复，不是 LLVM API/ABI 补丁。重建后须重跑 CLI 与插件发现，旧 RPM 出包不能标记验收完成。
