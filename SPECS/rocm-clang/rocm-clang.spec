@@ -94,7 +94,7 @@ grep -- '-targets=host-%{_target_platform}-unknown,' host-triple.log
 
 %files
 %license llvm/LICENSE.TXT
-%doc clang/README.txt
+%doc README.md
 %{compiler_prefix}/bin/clang*
 %{compiler_prefix}/lib/libclang-cpp.so*
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: (C) 2026 Institute of Software, Chinese Academy of Sciences (ISCAS)
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include <stddef.h>
 template <size_t N, typename T>
 __attribute__((device)) constexpr size_t count(T (&)[N]) { return N; }
