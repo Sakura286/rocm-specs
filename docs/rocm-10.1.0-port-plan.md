@@ -10,14 +10,14 @@
 
 ## 当前检查点
 
-最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 正按上游提交替换本地兼容补丁，旧 revision 11 的构建只保留作实验对照。当前 LLVM 24 已原生支持 postopt，已删除不必要的双阶段替代实现；九项上游回移及其前置关系见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方尚待双架构构建和实际产物验证。
+最后更新：2026-11-13。当前阶段：rocm-cmake 已最终验收；rocm-llvm 已替换为九项有来源的上游回移，恢复系统 LLVM 原生 postopt，见[回移审查](rocm-llvm-10.1-upstream-backports.md)。新配方提交 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，x86_64 构建中，riscv64 正常排队等待六台符合约束的 worker；尚未最终验收。旧 revision 11 仅作实验对照。
 
 | 阶段 | 状态 | 证据与下一步 |
 | --- | --- | --- |
 | 分支及 workflow 初始化 | 已完成 | 初始化提交 `0102982542b5ec2e60bae2fdc9a49ceab2cc770b` 已推送；[Actions 43407438828](https://github.com/Sakura286/rocm-specs/actions/runs/43407438828) 成功，但没有触发任何包 |
 | 源码基线核实 | 标签和提交已确认 | 两包均使用 `therock-10.1`；归档 SHA-256 已记录于 SPEC，补丁已按新源码审查 |
 | rocm-cmake | 最终验收通过 | 双架构构建／发布、32 项 CTest 及实际 RPM 功能验证通过；详见文末验收记录 |
-| rocm-llvm | 上游回移与重验中 | 旧包提交 `2fe0c57` / OBS revision `11` 为实验对照；新配方恢复原生 postopt，并使用有来源的上游修复 |
+| rocm-llvm | 上游回移与重验中 | 配方 `a09779d` / OBS revision `13`；[Actions 43429675658](https://github.com/Sakura286/rocm-specs/actions/runs/43429675658) 成功，`.obsinfo` 已核对完整提交 |
 | 其余组件 | 未开始 | 两项基础包验收完成后再确定依赖顺序 |
 
 最近一次 OBS 查询（2026-11-13 初始化时）：`home:Sakura286:ROCm10` 已存在，无软件包，项目 `_config` 为空。新项目的真实包服务调用、token 权限、取源和构建链路尚未验证。开始执行时重新读取远端状态，不将这个时间点的结果视为实时状态。
@@ -27,7 +27,7 @@ ROCm10/rocm-cmake 已完成取源、构建、发布和最终验证。本地初�
 | 包 | x86_64 快速验证 | riscv64 构建和发布 | riscv64 产物功能验证 | 最终验收 |
 | --- | --- | --- | --- | --- |
 | rocm-cmake | 通过 | 成功并发布 | 目标机通过 | 通过 |
-| rocm-llvm | 旧 `11.1.nor` 通过；新上游回移配方待重验 | 旧 revision 11 在 sg2044-0317:9 构建，新配方待构建 | 新配方待验证 | 未通过 |
+| rocm-llvm | revision 13 在 epyc-massive-04:2 构建；revision 12 的 33 项 device/39 项 COMGR CTest 和 310 项 unit 已通过，唯一 lit 失败已用上游后续提交修复 | revision 13 排队，waiting for 6 compliant workers | 新配方待验证；系统 LLVM 的原始 postopt pipeline 4/4 通过 | 未通过 |
 
 ## 固定边界和目标环境
 
