@@ -104,6 +104,7 @@ cd libhsakmt/tests/kfdtest
 
 rm -f %{buildroot}%{_prefix}/share/doc/hsa-runtime64/LICENSE.md
 rm -f %{buildroot}%{_prefix}/share/doc/hsa-rocr/LICENSE.md
+rm -f %{buildroot}%{_datadir}/doc/rocr/LICENSE.md
 rm -f %{buildroot}%{_prefix}/share/doc/packages/%{name}/LICENSE.md
 rm -f %{buildroot}%{_libdir}/libhsakmt.*
 rm -rf %{buildroot}%{_libdir}/cmake/hsakmt
