@@ -10,11 +10,11 @@
 # Also, it need GPU to run test
 %bcond test 0
 
-%global rocm_release 7.2
-%global rocm_patch   4
+%global rocm_release 7.14
+%global rocm_patch   1
 %global rocm_version %{rocm_release}.%{rocm_patch}
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 23
 
 Name:           hipsolver
 Version:        %{rocm_version}
@@ -22,9 +22,11 @@ Release:        %autorelease
 Summary:        ROCm SOLVER marshalling library (LAPACK)
 License:        MIT
 URL:            https://github.com/ROCm/hipSOLVER
-#!RemoteAsset:  sha256:a69d71dfadd760eb6b4fd5f45df8586cc1f978e371ad32a006aa9ca6ed9afa03
-Source:         %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:dff6cad875aced2d1264709c8f0560738d2059705fd29f13262c41ab35bb5a12
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hipsolver.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipsolver
 
 BuildOption(conf):  -G Ninja
 %if %{with test}
@@ -42,10 +44,15 @@ BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
 BuildRequires:  cmake(hip)
+BuildRequires:  rocm-hip-devel >= 7.14.1
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocr-runtime-devel >= 7.14.1
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocblas-devel >= 7.14.1
 BuildRequires:  cmake(rocsolver)
+BuildRequires:  rocsolver-devel >= 7.14.1
 BuildRequires:  cmake(rocsparse)
+BuildRequires:  rocsparse-devel >= 7.14.1
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-fortran
 BuildRequires:  lld(major) = %{llvm_maj_ver}
@@ -57,6 +64,7 @@ BuildRequires:  rocm-llvm-macros
 %if %{with test}
 BuildRequires:  cmake(GTest)
 BuildRequires:  cmake(hipsparse)
+BuildRequires:  hipsparse-devel >= 7.14.1
 BuildRequires:  pkgconfig(openblas)
 %endif
 
