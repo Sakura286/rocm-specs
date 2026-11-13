@@ -5,9 +5,9 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.2.4
+%global rocm_version 10.1.0
 
-%global llvm_maj_ver 22
+%global llvm_maj_ver 24
 
 Name:           hipblas
 Version:        %{rocm_version}
@@ -15,18 +15,23 @@ Release:        %autorelease
 Summary:        ROCm BLAS marshalling library
 License:        MIT
 URL:            https://github.com/ROCm/hipBLAS
-#!RemoteAsset:  sha256:114feba5cf2cf8c89f37c7906b7d2697ab4ee8b17e42c25e1b58ec3646d02a57
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:453fa4099c8d5419fc2e2f03fd17c4b69b7d67a39259fa1841719189024d9fe0
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/hipblas.tar.gz
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipblas
 
 BuildRequires:  clang(major) = %{llvm_maj_ver}
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
+BuildRequires:  rocm-hip-devel >= %{rocm_version}
 BuildRequires:  cmake(hip)
 BuildRequires:  cmake(hipblas-common)
 BuildRequires:  cmake(hsa-runtime64)
+BuildRequires:  rocblas-devel >= %{rocm_version}
 BuildRequires:  cmake(rocblas)
+BuildRequires:  rocsolver-devel >= %{rocm_version}
 BuildRequires:  cmake(rocsolver)
 BuildRequires:  compiler-rt(major) = %{llvm_maj_ver}
 BuildRequires:  gcc-c++
