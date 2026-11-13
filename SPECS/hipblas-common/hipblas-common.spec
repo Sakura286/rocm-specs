@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: MulanPSL-2.0
 
-%global rocm_version 7.2.4
+%global rocm_version 7.14.1
 
 Name:           hipblas-common
 Version:        %{rocm_version}
@@ -13,10 +13,12 @@ Release:        %autorelease
 Summary:        Common files shared by hipBLAS and hipBLASLt
 License:        MIT
 URL:            https://github.com/ROCm/hipBLAS-common
-#!RemoteAsset:  sha256:4d02427f8c9074bd55d397e9e144aaaeb392f6a9b5503e30d5ecca057ac61dc8
-Source0:        %{url}/archive/rocm-%{version}.tar.gz
+#!RemoteAsset:  sha256:b35b7e4e2532aec9dabb0c263516423a7f69b7e4ef7d05e535a18a84234c46b0
+Source0:        https://github.com/ROCm/rocm-libraries/releases/download/therock-%{version}/hipblas-common.tar.gz
 BuildArch:      noarch
 BuildSystem:    cmake
+
+BuildOption(prep):  -n hipblas-common
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
