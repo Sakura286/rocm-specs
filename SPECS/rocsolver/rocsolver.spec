@@ -9,8 +9,8 @@
 
 %global llvm_maj_ver 24
 
-%ifarch riscv64
-# Each HIP compilation launches four GPU jobs; use a large native worker.
+%ifarch x86_64 riscv64
+# Large kernel builds need the 32-job workers on both validation architectures.
 #!BuildConstraint: hardware:jobs 32
 %endif
 
