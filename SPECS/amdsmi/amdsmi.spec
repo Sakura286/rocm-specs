@@ -70,6 +70,7 @@ to monitor and control AMD devices.
 
 %package        devel
 Summary:        Libraries and headers for %{name}
+Provides:       %{name}-static = %{version}-%{release}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description    devel
@@ -100,6 +101,8 @@ sed -i -e 's@env python3@python3@' amdsmi_cli/*.py
 # Upstream installs the module directly into the configured Python sitearch.
 # Remove the duplicate relocatable-tree copy; use the system SONAME loader.
 rm -rf %{buildroot}%{_datadir}/amd_smi
+# Wheel generation helper is not used by the system package.
+rm -f %{buildroot}%{_datadir}/tools/disable_system_fallback.py
 
 # E: non-executable-script .../amdsmi_cli/amdsmi_cli_exceptions.py 644 /usr/bin/env python3
 chmod a+x %{buildroot}%{_libexecdir}/amdsmi_cli/amdsmi_*.py
@@ -141,8 +144,12 @@ fi
 %{_includedir}/amd_smi/
 %{_libdir}/cmake/amd_smi/
 %{_libdir}/libamd_smi.so
+%{_libdir}/libamd_smi_static.a
+%{_libdir}/libamdsminic.a
+%{_includedir}/rocm_smi/rocm_smi_logger.h
 %ifarch x86_64
 %{_includedir}/*.h
+%{_includedir}/e_smi/
 %{_libdir}/libgoamdsmi_shim64.so
 %endif
 
