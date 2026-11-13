@@ -1,22 +1,27 @@
 From: CHEN Xuan <chenxuan@iscas.ac.cn>
 Subject: [PATCH] comgr: update tests for LLVM 24 triples and system headers
 
-Accept canonical AMDGPU subarchitecture triples while retaining the checks
-for processor attributes and rewritten metadata. Match LLVM 24's gfx1250
-feature model. Keep the libstdc++ coexistence test independent of runtime
-accessor device annotations by using constant evaluation.
+Check exact canonical AMDGPU subarchitecture triples for extracted images;
+LLVM 24 no longer needs target-cpu attributes on these device functions.
+Retain checks for rewritten metadata and match the gfx1250 feature model.
+Use compile-time checked array indexing in the libstdc++ coexistence test
+to avoid GNU operator[] calling a host-only bounds assertion handler.
 
 --- a/amd/comgr/test-lit/cache-tests/unbundle-cached.hip
 +++ b/amd/comgr/test-lit/cache-tests/unbundle-cached.hip
-@@ -32,7 +32,7 @@
+@@ -32,9 +32,9 @@
  // RUN: COUNT=$(ls "%t.cache" | wc -l)
  // RUN: [ 3 -eq $COUNT ]
 
 -// BOTH: target triple = "amdgcn-amd-amdhsa"
-+// BOTH: target triple = "{{amdgcn|amdgpu[0-9]+\.[0-9a-f]+}}-amd-amdhsa"
- // GFX9: "target-cpu"="gfx900"
- // GFX10: "target-cpu"="gfx1030"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target triple =
++// GFX9-SAME: "amdgpu9.00-amd-amdhsa"
++// GFX10-SAME: "amdgpu10.30-amd-amdhsa"
 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {
 --- a/amd/comgr/test-lit/device-lib-linking.cl
 +++ b/amd/comgr/test-lit/device-lib-linking.cl
 @@ -6,7 +6,7 @@
@@ -30,26 +35,34 @@ accessor device annotations by using constant evaluation.
  // CHECK: define internal float @_Z4cbrtf
 --- a/amd/comgr/test-lit/unbundle.hip
 +++ b/amd/comgr/test-lit/unbundle.hip
-@@ -18,7 +18,7 @@
+@@ -18,9 +18,9 @@
  // RUN: unbundle %t.compressed-bundle.bc hip-amdgcn-amd-amdhsa-unknown-gfx1030 %t.compressed.gfx1030.bc
  // RUN: %llvm-dis %t.compressed.gfx1030.bc -o - | %FileCheck --check-prefixes=BOTH,GFX10 %s
  //
 -// BOTH: target triple = "amdgcn-amd-amdhsa"
-+// BOTH: target triple = "{{amdgcn|amdgpu[0-9]+\.[0-9a-f]+}}-amd-amdhsa"
- // GFX9: "target-cpu"="gfx900"
- // GFX10: "target-cpu"="gfx1030"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target triple =
++// GFX9-SAME: "amdgpu9.00-amd-amdhsa"
++// GFX10-SAME: "amdgpu10.30-amd-amdhsa"
 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {
 --- a/amd/comgr/test-lit/unpackage-test.hip
 +++ b/amd/comgr/test-lit/unpackage-test.hip
-@@ -42,7 +42,7 @@
+@@ -42,9 +42,9 @@
  // RUN: unpackage --expect-fail \
  // RUN: %t.corrupt.bc amdgcn-amd-amdhsa gfx900 %t.corrupt.output.bc
  //
 -// BOTH: target triple = "amdgcn-amd-amdhsa"
-+// BOTH: target triple = "{{amdgcn|amdgpu[0-9]+\.[0-9a-f]+}}-amd-amdhsa"
- // GFX9: "target-cpu"="gfx900"
- // GFX10: "target-cpu"="gfx1030"
+-// GFX9: "target-cpu"="gfx900"
+-// GFX10: "target-cpu"="gfx1030"
++// BOTH: target triple =
++// GFX9-SAME: "amdgpu9.00-amd-amdhsa"
++// GFX10-SAME: "amdgpu10.30-amd-amdhsa"
 
+ __attribute__((device))
+ void add_value(float* a, float* b, float* res) {
 --- a/amd/comgr/test-lit/hotswap/rewriter/hotswap-rewrite-e2e.hip
 +++ b/amd/comgr/test-lit/hotswap/rewriter/hotswap-rewrite-e2e.hip
 @@ -21,7 +21,7 @@
@@ -91,8 +104,9 @@ accessor device annotations by using constant evaluation.
 
  extern "C" __attribute__((global)) void test_kernel(int *out) {
 -  std::array<int, 3> a = {1, 2, 3};
-+  // This checks header coexistence, not device annotations of runtime GNU
-+  // library accessors. Constant evaluation also works with GCC 16 headers.
+-  out[0] = a[0] + a[1] + a[2];
++  // Check header coexistence with compile-time checked indexing. GNU array
++  // operator[] may call a host-only assertion handler even for valid indices.
 +  constexpr std::array<int, 3> a = {1, 2, 3};
-   out[0] = a[0] + a[1] + a[2];
++  out[0] = std::get<0>(a) + std::get<1>(a) + std::get<2>(a);
  }
