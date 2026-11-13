@@ -14,6 +14,9 @@
 
 %global llvm_maj_ver 23
 
+# Keep this in the recipe: server-generated _constraints has a service prefix.
+#!BuildConstraint: hardware:jobs 32
+
 Name:           miopen
 Version:        %{rocm_version}
 Release:        %autorelease
