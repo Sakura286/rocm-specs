@@ -34,6 +34,10 @@ BuildSystem:    cmake
 BuildOption(prep):  -n rocfft
 
 Patch0:         0001-cmake-use-gnu-installdirs.patch
+# The system Clang cannot emit a double-float RDC host registration object on
+# riscv64 (LLVM PR 168164 is unmerged), so inline the default callbacks and
+# build the library without relocatable device code there.
+Patch1:         0002-riscv64-inline-default-callbacks.patch
 
 BuildOption(conf):  -G Ninja
 # Offload bundle IDs require an explicit host environment component.
@@ -49,18 +53,23 @@ BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-lin
 %else
 BuildOption(conf):  -DCMAKE_HIP_FLAGS_INIT="--target=%{_target_cpu}-openruyi-linux-gnu"
 %endif
+%ifarch riscv64
+# clang-linker-wrapper compiles the RDC host registration object without the
+# lp64d host features, producing a soft-float object that GNU ld and LLD both
+# reject when linking against the double-float toolchain.  Inline the default
+# callbacks instead and keep the library free of relocatable device code.
+BuildOption(conf):  -DROCFFT_INLINE_DEFAULT_CALLBACKS=ON
+%endif
 BuildOption(conf):  -DAMDGPU_TARGETS=%{rocm_gpu_list_default}
 BuildOption(conf):  -DBUILD_CLIENTS_TESTS=ON
 BuildOption(conf):  -DROCFFT_BUILD_OFFLINE_TUNER=OFF
 BuildOption(conf):  -DROCFFT_KERNEL_CACHE_ENABLE=OFF
 BuildOption(conf):  -DSQLITE_USE_SYSTEM_PACKAGE=ON
 BuildOption(conf):  -DCMAKE_C_COMPILER=%{rocmllvm_bindir}/clang
-BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin/clang++
+BuildOption(conf):  -DCMAKE_CXX_COMPILER=%{rocmllvm_bindir}/clang++
 
 BuildRequires:  boost-devel
 BuildRequires:  clang(major) = %{llvm_maj_ver}
-# LLVM PR 168164 propagates the lp64d host features to RDC registration objects.
-BuildRequires:  rocm-clang >= 24.0.0~git20261109.b1de84e-12
 BuildRequires:  clang%{llvm_maj_ver}-tools-extra
 BuildRequires:  cmake
 BuildRequires:  cmake(amd_comgr)
@@ -116,13 +125,11 @@ sed -i '/target_.*_options(.*--offload-arch=amdgcnspirv/d' clients/tests/CMakeLi
 %conf -p
 # Preserve compiler and OpenMP probe diagnostics when configuration fails.
 trap 'status=$?; if [ "$status" -ne 0 ]; then cat %{_vpath_builddir}/CMakeFiles/CMakeConfigureLog.yaml; fi; exit "$status"' EXIT
-export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
-export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
+export PATH=%{rocmllvm_bindir}:$PATH
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %build -p
-export HIP_CLANG_PATH=%{_libdir}/rocm/llvm%{llvm_maj_ver}/bin
-export PATH="$HIP_CLANG_PATH":%{rocmllvm_bindir}:$PATH
+export PATH=%{rocmllvm_bindir}:$PATH
 export LIBRARY_PATH=%{_libdir}/llvm%{llvm_maj_ver}/lib/%{_target_platform}${LIBRARY_PATH:+:$LIBRARY_PATH}
 
 %install -a

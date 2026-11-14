@@ -1,0 +1,141 @@
+diff --git a/library/src/CMakeLists.txt b/library/src/CMakeLists.txt
+index 3fc1bd5..0d8e9bc 100644
+--- a/library/src/CMakeLists.txt
++++ b/library/src/CMakeLists.txt
+@@ -20,6 +20,16 @@
+ # THE SOFTWARE.
+ # #############################################################################
+ 
++# Without relocatable device code the default callback function pointers must
++# be inlined into the RTC kernels instead of being resolved from device
++# symbols.  This keeps the library linkable on targets whose toolchain cannot
++# emit RDC host registration objects with the right ABI.
++option( ROCFFT_INLINE_DEFAULT_CALLBACKS
++        "Inline default callbacks in RTC kernels instead of using RDC" OFF )
++if( ROCFFT_INLINE_DEFAULT_CALLBACKS )
++  add_compile_definitions( ROCFFT_INLINE_DEFAULT_CALLBACKS )
++endif()
++
+ # ########################################################################
+ # A helper function to prefix a source list of files with a common path into a new list (non-destructive)
+ # ########################################################################
+@@ -422,8 +432,13 @@ endif()
+ # need to be built as relocatable device code (causes failure at link
+ # stage on Windows)
+ if( NOT WIN32 AND NOT BUILD_CODE_COVERAGE )
+-  target_compile_options( rocfft PRIVATE -fgpu-rdc )
+-  target_link_options( rocfft PRIVATE -fgpu-rdc )
++  if( ROCFFT_INLINE_DEFAULT_CALLBACKS )
++    # The inlined default callbacks make the host library free of device
++    # symbols, so it does not need relocatable device code.
++  else()
++    target_compile_options( rocfft PRIVATE -fgpu-rdc )
++    target_link_options( rocfft PRIVATE -fgpu-rdc )
++  endif()
+ endif()
+ 
+ if( ROCFFT_MPI_ENABLE )
+diff --git a/library/src/device/generator/generator.h b/library/src/device/generator/generator.h
+index 75fc268..d3e38e6 100644
+--- a/library/src/device/generator/generator.h
++++ b/library/src/device/generator/generator.h
+@@ -805,9 +805,18 @@ public:
+                     ret += "auto load_cb = [load_cb_fn](" + scalar_type
+                            + "* data, size_t offset, void* cbdata, void* sharedMem)\n";
+                     ret += "  {\n";
++#ifdef ROCFFT_INLINE_DEFAULT_CALLBACKS
++                    // A null pointer selects the inlined default callback, so
++                    // the kernel does not need a library device symbol.
++                    ret += "      auto real_cb = load_cb_fn ? reinterpret_cast<typename "
++                           "callback_type<real_type_t<"
++                           + scalar_type + ">>::load>(load_cb_fn) : load_cb_default<real_type_t<"
++                           + scalar_type + ">>;\n";
++#else
+                     ret += "      auto real_cb = reinterpret_cast<typename "
+                            "callback_type<real_type_t<"
+                            + scalar_type + ">>::load>(load_cb_fn);\n";
++#endif
+                     ret += "      return " + scalar_type + "\n";
+                     ret += "      {\n";
+                     ret += "          real_cb(reinterpret_cast<real_type_t<" + scalar_type
+@@ -847,9 +856,16 @@ public:
+             {
+                 if(funcptr_callback)
+                 {
++#ifdef ROCFFT_INLINE_DEFAULT_CALLBACKS
++                    return "auto load_cb = load_cb_fn ? reinterpret_cast<typename "
++                           "callback_type<"
++                           + scalar_type + ">::load>(load_cb_fn) : load_cb_default<"
++                           + scalar_type + ">;\n";
++#else
+                     return "auto load_cb = reinterpret_cast<typename "
+                            "callback_type<"
+                            + scalar_type + ">::load>(load_cb_fn);\n";
++#endif
+                 }
+                 else
+                 {
+@@ -924,9 +940,18 @@ public:
+                            + "* data, size_t offset, " + scalar_type
+                            + " elem, void* cbdata, void* sharedMem)\n";
+                     ret += "  {\n";
++#ifdef ROCFFT_INLINE_DEFAULT_CALLBACKS
++                    // A null pointer selects the inlined default callback, so
++                    // the kernel does not need a library device symbol.
++                    ret += "      auto real_cb = store_cb_fn ? reinterpret_cast<typename "
++                           "callback_type<real_type_t<"
++                           + scalar_type + ">>::store>(store_cb_fn) : store_cb_default<real_type_t<"
++                           + scalar_type + ">>;\n";
++#else
+                     ret += "      auto real_cb = reinterpret_cast<typename "
+                            "callback_type<real_type_t<"
+                            + scalar_type + ">>::store>(store_cb_fn);\n";
++#endif
+                     ret += "      real_cb(reinterpret_cast<real_type_t<" + scalar_type
+                            + ">*>(data), offset * 2, elem.x, cbdata, sharedMem);\n";
+                     ret += "      real_cb(reinterpret_cast<real_type_t<" + scalar_type
+@@ -960,9 +985,16 @@ public:
+             {
+                 if(funcptr_callback)
+                 {
++#ifdef ROCFFT_INLINE_DEFAULT_CALLBACKS
++                    return "auto store_cb = store_cb_fn ? reinterpret_cast<typename "
++                           "callback_type<"
++                           + scalar_type + ">::store>(store_cb_fn) : store_cb_default<"
++                           + scalar_type + ">;\n";
++#else
+                     return "auto store_cb = reinterpret_cast<typename "
+                            "callback_type<"
+                            + scalar_type + ">::store>(store_cb_fn);\n";
++#endif
+                 }
+                 else
+                 {
+diff --git a/library/src/powX.cpp b/library/src/powX.cpp
+index 9021414..598f312 100644
+--- a/library/src/powX.cpp
++++ b/library/src/powX.cpp
+@@ -440,6 +440,15 @@ enum struct SetCallbackType
+ 
+ void SetDefaultCallback(const TreeNode* node, const SetCallbackType& type, void** cb)
+ {
++#ifdef ROCFFT_INLINE_DEFAULT_CALLBACKS
++    // The RTC kernel falls back to its inlined default callback when the
++    // function pointer is null.  Resolving the library device symbols here
++    // would make the host library require relocatable device code.
++    (void)node;
++    (void)type;
++    *cb = nullptr;
++    return;
++#else
+     auto result = hipSuccess;
+ 
+     auto array_type = (type == SetCallbackType::LOAD) ? node->inArrayType : node->outArrayType;
+@@ -521,6 +530,7 @@ void SetDefaultCallback(const TreeNode* node, const SetCallbackType& type, void*
+ 
+     if(result != hipSuccess)
+         throw std::runtime_error("hipMemcpyFromSymbol failure");
++#endif
+ }
+ 
+ // Internal plan executor.
