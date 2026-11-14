@@ -14,7 +14,7 @@
 | hipblas-common | 本阶段无 GPU 验证通过 | succeeded；CMake/枚举 API | succeeded；CMake/枚举 API |
 | hipblaslt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 | unresolvable；依赖待解 |
 | hipcub | 本阶段无 GPU 验证通过 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 |
-| hipfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API | unresolvable；依赖待解 |
+| hipfft | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | hipify | 本阶段无 GPU 验证通过 | succeeded；实际资源发现/CUDA→HIP 声明夹具 | succeeded；实际资源发现/CUDA→HIP 声明夹具 |
 | hiprand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
 | hipsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/Jacobi 配置与非法参数 API | unresolvable；依赖待解 |
@@ -25,7 +25,7 @@
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | building；跟踪新结果 |
+| rocfft | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
 | rocm-clang | 本阶段无 GPU 验证通过 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
@@ -40,11 +40,11 @@
 | rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
 | rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
 | rocsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/3.37.0 版本 API | unresolvable；依赖待解 |
-| rocsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | scheduled；跟踪新结果 |
+| rocsparse | 继续构建／实际 RPM 验证 | succeeded；CMake/矩阵描述符 create/set/get/destroy | building；跟踪新结果 |
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-14T00:25:16.112597+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-14T01:33:39.098300+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -248,3 +248,13 @@ export PATH="$HIP_CLANG_PATH:/usr/lib64/llvm24/bin:$PATH"
 - 原生 rocSPARSE 源码预构建库也已实际加载，并通过描述符 create/default/set/get/destroy，见 `validation/rocsparse-source-api-riscv64.log`；JSON 明确 actual_obs_rpm=false，不计入正式 25/35。
 - 调度/构建简报：在工作区运行 `python3 tmp/rocm10-stack/brief-native-build.py rocsparse rocfft`，保存完整活动日志并只输出任务数/少量错误。常驻正式产物检查仍为 `finish-native-pending.py`，账本 `validation/native-pending-acceptance.json` 当前只有本轮新增的 rocm-clang；此前 24 包记录在既有验收表。完成后用 refresh-status-doc.py 更新表格。
 - 保持 native root 的串行 staging；当前自动脚本正在等待产物，没有运行测试，可按需补依赖。stage-artifacts.py 已同时校验实际 host 与每个 RPM 的架构，拒绝 source RPM；父项目源码 RPM 移到 build-dependencies/lapack，不加入依赖自动扫描。
+
+### 原生 FFT/hipFFT 已完成验收：27/35
+
+- rocFFT 正式 riscv64 完整构建成功（3386 秒，sg2044-0317:8，2026-11-14 01:03:36 UTC 完成）。原先在约第 78/106 步出现的 double-float/soft-float 链接错误已消失；新实际 librocfft.so 的 ELF flags=0x5（RVC, double-float ABI）。沿用 LLVM PR 168164 的 host CPU/features 机制，没有改写 ELF flags 或降低宿主 ABI。旧完整失败日志与 history 已另存 `validation/rocfft-riscv64-before-host-features*`，新完成日志为 `rocfft-build-riscv64.log`。
+- 实际 RPM 的 CMake/1.0.40 版本/plan description create/destroy 通过；RTC helper 分别生成 gfx1100/gfx1200 的 4544 字节 ELF64 little-endian 代码对象，e_machine=224（AMDGPU），flags 分别为 0x41/0x48。两份实际代码对象已同步到本机 `validation/native-codeobjects/`，检查记录 `validation/fft-rtc-elf-riscv64.json`，运行记录 `validation/fft-rtc-final-riscv64.log`。execution-info API 需要 HIP 设备枚举，不声称该 API 或 GPU FFT 数值运算通过。
+- hipFFT 原生构建成功，实际 RPM 的联合 CMake 导入、rocFFT=1.0.40 / hipFFT=10040（1.0.40）版本 API，以及同消费者的 hipCUB gfx1100/gfx1200 编译通过，见 `validation/fft-joint-final-riscv64.log`。正式验收账本新增 rocfft（01:04 UTC）和 hipfft（01:17 UTC）；连同 rocm-clang 及之前 24 包，共 27/35。
+- rocSPARSE 已在 sg2044-0317:8 正式构建，当前约 320/622，无新错误。剩余 8 包为 rocSPARSE、rocSOLVER、hipBLAS、hipSPARSE、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen；继续全部构建和实际 RPM，不重新等待已完成 FFT 分支。
+- 自动跟踪入口 `monitor-native-once.py` 汇总当前未完成原生包及实际验收数；内部仍调用 brief-native-build.py 保存完整活动日志。`finish-native-pending.py` 持续串行执行正式产物检查，不能再启动并发 staging。若其日志含 VALIDATION FAILED，先处理对应检查；已通过项保留在 native-pending-acceptance.json。
+
+rocFFT 源码审计：OBS revision 11 / srcmd5 `24340bdcf743b993d6d22c50ec5cec8a` / Git `a583281f42c2205c5e3f819158ce4755dc4954fe`；配方内容与当前 HEAD 一致。
