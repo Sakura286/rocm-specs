@@ -8,9 +8,13 @@
 
 审查结果：postopt 是当前系统 LLVM 已支持的上游功能，不需补丁；恢复原始调用。九项上游回移替换自写 API 和测试适配，剩余本地补丁限于发行版构建路径、测试环境及增加回归覆盖。上游完整 lgamma_r 检查已恢复；本地 x86_64 device-libs 33/33、LLVM 原始 postopt pipeline 4/4 通过，正式双架构 RPM 已完成重验，见当前检查点。后文各轮构建记录保留为历史，其中“AMD 私有 postopt 缺失”的判断已被本次审查纠正。
 
+## 用户最新方向（2026-11-14）
+
+澄清早期建议的适用范围：兼容性修复应优先查看 comgr/device-libs/hipcc 的提交历史并回移组件补丁，也就是只改 `rocm-llvm`；不修改 openRuyi 的 `llvm-snapshot`，也不新增私有 Clang 前端包（新增 rocm-clang 与把 LLVM bundle 进 rocm-llvm 同类，均不采用）。rocsparse/rocfft/miopen 三个下游阻塞点改为各包内最小修复：rocsparse 用参数包大小替代设备 constexpr 调用；rocfft 在 riscv64 关闭 RDC 并把默认 callback 内联进 RTC 内核；miopen 恢复 GNU host target 并用 `-resource-dir` 指向构建内 compiler-rt 别名。具体方案与验证见全栈进度文档的“决策修正”一节。
+
 ## 当前检查点
 
-基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为原有 33 个源码包，加上新依赖 rocm-stinkytofu 与 LLVM 24 支持包 rocm-clang，共 35 个；持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
+基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为原有 33 个源码包，加上新依赖 rocm-stinkytofu，共 34 个；2026-11-14 已按用户指示删除 rocm-clang 私有前端包，三个受影响包改为包内修复（进行中）；持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
 
 `rocm-llvm` 配方 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，实际 RPM `10.1.0-13.1.nor`。两个架构均通过 device-libs CTest 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail。实际 RPM 的 21 项检查（含 COMGR、嵌入 libc++、缓存、hipcc gfx1100 编译和无未定义符号检查）与 CMake 下游导入／运行、LLVM 24 宏检查均通过。riscv64 在 `sh-plct-sg2044` 原生执行，RPM 校验值与下载产物一致。
 
@@ -222,4 +226,4 @@ x86_64 最新实际产物 `10.1.0-11.1.nor` 已全部复验通过，`_statistics
 
 ### 2026-11-14 验收范围与新增编译器支持包
 
-用户已确认目前无带 AMD GPU 的 riscv64 机器，先完成全部包的无 GPU 验证：riscv64 构建、实际 RPM 的 CPU/API 与离线编译。GPU 数值运算保留为未验证项，不再等待硬件答复。全栈状态及 LLVM PR 216938/233925/168164、独立 rocm-clang 支持包的最终产物验证见全栈进度文档最新检查点。三项 PR 均未合并，必须保留来源、完整提交及实验性状态；使用系统 LLVM 24 相同源码基线，不扩展到主线工程。当前两项基础包与支持包的双架构验收已经完成，继续其余全部组件。
+用户已确认目前无带 AMD GPU 的 riscv64 机器，先完成全部包的无 GPU 验证：riscv64 构建、实际 RPM 的 CPU/API 与离线编译。GPU 数值运算保留为未验证项，不再等待硬件答复。2026-11-14 晚用户澄清后已回退私有前端方案：rocm-clang 包删除，rocsparse/rocfft/miopen 改为各自包内修复；三项 LLVM PR（216938/233925/168164）均未合入，仅保留为参考记录，不再作为本分支交付物；`llvm-snapshot` 不变，rocm-llvm 的组件回移保持不变。当前两项基础包双架构验收已完成，继续其余组件，详见全栈进度文档最新检查点。

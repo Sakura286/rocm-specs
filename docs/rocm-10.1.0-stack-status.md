@@ -1,6 +1,6 @@
 # ROCm 10.1.0 全栈进度
 
-本任务包括原有 33 个 ROCm 源码包，并补入 10.1 新依赖 rocm-stinkytofu 和 LLVM 24 支持包 rocm-clang（共 35 个）。基础包阶段已完成，持续推进剩余组件；x86_64 是快速验证，riscv64 是最终验收。构建成功与实际 RPM 功能验证分别记录；用户已明确本阶段先完成无 GPU 验证；GPU 运算另列为未验证。
+本任务包括原有 33 个 ROCm 源码包，并补入 10.1 新依赖 rocm-stinkytofu，共 34 个；此前新增的 LLVM 24 支持包 rocm-clang 已于 2026-11-14 按用户指示删除，三个受影响包改为各自包内修复，见下方“决策修正”。基础包阶段已完成，持续推进剩余组件；x86_64 是快速验证，riscv64 是最终验收。构建成功与实际 RPM 功能验证分别记录；用户已明确本阶段先完成无 GPU 验证；GPU 运算另列为未验证。
 
 源码统一基线：rocm-systems `therock-10.1` → `7da43026e4f2ef7600433c38c820732f7a205d22`；rocm-libraries → `39d8d60365d2272a5366f76ccb3bfba24b219eaf`。TheRock 固定 half `207ee58595a64b5c4a70df221f1e6e704b807811`（与旧配方相同），HIPIFY `0e051929fe80ccc0af6dc194ddb990aa82eec97d`。归档校验值逐包核实并记入 SPEC。`rocm-bandwidth-test` 不在 systems 10.1 发布中，也无 therock-10.1 标签；采用独立仓库最新标签 `rocm-7.2.4` 的固定提交 `06dd9df114855ed2dc38cd731ad214066a62d6da`（从旧 6.4.2 升级），RPM 保留其真实发布版本 7.2.4，依赖 10.1.0 HSA。上游证据与实验目录：工作区 `tmp/rocm10-stack/`。
 
@@ -12,7 +12,7 @@
 | half | 本阶段无 GPU 验证通过 | succeeded；CMake/half 运算 | succeeded；CMake/half 运算 |
 | hipblas | 本阶段无 GPU 验证通过 | succeeded；CMake/3.7.0 属性 API | succeeded；CMake/3.7.0 属性 API |
 | hipblas-common | 本阶段无 GPU 验证通过 | succeeded；CMake/枚举 API | succeeded；CMake/枚举 API |
-| hipblaslt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 | building；跟踪新结果 |
+| hipblaslt | 本阶段无 GPU 验证通过 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 |
 | hipcub | 本阶段无 GPU 验证通过 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 |
 | hipfft | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | hipify | 本阶段无 GPU 验证通过 | succeeded；实际资源发现/CUDA→HIP 声明夹具 | succeeded；实际资源发现/CUDA→HIP 声明夹具 |
@@ -20,14 +20,13 @@
 | hipsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/Jacobi 配置与非法参数 API | succeeded；CMake/Jacobi 配置与非法参数 API |
 | hipsparse | 本阶段无 GPU 验证通过 | succeeded；CMake/矩阵描述符 create/set/get/destroy | succeeded；CMake/矩阵描述符 create/set/get/destroy |
 | hipsparselt | 本阶段无 GPU 验证通过 | succeeded；22 上游 CPU 回归、实际 property/version/error API | succeeded；22 上游 CPU 回归、实际 property/version/error API |
-| miopen | 继续构建／实际 RPM 验证 | succeeded；实际 RPM API 子集/CMake/tensor 描述符 | unresolvable；依赖待解 |
+| miopen | 重新构建／实际 RPM 验证 | 待新构建；GNU target + resource-dir 别名 | 待新构建；GNU target + resource-dir 别名 |
 | python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 |
+| rocfft | 重新构建／实际 RPM 验证 | 待新构建；系统 clang 24，riscv64 关闭 RDC | 待新构建；系统 clang 24，riscv64 关闭 RDC |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
-| rocm-clang | 本阶段无 GPU 验证通过 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
 | rocm-core | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | rocm-llvm | 本阶段无 GPU 验证通过 | succeeded；COMGR、HIP/设备库离线编译 | succeeded；COMGR、HIP/设备库离线编译 |
@@ -40,11 +39,25 @@
 | rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
 | rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
 | rocsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/3.37.0 版本 API | succeeded；CMake/3.37.0 版本 API |
-| rocsparse | 本阶段无 GPU 验证通过 | succeeded；CMake/矩阵描述符 create/set/get/destroy | succeeded；CMake/矩阵描述符 create/set/get/destroy |
+| rocsparse | 重新构建／实际 RPM 验证 | 待新构建；系统 clang 24 + 一行补丁 | 待新构建；系统 clang 24 + 一行补丁 |
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-14T12:12:56.722523+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-14T12:44:33.935169+00:00；下方追加记录保留历史诊断。
+
+## 2026-11-14 决策修正：删除私有 Clang 前端，三包就地修复
+
+用户澄清：先前“查看 comgr/device-libs/hipcc 提交历史并回移”的建议只针对 `rocm-llvm` 自身的组件适配；随后为 rocSPARSE/rocFFT/MIOpen 新增 `rocm-clang` 私有前端属于理解偏差。私有前端与把 LLVM 打包进 `rocm-llvm` 同类，不采用。现行决定：
+
+- 删除 `SPECS/rocm-clang` 及 OBS 包 `home:Sakura286:ROCm10/rocm-clang`；`llvm-snapshot` 不动，暂不向发行版 LLVM 提补丁。
+- `rocm-llvm` 继续只使用组件回移补丁（见该包补丁清单），这是本分支唯一应改的“LLVM 相关”包。
+- 三个受影响包各自修复（均已提交，待新 OBS 构建与产物验证）：
+  - rocsparse：clang 24 把设备函数内 `static constexpr` 局部变量误判为宿主全局初始化（上游 PR 233925 未合入）。`2000-csrmm-row-split-avoid-device-constexpr-initializer.patch` 把 `sizeofarray(SUBWFSIZES)` 换成同一参数包的 `sizeof...(SUBWFSIZES_LIST)`，元素个数与设备 IR 均不变。
+  - rocfft：`clang-linker-wrapper` 生成的 RDC 宿主 registration 对象未带 `lp64d` host features（上游 PR 168164 未合入），riscv64 链接必然失败。`0002-riscv64-inline-default-callbacks.patch` 在 riscv64 关闭 `-fgpu-rdc`，并把默认 callback 内联进 RTC 内核（`SetDefaultCallback` 返回空指针、生成代码回退 `*_cb_default<T>`）；x86_64 保持原 RDC 构建。
+  - miopen：恢复显式 GNU host target（四段 offload bundle ID）并沿用 rocBLAS／RCCL 已验证的 `-resource-dir` 构建内别名，使 compiler-rt 仍取自发行版目录；不再需要私有前端的原生 triple。
+- 三项上游 PR 仍记录为参考与未合入状态，不再作为本分支交付物；相关历史段落（“独立 Clang 已接入”等）保留为历史记录。
+- 表格与后续验收在三个包的新 OBS 构建、实际 RPM 验证通过前不得标记完成。rocfft 的 riscv64 回调运行期行为、全部 GPU 数值计算仍未验证。
+
 
 ## 当前修复与验收证据
 
@@ -132,7 +145,7 @@
 - rocSPARSE 完整构建遇到设备函数静态 constexpr 变量调用设备 constexpr helper，被误判为宿主全局初始化。LLVM 上游 PR [233925](https://github.com/llvm/llvm-project/pull/233925)，提交 `6b8c5dd883ca6fc2a29e39d35b72fbadeb4a4a26`，直接修正该执行空间检查，尚未合并；较大的 PR 222985 处理不同的静态初始化规则，不作为必要前置回移。ROCm develop 的 sizeofarray 调用和本资产一致，未发现 ROCm 侧已合入修复。
 - 正在准备独立 `SPECS/rocm-clang/`，从系统 snapshot 的同一完整提交构建 Clang 和 linker-wrapper，复用系统 LLVM shared library，不重建 LLVM/运行库。安装到 `/usr/lib64/rocm/llvm24`，携带上述两项有来源的上游候选修复及原发行版目标配置；发行版 GCC 搜索列表补丁存在缺失逗号，此副本校正该排版错误。源码 SHA-256 已验证为 `84d435841d4227537f27ba89ca7647013264b380050c520b28c74e452e466963`，完整解包和 fuzz=0 应用检查仍在进行，尚未接入 OBS。下一步验证 standalone CMake 配置、提交本支持包、接入 ROCm10，然后让 rocSPARSE 使用它。不要仅为通过编译自行改写 sizeofarray 逻辑。
 
-### 独立 Clang 已接入（最新恢复入口）
+### （已废弃，保留历史）独立 Clang 已接入
 
 - 新增支持包后共 35 个 OBS 源码包。`rocm-clang` 配方 `6a2dd2a`、offload 检查依赖 `61cfc2c`、GCC 的 LLD 选项修复 `8f5de87`、LLVMConfig 导入依赖补齐 `fb8f7e9` 均已推送。包 `_service` 已核实仅取 `rocm10/SPECS/rocm-clang/*`；全部四个补丁在精确 snapshot 归档上 fuzz=0 应用，见 `rocm-clang-patch-check.log` / `rocm-clang-source-check.log`。PR 233925 的 SemaCUDA.cpp 在 SG2044 用真实 snapshot headers 已编译为对象，`validation/SemaCUDA-upstream-233925-build.log` 为空且命令成功。
 - `rocsparse` 配方 `d9a77e1` 显式依赖新工具，通过 HIP_CLANG_PATH、PATH 和 CMAKE_HIP_COMPILER 选择独立编译器。未改写算法/sizeofarray。Clang 支持包两架构均在大型 worker 上构建，x86_64 `epyc-massive-01-n0h:9`，riscv64 `sg2044-0317:8`；先前两项配置失败分别为 GCC 不接受绝对 -fuse-ld 路径、缺失 LLVMConfig 导入的 LibLZMA target，已修复，等待新完整结果。
@@ -227,7 +240,9 @@
 - `fetch-native-artifacts.py` 对后续 >=1 GiB 的原生产物改用 `download-native-public-range.py`，在 SG 保留文件并验证 64 MiB ranges；发布尚未可见时最多等待 30 分钟，不传输认证凭据。其余实际产物检查继续由 `finish-native-pending.py` 串行执行。
 - 现在 35/35 已通过 x86_64 构建及对应快速功能检查，25/35 已完成双架构无 GPU 验收。仍必须完成余下 10 包原生构建/实际 RPM；rocSPARSE/rocFFT 等待 4 个符合条件的 SG worker。当前这些 worker 正运行主线 ROCm 或 openruyi 的合法任务，不中止或修改它们，不把排队当成构建失败。
 
-### 选择本实验的 HIP 编译器
+### （已废弃，保留历史）选择本实验的 HIP 编译器
+
+> 2026-11-14 晚已删除 `rocm-clang`：以下私有前缀用法只作历史记录，当前一律使用系统 LLVM 24；三个受影响包的处理见“决策修正”一节。
 
 `rocm-clang` 使用与系统相同的 LLVM snapshot 源码基线，工具安装在私有前缀。进行 HIP 离线开发时选择它，实际双架构验证已覆盖默认 host triple 和 RDC：
 
