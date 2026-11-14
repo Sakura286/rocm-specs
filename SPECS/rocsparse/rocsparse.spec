@@ -15,6 +15,13 @@
 # Large kernel builds need the 32-job workers on both validation architectures.
 #!BuildConstraint: hardware:jobs 32
 %endif
+%ifarch riscv64
+# The package-level _constraints file is delivered by the source service as
+# "_service:obs_scm:_constraints", which this instance does not recognize.
+# Require the 64-processor SG2044 workers inline instead; the riscv64 workers
+# advertise jobs=32 while the small pico-itx workers have 8 processors.
+#!BuildConstraint: hardware:processors 64
+%endif
 
 Name:           rocsparse
 Version:        %{rocm_version}
