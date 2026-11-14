@@ -1,0 +1,13 @@
+diff --git a/library/src/level3/csrmm_device_row_split.h b/library/src/level3/csrmm_device_row_split.h
+index 130bacd..90512fa 100644
+--- a/library/src/level3/csrmm_device_row_split.h
++++ b/library/src/level3/csrmm_device_row_split.h
+@@ -600,7 +600,7 @@ namespace rocsparse
+         static_assert(BLOCKSIZE % WFSIZE == 0, "BLOCKSIZE must be a multiple of WFSIZE.");
+ 
+         static constexpr uint32_t SUBWFSIZES[]   = {SUBWFSIZES_LIST...};
+-        static constexpr uint32_t NUM_SUBWFSIZES = sizeofarray(SUBWFSIZES);
++        static constexpr uint32_t NUM_SUBWFSIZES = sizeof...(SUBWFSIZES_LIST);
+ 
+         const uint32_t tid = hipThreadIdx_x;
+         const J        gid = hipBlockIdx_x * BLOCKSIZE + tid;
