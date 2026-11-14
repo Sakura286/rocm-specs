@@ -16,7 +16,7 @@
 
 证据：工作区 `tmp/rocm10-rocm-llvm/upstream-review/build-final-{x86_64,riscv64}.log`、`artifact-final-x86_64.log`、`cmake-final-x86_64.log`、`riscv64-validation/`；总审计 `tmp/rocm10-rocm-llvm/audit.json`。旧 revision 11 和 custom-patch native-build 均为历史实验，不要恢复其下载／构建流程。
 
-当前全栈检查点（2026-11-13 23:25 UTC）：35/35 已完成 x86_64 构建和对应快速功能验证，25/35 已完成 riscv64 构建与实际 RPM 无 GPU 验收。正式 rocm-clang 13.1 的原生 HIP/RDC/LTO、默认 triple 及离线 codegen 已通过；MIOpen 9.1 x86_64 的 CMake/tensor 描述符 API 也通过。剩余原生包为 rocSPARSE、rocFFT、rocSOLVER、hipBLAS、hipFFT、hipSPARSE、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen。rocSPARSE/rocFFT 正等待大 worker，后续按依赖关系继续；实际产物验证脚本持续运行。完整状态、证据及恢复命令见全栈进度的最新检查点，不在全 x86_64 完成时结束任务。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
+当前全栈检查点（2026-11-13 23:25 UTC）：35/35 已完成 x86_64 构建和对应快速功能验证，25/35 已完成 riscv64 构建与实际 RPM 无 GPU 验收。正式 rocm-clang 13.1 的原生 HIP/RDC/LTO、默认 triple 及离线 codegen 已通过；MIOpen 9.1 x86_64 的 CMake/tensor 描述符 API 也通过。剩余原生包为 rocSPARSE、rocFFT、rocSOLVER、hipBLAS、hipFFT、hipSPARSE、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen。rocFFT 已于 2026-11-14 00:07 UTC 在 sg2044-0317:8 开始正式原生构建，rocSPARSE 仍等待大 worker，后续按依赖关系继续；实际产物验证脚本持续运行。完整状态、证据及恢复命令见全栈进度的最新检查点，不在全 x86_64 完成时结束任务。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
 
 ## 固定边界和目标环境
 

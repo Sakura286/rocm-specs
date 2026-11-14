@@ -25,7 +25,7 @@
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | scheduled；跟踪新结果 |
+| rocfft | 继续构建／实际 RPM 验证 | succeeded；CMake/版本 API、RTC helper gfx1100/1200 | building；跟踪新结果 |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
 | rocm-clang | 本阶段无 GPU 验证通过 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 | succeeded；上游诊断、实际 HIP/RDC/LTO 编译链接 |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
@@ -44,7 +44,7 @@
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-13T23:17:50.948413+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-14T00:25:16.112597+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -239,3 +239,12 @@ export PATH="$HIP_CLANG_PATH:/usr/lib64/llvm24/bin:$PATH"
 不需要测试 runner 的 LD_LIBRARY_PATH 覆盖；runner 专门为隔离 RPM 运行库设置该变量，常规环境使用私有工具自身的 RUNPATH。当前支持包的三项 LLVM PR 216938、233925、168164 尚未合入，仍为有固定 SHA 的实验性回移。GPU 数值计算未验证。
 
 检查点时间：2026-11-13T23:18:23.753502+00:00。继续全部原生包，不在此处停止。
+
+### 2026-11-14 00:24 UTC：原生 FFT 已启动
+
+- rocFFT 于 00:07 UTC 在 sg2044-0317:8 启动，`rocfft-buildinfo-clang13-riscv64.xml` 确认实际 rocm-clang 13.1.nor、系统 LLVM/Clang/OpenMP 24.0.0~git20261109.b1de84e-11.1.or。配置通过，最新编译约 75/106，暂无新错误；仍须跟进完整 RDC 链接，不能只据前端编译通过标记成功。rocSPARSE 继续 scheduled / waiting for 4 compliant workers。源码配方/OBS 审计已 35/35 匹配，近期 Actions 全成功。
+- 空闲 V100 worker 的硬件为 native / processors=80 / jobs=4；另有 jobs=8 的模拟 worker。当前重型包保留 jobs>=32，普通 hipFFT/hipBLAS/hipSPARSE/hipSOLVER 无此限制。只读取共享 worker 状态与进度，未修改或中止主线 ROCm / openruyi 作业。
+- 提前补齐原生验证 root 的 parent lapack 3.12.1-2.2.or、libomp24 及其开发包（相同 b1de84e-11.1），全部 RPM digest 通过。实际 LAPACK ilaver 返回 3.12.0；dgesv CPU 2x2 方程解为 [2,3]，OpenMP 动态加载及 max_threads=4 通过，见 `validation/native-math-dependencies-riscv64.log`。这只是 CPU 依赖验证，不是 hipSOLVER geev/GPU 集成验收。
+- 原生 rocSPARSE 源码预构建库也已实际加载，并通过描述符 create/default/set/get/destroy，见 `validation/rocsparse-source-api-riscv64.log`；JSON 明确 actual_obs_rpm=false，不计入正式 25/35。
+- 调度/构建简报：在工作区运行 `python3 tmp/rocm10-stack/brief-native-build.py rocsparse rocfft`，保存完整活动日志并只输出任务数/少量错误。常驻正式产物检查仍为 `finish-native-pending.py`，账本 `validation/native-pending-acceptance.json` 当前只有本轮新增的 rocm-clang；此前 24 包记录在既有验收表。完成后用 refresh-status-doc.py 更新表格。
+- 保持 native root 的串行 staging；当前自动脚本正在等待产物，没有运行测试，可按需补依赖。stage-artifacts.py 已同时校验实际 host 与每个 RPM 的架构，拒绝 source RPM；父项目源码 RPM 移到 build-dependencies/lapack，不加入依赖自动扫描。
