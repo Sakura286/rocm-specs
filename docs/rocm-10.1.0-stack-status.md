@@ -58,6 +58,13 @@
 - 三项上游 PR 仍记录为参考与未合入状态，不再作为本分支交付物；相关历史段落（“独立 Clang 已接入”等）保留为历史记录。
 - 表格与后续验收在三个包的新 OBS 构建、实际 RPM 验证通过前不得标记完成。rocfft 的 riscv64 回调运行期行为、全部 GPU 数值计算仍未验证。
 
+### rocsparse 调度约束（2026-11-15）
+
+- riscv64 的 rocsparse 有 622 个编译目标，历史完整构建约 2h54m（`sg2044-0317:8`）。当前实例的 riscv64 worker 只有两类：`pico-itx`（8 处理器、jobs=4）与 `sg2044`（64 处理器、jobs=32），没有更高配置。
+- 包级 `_constraints` 经 source service 提取后名为 `_service:obs_scm:_constraints`，`_buildinfo` 仍只有 SPEC 的 `hardware:jobs 32`，调度器未读取该文件；已删除，避免留下无效配置。
+- 改用 SPEC 内 `#!BuildConstraint: hardware:processors 64`（仅 riscv64）。新 srcmd5 `e05da66aedf2f0ab4729de5056eb129b` 的 `_buildinfo` 同时含 `hardware:jobs 32` 与 `hardware:processors 64`；`osc checkconstraints` 只匹配 4 个 `sg2044` 槽位，`jobs 64` 零匹配。
+- 为落该约束重启了 riscv64 构建；重启前那次构建在日志 8199s 后长时间无新输出，未继续等待。
+
 
 ## 当前修复与验收证据
 
