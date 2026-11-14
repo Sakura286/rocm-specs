@@ -20,12 +20,12 @@
 | hipsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/Jacobi 配置与非法参数 API | succeeded；CMake/Jacobi 配置与非法参数 API |
 | hipsparse | 本阶段无 GPU 验证通过 | succeeded；CMake/矩阵描述符 create/set/get/destroy | succeeded；CMake/矩阵描述符 create/set/get/destroy |
 | hipsparselt | 本阶段无 GPU 验证通过 | succeeded；22 上游 CPU 回归、实际 property/version/error API | succeeded；22 上游 CPU 回归、实际 property/version/error API |
-| miopen | 重新构建／实际 RPM 验证 | 待新构建；GNU target + resource-dir 别名 | 待新构建；GNU target + resource-dir 别名 |
+| miopen | 本阶段无 GPU 验证通过 | succeeded；3.6.1 版本与 tensor descriptor create/set/get/destroy | succeeded；3.6.1 版本与 tensor descriptor create/set/get/destroy（`10.1.0-10.1`） |
 | python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
 | rocblas | 本阶段无 GPU 验证通过 | succeeded；CMake/5.7.0 版本 API、四架构 catalog | succeeded；CMake/5.7.0 版本 API、四架构 catalog |
 | rocclr | 本阶段无 GPU 验证通过 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 | succeeded；HIPRTC gfx1100 ELF、实际 HIP 离线编译 |
-| rocfft | 重新构建／实际 RPM 验证 | 待新构建；系统 clang 24，riscv64 关闭 RDC | 待新构建；系统 clang 24，riscv64 关闭 RDC |
+| rocfft | 本阶段无 GPU 验证通过 | succeeded；plan description API、RTC gfx1100/1200 4544B ELF | succeeded；plan description API、RTC gfx1100/1200 4544B ELF（`10.1.0-12.1`） |
 | rocm-bandwidth-test | 本阶段无 GPU 验证通过 | succeeded；4 项 CPU CLI/插件发现（无 GPU） | succeeded；4 项 CPU CLI/插件发现（无 GPU） |
 | rocm-cmake | 本阶段无 GPU 验证通过 | succeeded；32 CTest、实际模块/安装/消费者 | succeeded；32 CTest、实际模块/安装/消费者 |
 | rocm-core | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
@@ -39,11 +39,11 @@
 | rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
 | rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
 | rocsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/3.37.0 版本 API | succeeded；CMake/3.37.0 版本 API |
-| rocsparse | 重新构建／实际 RPM 验证 | 待新构建；系统 clang 24 + 一行补丁 | 待新构建；系统 clang 24 + 一行补丁 |
+| rocsparse | 本阶段无 GPU 验证通过 | succeeded；矩阵描述符 create/default/set/get/destroy | succeeded；矩阵描述符 create/default/set/get/destroy（`10.1.0-10.1`） |
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-14T12:44:33.935169+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-14T23:21:00+00:00；下方追加记录保留历史诊断。
 
 ## 2026-11-14 决策修正：删除私有 Clang 前端，三包就地修复
 
@@ -56,7 +56,8 @@
   - rocfft：`clang-linker-wrapper` 生成的 RDC 宿主 registration 对象未带 `lp64d` host features（上游 PR 168164 未合入），riscv64 链接必然失败。`0002-riscv64-inline-default-callbacks.patch` 在 riscv64 关闭 `-fgpu-rdc`，并把默认 callback 内联进 RTC 内核（`SetDefaultCallback` 返回空指针、生成代码回退 `*_cb_default<T>`）；x86_64 保持原 RDC 构建。
   - miopen：恢复显式 GNU host target（四段 offload bundle ID）并沿用 rocBLAS／RCCL 已验证的 `-resource-dir` 构建内别名，使 compiler-rt 仍取自发行版目录；不再需要私有前端的原生 triple。
 - 三项上游 PR 仍记录为参考与未合入状态，不再作为本分支交付物；相关历史段落（“独立 Clang 已接入”等）保留为历史记录。
-- 表格与后续验收在三个包的新 OBS 构建、实际 RPM 验证通过前不得标记完成。rocfft 的 riscv64 回调运行期行为、全部 GPU 数值计算仍未验证。
+- 三个包的新 OBS 构建与实际 RPM 验证已完成（见下方收尾记录）；表格已恢复“本阶段无 GPU 验证通过”。rocfft 的 riscv64 回调运行期行为、全部 GPU 数值计算仍未验证。
+- 下游重建：项目仓库配置为 `rebuild="local"`，依赖变化不会自动重建下游。实测新产物发布后 hipfft/hipsparse/rocsolver 的最近构建时间仍早于本次发布。三个包的版本与 ABI 未变，下游无需重建；如需让下游显式对应新产物，可手动触发 `osc rebuild`，本阶段未执行。
 
 ### rocsparse 调度约束（2026-11-15）
 
@@ -292,3 +293,12 @@ rocFFT 源码审计：OBS revision 11 / srcmd5 `24340bdcf743b993d6d22c50ec5cec8a
 - rocSOLVER 正式 riscv64 RPM 于 2026-11-14 08:57 UTC 验收，实际 CMake/3.37.0 版本 API 通过。随后 hipSOLVER 的 Jacobi 配置/非法参数 API、hipBLAS 的 3.7.0 property API 分别于 08:59、09:01 UTC 通过，见 `validation/{rocsolver,hipsolver,hipblas}-consumer-native-riscv64.log`。
 - hipSPARSELt 的完整原生构建及 22 项上游 true16 CPU 回归通过，实际 RPM 的 CMake/property/version/error APIs 于 10:20 UTC 验收（0.2.9 / 209），见 `validation/hipsparselt-consumer-native-riscv64.log`。四个包的实际 RPM manifests 和消费者结果均已同步回本机，原始 RPM 保留在 SG2044。
 - 当前只有 hipBLASLt 与 MIOpen 未完成。hipBLASLt 在 sg2044-0317:9 构建；22 项 true16 CPU 回归全通过，130994 项汇编内核生成耗时 7374.9 秒，现已进入 helper 编译阶段。Ninja 最后完成步骤可能长时间停在 98/103，不能把它当成实时设备库生成进度；`brief-native-build.py` 现同时显示最新日志行。MIOpen 等待 hipBLASLt 开发包，继续跟进，不重复触发已完成包。
+
+## 2026-11-15 收尾：三包改用系统 clang 24 的构建与实际产物验收
+
+- `rocsparse` rev 10（srcmd5 `009e4e75008a28dc8226cf55d0415efc`，`10.1.0-10.1`）：x86_64 与 riscv64 均 succeeded；riscv64 实际 RPM 通过矩阵描述符 create/default/set/get/destroy，证据 `tmp/rocm10-stack/validation/rocsparse-consumer-rework2-riscv64.log`。
+- `rocfft` rev 12（srcmd5 `3b8d69f60e4a2cda3611e42f188ec176`，`10.1.0-12.1`）：双架构 succeeded；riscv64 实际 RPM 的 plan description API 与 RTC gfx1100/gfx1200 离线编译（各 4544 字节、ELF machine 224）通过，见 `rocfft-consumer-rework-riscv64.log`、`fft-rtc-rework-riscv64.log`；实际库 `e_flags=0x5`（double-float ABI），无 callback 设备符号。
+- `miopen` rev 10（srcmd5 `b569b087213de31d40d97d70b50981d2`，`10.1.0-10.1`）：双架构 succeeded；riscv64 实际 RPM 的 3.6.1 版本与 tensor descriptor create/set/get/destroy 通过，见 `miopen-consumer-rework2-riscv64.log`。
+- riscv64 构建耗时：rocsparse 2h52m48s（sg2044-0316:8），rocfft 56m16s（sg2044-0317:9），miopen 1h54m35s（sg2044-0316:9）。rocsparse 的 `#!BuildConstraint: hardware:processors 64` 生效（`_buildinfo` 同时含 jobs 32 与 processors 64）。
+- 验收账本：`tmp/rocm10-stack/validation/rework-acceptance.json`（rocfft、miopen、rocsparse 均 `actual_obs_rpm=true`、`gpu_execution=false`）。
+- 未验证项：全部 GPU 数值执行；rocfft 在 riscv64 关闭 RDC 后默认/单边 callback 的运行期行为；MIOpen 数值与训练路径。上述均因无 AMD GPU 而不能在本阶段验证，不得写成已通过。

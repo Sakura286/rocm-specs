@@ -16,6 +16,8 @@
 
 基础包阶段已完成：`rocm-cmake` revision 3 与 `rocm-llvm` revision 13 均已在 x86_64 / riscv64 构建、发布并验证实际 RPM。用户明确要求继续升级仓库中全部 ROCm 软件；当前范围为原有 33 个源码包，加上新依赖 rocm-stinkytofu，共 34 个；2026-11-14 已按用户指示删除 rocm-clang 私有前端包，三个受影响包改为包内修复（进行中）；持续清单见[全栈进度](rocm-10.1.0-stack-status.md)。不要在基础包完成或单批提交后停止。
 
+当前状态（2026-11-15 收尾）：`rocm-clang` 私有前端已删除，范围为 34 个源码包；`rocsparse`、`rocfft`、`miopen` 已在系统 clang 24 下完成 x86_64/riscv64 构建，并通过 riscv64 实际 RPM 无 GPU 验收（rocfft 在 riscv64 关闭 RDC 并把默认 callback 内联进 RTC 内核，回调运行期仍未验证）。证据见[全栈进度](rocm-10.1.0-stack-status.md)末尾的收尾记录。
+
 `rocm-llvm` 配方 `a09779dd2417790e05fdcf152b5c3a05791eb939`，OBS revision `13` / srcmd5 `f6f951edbfadbccc2e57624d1fd9904d`，实际 RPM `10.1.0-13.1.nor`。两个架构均通过 device-libs CTest 33/33、COMGR CTest 39/39、unit 310/310、lit 177 pass / 27 unsupported / 1 xfail。实际 RPM 的 21 项检查（含 COMGR、嵌入 libc++、缓存、hipcc gfx1100 编译和无未定义符号检查）与 CMake 下游导入／运行、LLVM 24 宏检查均通过。riscv64 在 `sh-plct-sg2044` 原生执行，RPM 校验值与下载产物一致。
 
 证据：工作区 `tmp/rocm10-rocm-llvm/upstream-review/build-final-{x86_64,riscv64}.log`、`artifact-final-x86_64.log`、`cmake-final-x86_64.log`、`riscv64-validation/`；总审计 `tmp/rocm10-rocm-llvm/audit.json`。旧 revision 11 和 custom-patch native-build 均为历史实验，不要恢复其下载／构建流程。
