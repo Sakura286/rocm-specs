@@ -1,0 +1,9 @@
+<constraints>
+  <!-- Large kernel builds: require the 64-processor RISC-V workers. The SPEC
+       also requires jobs>=32; repeating it here keeps the requirement visible
+       to the scheduler and excludes the small pico-itx workers. -->
+  <overwrite>
+    <conditions><arch>riscv64</arch></conditions>
+    <hardware><jobs>32</jobs><processors>64</processors></hardware>
+  </overwrite>
+</constraints>
