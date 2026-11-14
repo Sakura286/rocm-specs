@@ -16,7 +16,7 @@
 
 证据：工作区 `tmp/rocm10-rocm-llvm/upstream-review/build-final-{x86_64,riscv64}.log`、`artifact-final-x86_64.log`、`cmake-final-x86_64.log`、`riscv64-validation/`；总审计 `tmp/rocm10-rocm-llvm/audit.json`。旧 revision 11 和 custom-patch native-build 均为历史实验，不要恢复其下载／构建流程。
 
-当前全栈检查点（2026-11-14 01:30 UTC）：35/35 已完成 x86_64 构建和对应快速功能验证，27/35 已完成 riscv64 构建与实际 RPM 无 GPU 验收。正式 rocm-clang 13.1、rocFFT 与 hipFFT 的原生编译/链接/实际消费者验证均通过；rocFFT 原先的 RDC 浮点 ABI 错误由 LLVM PR 168164 回移修复，新实际 ELF 为 double-float ABI。MIOpen 9.1 x86_64 的 CMake/tensor 描述符 API 也通过。剩余原生包为 rocSPARSE、rocSOLVER、hipBLAS、hipSPARSE、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen。rocSPARSE 正在 sg2044-0317:8 构建（约 320/622），后续按依赖关系继续；实际产物验证脚本持续运行。完整状态、证据及恢复命令见全栈进度的最新检查点，不在全 x86_64 或 FFT 分支完成时结束任务。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
+当前全栈检查点（2026-11-14 12:15 UTC）：35/35 已完成 x86_64 构建和对应快速功能验证，33/35 已完成 riscv64 构建与实际 RPM 无 GPU 验收。正式 rocm-clang 13.1、rocFFT/hipFFT、rocSPARSE/hipSPARSE、rocSOLVER/hipSOLVER、hipBLAS 与 hipSPARSELt 均已通过原生实际产物检查。剩余仅 hipBLASLt 与 MIOpen：前者正在 sg2044-0317:9 构建设备库，22 项 true16 CPU 回归通过，汇编内核生成阶段已完成；MIOpen 等待该依赖。实际产物验证控制器持续运行，完整状态、证据及恢复命令见全栈进度的最新检查点，不在此处结束任务。每个包分别记录源码、补丁审查、配方提交、OBS 修订、双架构构建和实际产物验证；GPU 执行能力单独记录，不把无 GPU 的检查表述为完整 GPU 验证。
 
 ## 固定边界和目标环境
 
@@ -107,16 +107,16 @@ rocm-cmake 尚在等待 riscv64 最终验收时，可推进已具备依赖的 ro
 
 x86_64 用于快速检查构建、依赖解析及下述核心编译功能并修复问题。以下清单的构建和功能结果必须来自 riscv64；按架构分别记录，不能直接复用 x86_64 结果。
 
-- [ ] 源码、校验和、补丁、COMGR API／SONAME 和 LLVM 24 依赖均已核实。
-- [ ] 配方已推送，OBS 取得对应 Git SHA，`riscv64_build/riscv64` 构建并发布成功。
-- [ ] buildinfo 及实际运行路径证明使用 openruyi LLVM 24 和本项目 rocm-cmake；记录 snapshot 完整版本。
-- [ ] device-libs bitcode 能由目标 LLVM 读取，并参与至少一个代表性 AMDGPU 目标（优先 gfx1100）的离线编译与链接。
-- [ ] COMGR 实际共享库可加载，公共 API 和 CMake 导出可被下游编译／链接使用；完成基础编译、device-libs 链接和代码对象生成。
-- [ ] 核实 COMGR 的 libc++ headers 来源并验证需要标准 C++ 头文件的编译流程。
-- [ ] hipcc／hipconfig 能找到系统 Clang 24 及已安装 device-libs；完成本包范围内的离线设备编译。需要 HIP runtime 才能完成的全程序运行单列为后续集成项。
-- [ ] RPM 子包文件、依赖、宏、CMake 配置和许可证检查通过，无构建目录泄漏。
-- [ ] 上游适用的 device-libs／COMGR 测试已运行并逐项归因；关键编译、设备库链接、API 行为无未解决失败。
-- [ ] 更新本计划的证据、限制和交接信息；确认 rocm-cmake 与 rocm-llvm 均已通过 riscv64 最终验收，随后才开始剩余组件的依赖梳理。
+- [x] 源码、校验和、补丁、COMGR API／SONAME 和 LLVM 24 依赖均已核实。
+- [x] 配方已推送，OBS 取得对应 Git SHA，`riscv64_build/riscv64` 构建并发布成功。
+- [x] buildinfo 及实际运行路径证明使用 openruyi LLVM 24 和本项目 rocm-cmake；记录 snapshot 完整版本。
+- [x] device-libs bitcode 能由目标 LLVM 读取，并参与至少一个代表性 AMDGPU 目标（优先 gfx1100）的离线编译与链接。
+- [x] COMGR 实际共享库可加载，公共 API 和 CMake 导出可被下游编译／链接使用；完成基础编译、device-libs 链接和代码对象生成。
+- [x] 核实 COMGR 的 libc++ headers 来源并验证需要标准 C++ 头文件的编译流程。
+- [x] hipcc／hipconfig 能找到系统 Clang 24 及已安装 device-libs；完成本包范围内的离线设备编译。需要 HIP runtime 才能完成的全程序运行单列为后续集成项。
+- [x] RPM 子包文件、依赖、宏、CMake 配置和许可证检查通过，无构建目录泄漏。
+- [x] 上游适用的 device-libs／COMGR 测试已运行并逐项归因；关键编译、设备库链接、API 行为无未解决失败。
+- [x] 更新本计划的证据、限制和交接信息；确认 rocm-cmake 与 rocm-llvm 均已通过 riscv64 最终验收，随后才开始剩余组件的依赖梳理。
 
 ### 必须重新验证的已知问题
 

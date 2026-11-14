@@ -10,16 +10,16 @@
 | --- | --- | --- | --- |
 | amdsmi | 本阶段无 GPU 验证通过 | succeeded；实际 Python 模块/27.1 版本 API | succeeded；实际 Python 模块/27.1 版本 API |
 | half | 本阶段无 GPU 验证通过 | succeeded；CMake/half 运算 | succeeded；CMake/half 运算 |
-| hipblas | 继续构建／实际 RPM 验证 | succeeded；CMake/3.7.0 属性 API | unresolvable；依赖待解 |
+| hipblas | 本阶段无 GPU 验证通过 | succeeded；CMake/3.7.0 属性 API | succeeded；CMake/3.7.0 属性 API |
 | hipblas-common | 本阶段无 GPU 验证通过 | succeeded；CMake/枚举 API | succeeded；CMake/枚举 API |
-| hipblaslt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 | unresolvable；依赖待解 |
+| hipblaslt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 layout/batch/matmul 描述符 | building；跟踪新结果 |
 | hipcub | 本阶段无 GPU 验证通过 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 | succeeded；CMake/BlockReduce 离线 gfx1100/1200 |
 | hipfft | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 | hipify | 本阶段无 GPU 验证通过 | succeeded；实际资源发现/CUDA→HIP 声明夹具 | succeeded；实际资源发现/CUDA→HIP 声明夹具 |
 | hiprand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
-| hipsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/Jacobi 配置与非法参数 API | unresolvable；依赖待解 |
+| hipsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/Jacobi 配置与非法参数 API | succeeded；CMake/Jacobi 配置与非法参数 API |
 | hipsparse | 本阶段无 GPU 验证通过 | succeeded；CMake/矩阵描述符 create/set/get/destroy | succeeded；CMake/矩阵描述符 create/set/get/destroy |
-| hipsparselt | 继续构建／实际 RPM 验证 | succeeded；22 上游 CPU 回归、实际 property/version/error API | scheduled；跟踪新结果 |
+| hipsparselt | 本阶段无 GPU 验证通过 | succeeded；22 上游 CPU 回归、实际 property/version/error API | succeeded；22 上游 CPU 回归、实际 property/version/error API |
 | miopen | 继续构建／实际 RPM 验证 | succeeded；实际 RPM API 子集/CMake/tensor 描述符 | unresolvable；依赖待解 |
 | python-tensile | 本阶段无 GPU 验证通过 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 | succeeded；Python/CLI、生成 helper 并离线编译 gfx1100/1200 |
 | rccl | 本阶段无 GPU 验证通过 | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API | succeeded；3 CTest+110 micro-tests、CMake/23007 版本 API |
@@ -39,12 +39,12 @@
 | rocprofiler-register | 本阶段无 GPU 验证通过 | succeeded；132 上游测试、CMake/错误 API | succeeded；132 上游测试、CMake/错误 API |
 | rocr-runtime | 本阶段无 GPU 验证通过 | succeeded；CMake/状态 API、280 符号 | succeeded；CMake/状态 API、280 符号 |
 | rocrand | 本阶段无 GPU 验证通过 | succeeded；CMake/版本/Philox 256 CPU 样本 | succeeded；CMake/版本/Philox 256 CPU 样本 |
-| rocsolver | 继续构建／实际 RPM 验证 | succeeded；CMake/3.37.0 版本 API | building；跟踪新结果 |
+| rocsolver | 本阶段无 GPU 验证通过 | succeeded；CMake/3.37.0 版本 API | succeeded；CMake/3.37.0 版本 API |
 | rocsparse | 本阶段无 GPU 验证通过 | succeeded；CMake/矩阵描述符 create/set/get/destroy | succeeded；CMake/矩阵描述符 create/set/get/destroy |
 | rocthrust | 本阶段无 GPU 验证通过 | succeeded；transform 离线 gfx1100/1200 | succeeded；transform 离线 gfx1100/1200 |
 | roctracer | 本阶段无 GPU 验证通过 | succeeded；CMake/版本 API | succeeded；CMake/版本 API |
 
-表格状态采集时间：2026-11-14T04:14:43.619258+00:00；下方追加记录保留历史诊断。
+表格状态采集时间：2026-11-14T12:12:56.722523+00:00；下方追加记录保留历史诊断。
 
 ## 当前修复与验收证据
 
@@ -264,3 +264,9 @@ rocFFT 源码审计：OBS revision 11 / srcmd5 `24340bdcf743b993d6d22c50ec5cec8a
 - rocSPARSE 正式 riscv64 构建于 2026-11-14 03:57 UTC 成功，总耗时 10436 秒；619/622 之后的长时间静默为最终链接阶段，完整日志未出现新错误。未中止 worker 或为加速改变配方。实际 RPM 的 CMake 导入、矩阵描述符 create/default/set/get/destroy 全通过，见 `validation/rocsparse-consumer-native-riscv64.log`；不再以先前源码预构建充当验收。
 - hipSPARSE 随后在 pico-itx-box05:0 构建成功，实际 RPM 的 CMake/矩阵描述符检查于 04:11 UTC 通过，见 `validation/hipsparse-consumer-native-riscv64.log`。两个包的当前 RPM 清单及消费者结果已从 SG2044 同步至本机 `native-artifact-manifests/` 和 `validation/`。
 - 当前 29/35 已完成实际双架构无 GPU 验证。余下 rocSOLVER、hipBLAS、hipSOLVER、hipBLASLt、hipSPARSELt、MIOpen；rocSOLVER 正在编译，hipSPARSELt 已解除依赖阻塞、等待符合条件的 worker，其余沿依赖链推进。持续运行的原生验收控制器保持串行 staging，不启动重复控制器。
+
+### 33/35：仅余 hipBLASLt 与 MIOpen
+
+- rocSOLVER 正式 riscv64 RPM 于 2026-11-14 08:57 UTC 验收，实际 CMake/3.37.0 版本 API 通过。随后 hipSOLVER 的 Jacobi 配置/非法参数 API、hipBLAS 的 3.7.0 property API 分别于 08:59、09:01 UTC 通过，见 `validation/{rocsolver,hipsolver,hipblas}-consumer-native-riscv64.log`。
+- hipSPARSELt 的完整原生构建及 22 项上游 true16 CPU 回归通过，实际 RPM 的 CMake/property/version/error APIs 于 10:20 UTC 验收（0.2.9 / 209），见 `validation/hipsparselt-consumer-native-riscv64.log`。四个包的实际 RPM manifests 和消费者结果均已同步回本机，原始 RPM 保留在 SG2044。
+- 当前只有 hipBLASLt 与 MIOpen 未完成。hipBLASLt 在 sg2044-0317:9 构建；22 项 true16 CPU 回归全通过，130994 项汇编内核生成耗时 7374.9 秒，现已进入 helper 编译阶段。Ninja 最后完成步骤可能长时间停在 98/103，不能把它当成实时设备库生成进度；`brief-native-build.py` 现同时显示最新日志行。MIOpen 等待 hipBLASLt 开发包，继续跟进，不重复触发已完成包。
